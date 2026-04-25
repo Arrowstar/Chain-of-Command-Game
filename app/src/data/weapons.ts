@@ -1,0 +1,177 @@
+import type { WeaponModule } from '../types/game';
+
+export const WEAPONS: WeaponModule[] = [
+  {
+    id: 'plasma-battery',
+    name: 'Mark IV Plasma Battery',
+    arcs: ['fore', 'forePort', 'foreStarboard'],
+    rangeMin: 1,
+    rangeMax: 4,
+    volleyPool: ['d8', 'd8', 'd8'],
+    rpCost: 20,
+    // avgDmg(3×d8=12) + tags(0) + range(0, max ≤4) = 12
+    dpCost: 12,
+    effect: 'Standard, reliable damage.',
+    tags: ['standard'],
+  },
+  {
+    id: 'heavy-railgun',
+    name: 'Heavy Railgun',
+    arcs: ['fore'],
+    rangeMin: 3,
+    rangeMax: 8,
+    volleyPool: ['d12', 'd10'],
+    rpCost: 35,
+    // avgDmg(d12+d8=10) + tags(AP+6, Ordnance+2=8) + range(+5) = 23
+    dpCost: 24,
+    effect: 'Armor Piercing. Standard hits that reach the hull ignore the defender\'s armor roll.',
+    tags: ['armorPiercing', 'ordnance'],
+  },
+  {
+    id: 'broadside-macrocannons',
+    name: 'Broadside Macrocannons',
+    arcs: ['aftPort', 'forePort', 'aftStarboard', 'foreStarboard'],
+    rangeMin: 1,
+    rangeMax: 3,
+    volleyPool: ['d10', 'd10', 'd10'],
+    rpCost: 40,
+    // avgDmg(4×d10=20) + tags(Broadside−4) + range(0) = 16
+    dpCost: 11,
+    effect: 'Devastating at close range, but requires complex maneuvering from Helm to line up the shot.',
+    tags: ['broadside'],
+  },
+  {
+    id: 'seeker-torpedoes',
+    name: 'Seeker Torpedo Tubes',
+    arcs: ['fore', 'foreStarboard', 'aftStarboard', 'aft', 'aftPort', 'forePort'],
+    rangeMin: 1,
+    rangeMax: 8,
+    volleyPool: ['d20'],
+    rpCost: 40,
+    // avgDmg(d20=10) + tags(Ordnance+2) + range(+5, Infinity>4) = 17
+    dpCost: 17,
+    effect: 'Fires a Torpedo Token that moves 4 hexes/round. Deals flat 3 Hull damage on hit.',
+    tags: ['torpedo', 'ordnance'],
+  },
+  {
+    id: 'pdc',
+    name: 'Point Defense Cannons (PDC)',
+    arcs: ['fore', 'foreStarboard', 'aftStarboard', 'aft', 'aftPort', 'forePort'],
+    rangeMin: 1,
+    rangeMax: 2,
+    volleyPool: ['d6', 'd6', 'd4', 'd4'],
+    rpCost: 15,
+    // avgDmg(4×d4=8) + tags(PointDefense+4) + range(0) = 12
+    dpCost: 14,
+    effect: 'Anti-Small Craft. Fires as a free reaction when an enemy Torpedo/Fighter enters an adjacent hex.',
+    tags: ['pointDefense'],
+  },
+  {
+    id: 'ion-emitter',
+    name: 'Ion Emitter Array',
+    arcs: ['fore', 'forePort', 'foreStarboard'],
+    rangeMin: 1,
+    rangeMax: 4,
+    volleyPool: ['d8', 'd8', 'd6'],
+    rpCost: 30,
+    // avgDmg(2×d6=6) + tags(ShieldBreaker+5) + range(0) = 11
+    dpCost: 16,
+    effect: 'Shield Breaker. Every Standard Hit removes 2 Shield points instead of 1. However, Ion hits that overflow to the Hull deal 0 damage.',
+    tags: ['shieldBreaker'],
+  },
+  {
+    id: 'flak-artillery',
+    name: 'Flak Artillery',
+    arcs: ['fore'],
+    rangeMin: 2,
+    rangeMax: 5,
+    volleyPool: ['d8', 'd8'],
+    rpCost: 35,
+    // avgDmg(2×d8=8) + tags(AoE+8) + range(+5, max 5>4) = 21
+    dpCost: 21,
+    effect: 'Area of Effect. Select a target Hex instead of a target Ship. Roll the attack against ALL units (Allied and Enemy) in that hex and all 6 adjacent hexes.',
+    tags: ['areaOfEffect'],
+  },
+  {
+    id: 'experimental-plasma-lance',
+    name: 'Experimental Plasma Lance',
+    arcs: ['fore'],
+    rangeMin: 2,
+    rangeMax: 5,
+    volleyPool: ['d12', 'd10', 'd8'],
+    rpCost: 65,
+    dpCost: 30,
+    effect: 'Experimental. A focused plasma spear tuned to punch through shields before the beam blooms across the target hull.',
+    tags: ['shieldBreaker', 'armorPiercing'],
+    availability: 'event',
+  },
+  {
+    id: 'illegal-rail-accelerator',
+    name: 'Illegal Rail Accelerator',
+    arcs: ['fore'],
+    rangeMin: 4,
+    rangeMax: 8,
+    volleyPool: ['d12', 'd12'],
+    rpCost: 70,
+    dpCost: 32,
+    effect: 'Black-market siege piece. Hyper-dense sabot rounds are devastating at long range and ignore armor on Standard Hits.',
+    tags: ['armorPiercing', 'ordnance'],
+    availability: 'event',
+  },
+  {
+    id: 'defense-platform-laser',
+    name: 'Defense Platform Laser',
+    arcs: ['fore', 'forePort', 'foreStarboard'],
+    rangeMin: 2,
+    rangeMax: 6,
+    volleyPool: ['d10', 'd10', 'd8'],
+    rpCost: 60,
+    dpCost: 27,
+    effect: 'Salvaged from an automated battery. Highly stable beam optics make it brutally consistent across mid-range engagements.',
+    tags: ['standard'],
+    availability: 'event',
+  },
+  {
+    id: 'phase-disruptor-array',
+    name: 'Phase Disruptor Array',
+    arcs: ['fore', 'forePort', 'foreStarboard'],
+    rangeMin: 1,
+    rangeMax: 4,
+    volleyPool: ['d10', 'd8', 'd8'],
+    rpCost: 60,
+    dpCost: 28,
+    effect: 'An unstable waveform projector that overwhelms protective screens and leaves ruptures in exposed hull plating.',
+    tags: ['shieldBreaker', 'areaOfEffect'],
+    availability: 'event',
+  },
+];
+
+export const TAG_DESCRIPTIONS: Record<string, string> = {
+  standard: "Reliable weaponry with no special rules.",
+  armorPiercing: "Standard hits that reach the hull ignore the target's armor roll.",
+  broadside: "Fires from the sides of the ship, requiring careful maneuvering.",
+  torpedo: "Fires a slow-moving, target-seeking projectile that ignores standard evasion.",
+  ordnance: "Must be reloaded via the Load Ordnance action after firing.",
+  pointDefense: "Automatically fires at incoming Torpedoes or Fighters in adjacent hexes.",
+  shieldBreaker: "Deals double damage to shields, but zero damage to hull.",
+  areaOfEffect: "Damages all units in the target hex and all adjacent hexes.",
+};
+
+export const TAG_LABELS: Record<string, string> = {
+  standard: "STANDARD",
+  armorPiercing: "ARMOR PIERCING",
+  broadside: "BROADSIDE",
+  torpedo: "TORPEDO",
+  ordnance: "ORDNANCE",
+  pointDefense: "POINT DEFENSE",
+  shieldBreaker: "SHIELD BREAKER",
+  areaOfEffect: "AREA OF EFFECT",
+};
+
+export function getWeaponById(id: string): WeaponModule | undefined {
+  return WEAPONS.find(w => w.id === id);
+}
+
+export function getPurchasableWeapons(): WeaponModule[] {
+  return WEAPONS.filter(weapon => (weapon.availability ?? 'standard') === 'standard');
+}
