@@ -11,6 +11,7 @@ import { getAdversaryById } from '../../data/adversaries';
 import { TerrainLegend } from './TerrainLegend';
 import { getTerrainColor, drawHexPolygon, drawShipTriangle, drawShipShields, attachOrUpdateSprite, drawFacingIndicator, drawShipHull } from '../../engine/pixiGraphics';
 import { getValidTargetsForWeapon } from '../../engine/combat';
+import { getSubsystemById } from '../../data/subsystems';
 import { projectDriftPreview } from '../../engine/movement';
 import { previewAITierMovement, type AIMovementPreview } from '../../engine/ai/aiTurn';
 import ShipInfoPanel, { type MapHoverTarget } from './ShipInfoPanel';
@@ -725,7 +726,15 @@ export default function HexMap() {
       const mineGfx = new PIXI.Graphics();
       mineGfx.lineStyle(2, 0xFF5555, 1);
       mineGfx.beginFill(0x661111, 0.85);
-      mineGfx.drawStar(0, 0, 4, 10, 5);
+      mineGfx.moveTo(0, -10);
+      mineGfx.lineTo(2, -2);
+      mineGfx.lineTo(10, 0);
+      mineGfx.lineTo(2, 2);
+      mineGfx.lineTo(0, 10);
+      mineGfx.lineTo(-2, 2);
+      mineGfx.lineTo(-10, 0);
+      mineGfx.lineTo(-2, -2);
+      mineGfx.closePath();
       mineGfx.endFill();
 
       const label = new PIXI.Text('MINE', {
@@ -981,7 +990,8 @@ export default function HexMap() {
                 // Validate subsystem range
                 const assignedAction = player?.assignedActions.find(a => a.id === actionData.actionId);
                 const subsystemId = assignedAction?.actionId;
-                const subsystem = subsystemId ? useGameStore.getState().equippedSubsystems?.find(() => true) && getSubsystemById(subsystemId) : null;
+                const attackerShip = useGameStore.getState().playerShips.find(s => s.id === actionData.shipId);
+                const subsystem = (subsystemId && attackerShip?.equippedSubsystems.includes(subsystemId)) ? getSubsystemById(subsystemId) : null;
                 
                 if (subsystem?.rangeMax) {
                   const attackerShip = useGameStore.getState().playerShips.find(s => s.id === actionData.shipId);

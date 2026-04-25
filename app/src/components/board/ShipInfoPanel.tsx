@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import type { EnemyShipState, FighterToken, HexCoord, ObjectiveMarkerState, ShipState, TerrainType, TorpedoToken } from '../../types/game';
+import type { EnemyShipState, FighterToken, HexCoord, ObjectiveMarkerState, ShipArc, ShipState, TerrainType, TorpedoToken } from '../../types/game';
 import { getWeaponById } from '../../data/weapons';
 import { getChassisById } from '../../data/shipChassis';
 import { getAdversaryById } from '../../data/adversaries';
@@ -306,7 +306,7 @@ function ShipTooltipContent({ ship, isEnemy }: { ship: ShipState | EnemyShipStat
         </div>
       )}
 
-      {ship.criticalDamage.length > 0 && (
+      {ship.criticalDamage && ship.criticalDamage.length > 0 && (
         <div style={{ marginTop: 'var(--space-md)' }}>
           <div className="label" style={{ color: 'var(--color-alert-amber)' }}>Critical Damage</div>
           <ul style={{ paddingLeft: 'var(--space-md)', marginTop: '4px' }}>
@@ -319,13 +319,13 @@ function ShipTooltipContent({ ship, isEnemy }: { ship: ShipState | EnemyShipStat
         </div>
       )}
 
-      {!isEnemy && ship.scars.length > 0 && (
+      {!isEnemy && 'scars' in ship && (ship as ShipState).scars.length > 0 && (
         <div style={{ marginTop: 'var(--space-md)' }}>
           <div className="label" style={{ color: 'var(--color-alert-amber)', marginBottom: '6px' }}>
             Persistent Scars
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
-            {ship.scars.map(scar => (
+            {(ship as ShipState).scars.map(scar => (
               <div
                 key={scar.id}
                 className="panel panel--raised"

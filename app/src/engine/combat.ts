@@ -102,9 +102,14 @@ export function assembleVolleyPool(
   if (upgradeOneDie && pool.length > 0) {
     // Upgrade the first die in the pool
     const firstDie = pool[0];
-    const currentType = firstDie.type;
+    const currentType = typeof firstDie === 'string' ? firstDie : firstDie.type;
     const upgradedType = stepUpDie(currentType);
-    pool[0] = { ...firstDie, type: upgradedType };
+    
+    if (typeof firstDie === 'string') {
+      pool[0] = upgradedType;
+    } else {
+      pool[0] = { ...firstDie, type: upgradedType };
+    }
   }
 
   return pool;

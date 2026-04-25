@@ -7,7 +7,13 @@ vi.mock('../../data/shipChassis', () => ({
 }));
 
 vi.mock('../../data/adversaries', () => ({
-  getAdversaryById: vi.fn(() => ({ name: 'Hegemony Hunter-Killer (Frigate)' })),
+  getAdversaryById: vi.fn(() => ({ 
+    name: 'Hegemony Hunter-Killer (Frigate)',
+    volleyPool: ['d6', 'd6'],
+    weaponRangeMin: 1,
+    weaponRangeMax: 4,
+    shieldsPerSector: 3,
+  })),
 }));
 
 describe('ShipInfoPanel', () => {

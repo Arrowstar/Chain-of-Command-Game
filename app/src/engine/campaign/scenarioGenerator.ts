@@ -772,6 +772,7 @@ export function generateProceduralScenario(
         aftPort: adv.shieldsPerSector,
         forePort: adv.shieldsPerSector,
       },
+      maxShieldsPerSector: adv.shieldsPerSector,
       criticalDamage: [],
       isDestroyed: false,
       hasDroppedBelow50: false,

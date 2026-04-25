@@ -43,6 +43,7 @@ function makeEnemyShip(overrides: Partial<EnemyShipState> = {}): EnemyShipState 
     currentHull: 6,
     maxHull: 6,
     shields: { fore: 3, foreStarboard: 0, aftStarboard: 0, aft: 0, aftPort: 0, forePort: 0 },
+    maxShieldsPerSector: 3,
     criticalDamage: [],
     isDestroyed: false,
     hasDroppedBelow50: false,

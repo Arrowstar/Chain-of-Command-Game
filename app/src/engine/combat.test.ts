@@ -42,8 +42,8 @@ describe('combat engine', () => {
 
     const pool = assembleVolleyPool(weapon, officer, false, true);
     // d8 weapon die should be upgraded to d10 (since it's first in the pool)
-    expect(pool[0].type).toBe('d10');
-    expect(pool[1].type).toBe('d6');
+    expect((pool[0] as any).type).toBe('d10');
+    expect((pool[1] as any).type).toBe('d6');
   });
 
   it('resolveAttack correctly applies hits, shields, and armor', () => {

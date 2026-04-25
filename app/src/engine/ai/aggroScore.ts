@@ -52,7 +52,7 @@ export function calculateAggroScores(
     }
 
     // Vulnerability: critical hull damage
-    if (target.criticalDamage.length > 0) {
+    if (target.criticalDamage?.length > 0) {
       score += 2;
       breakdown['criticalDamage'] = 2;
     }

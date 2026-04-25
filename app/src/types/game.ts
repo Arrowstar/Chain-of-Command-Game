@@ -173,6 +173,7 @@ export interface Subsystem {
   isPassive?: boolean;
   requiresTarget?: boolean;
   requiresHexTarget?: boolean;
+  rangeMax?: number;
   availability?: 'standard' | 'event';
 }
 
@@ -532,6 +533,7 @@ export interface EnemyShipState {
   currentHull: number;
   maxHull: number;
   shields: ShieldState;
+  maxShieldsPerSector: number;
   criticalDamage: CriticalDamageCard[];
   isDestroyed: boolean;
   hasDroppedBelow50: boolean;

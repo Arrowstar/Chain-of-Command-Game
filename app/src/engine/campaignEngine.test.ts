@@ -326,6 +326,7 @@ describe('event requirements framework', () => {
       players: [makePlayer('p1', 'ship-1', [makeOfficer('sparky', 'engineering', 0)])],
       ownedTechIds: [],
       requisitionPoints: 20,
+      fleetFavor: 0,
     });
 
     const availability = getEventOptionAvailability({
@@ -350,6 +351,7 @@ describe('event requirements framework', () => {
       players: [makePlayer('p1', 'ship-1', [makeOfficer('helm-1', 'helm', 0)])],
       ownedTechIds: [],
       requisitionPoints: 5,
+      fleetFavor: 0,
     });
 
     const availability = getEventOptionAvailability({
@@ -381,6 +383,7 @@ describe('applyEventResolution', () => {
         narrativeResult: 'Recovered contraband.',
       },
       requisitionPoints: 10,
+      fleetFavor: 0,
       experimentalTech: [],
       nextCombatModifiers: null,
       canSkipNode: false,
@@ -414,6 +417,7 @@ describe('applyEventResolution', () => {
         narrativeResult: 'Set up the next haven visit.',
       },
       requisitionPoints: 10,
+      fleetFavor: 0,
       experimentalTech: [],
       nextCombatModifiers: null,
       canSkipNode: false,

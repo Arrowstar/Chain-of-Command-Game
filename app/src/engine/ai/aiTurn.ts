@@ -224,7 +224,7 @@ export function executeAITier(
     const dist = hexDistance(aiShip.position, target.position);
     if (dist >= adversary.weaponRangeMin && dist <= adversary.weaponRangeMax) {
       // Check for weapons disabled crit
-      const weaponsDisabled = aiShip.criticalDamage.some(c => c.id === 'enemy-weapons-disabled');
+      const weaponsDisabled = aiShip.criticalDamage?.some(c => c.id === 'enemy-weapons-disabled');
       if (!weaponsDisabled) {
         const pool: VolleyDieInput[] = adversary.volleyPool.map(dt => ({ type: dt, source: 'weapon' }));
         // Tactic card extra dice
@@ -299,7 +299,7 @@ export function executeAITier(
         let hullDmg = 0;
         if (overflow > 0) {
           // Check for armor disabled crit (e.g. 'armor-compromised') if applicable
-          const armorDisabled = target.criticalDamage.some(c => c.id === 'armor-compromised');
+          const armorDisabled = target.criticalDamage?.some(c => c.id === 'armor-compromised');
           if (!armorDisabled) {
             armorRoll = rollDie(target.armorDie);
           }

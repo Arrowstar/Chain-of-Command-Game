@@ -213,6 +213,7 @@ describe('GameStateMachine — checkGameOverConditions', () => {
       const state = { 
         ...makeInitialState('Hold the Line'), 
         round: 6,
+        phase: 'cleanup',
         playerShips: [makeShip('s1')],
       } as GameState;
       const res = checkGameOverConditions(state);

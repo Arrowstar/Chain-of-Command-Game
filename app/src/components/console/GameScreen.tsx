@@ -322,7 +322,7 @@ function DeploymentPanel({
 }: {
   ships: Array<{ id: string; name: string; facing: number }>;
   selectedShipId: string | null;
-  deploymentBounds: { minQ: number; maxQ: number; minR: number; maxR: number } | null;
+  deploymentBounds: import('../../types/game').DeploymentBounds | null;
   onSelectShip: (shipId: string) => void;
   onRotateShip: (shipId: string, delta?: 1 | -1) => void;
   onConfirm: () => void;
