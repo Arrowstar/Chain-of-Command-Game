@@ -317,7 +317,8 @@ export function resolveAttack(
   }
 
   // Add the piercing hits directly to hull damage (bypassing shields and armor)
-  if (piercingHits > 0) {
+  // Ion weapons: critical hits also deal 0 hull damage
+  if (piercingHits > 0 && !isIonWeapon) {
     hullDamage += piercingHits;
   }
 

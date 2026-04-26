@@ -199,4 +199,50 @@ describe('combat engine', () => {
     expect(dmg.tnBreakdown.trackingBonus).toBe(0);
     expect(dmg.tnBreakdown.total).toBe(7);
   });
+
+  it('Ion Emitter Array critical hits deal 0 hull damage (shield breaker property)', () => {
+    const shields: ShieldState = { fore: 3, foreStarboard: 3, aftStarboard: 3, aft: 3, aftPort: 3, forePort: 3 };
+    const ionWeapon: WeaponModule = {
+      id: 'ion-emitter', name: 'Ion Emitter Array', arcs: ['fore'], rangeMin: 1, rangeMax: 4,
+      volleyPool: ['d8', 'd8', 'd6'], rpCost: 30, dpCost: 16, effect: 'Shield Breaker. Every Standard Hit removes 2 Shield points instead of 1. However, Ion hits that overflow to the Hull deal 0 damage.',
+      tags: ['shieldBreaker']
+    };
+
+    // Mock dice rolls to guarantee at least one critical hit
+    // A die is critical ONLY if the INITIAL roll is max value (not explosions)
+    // First die: standard hit on d8 (rolls 5, TN=5, not critical since 5 < 8) - (5-1)/8 = 0.5
+    // Second die: critical hit on d8 (rolls 8, TN=5, max for d8) - (8-1)/8 = 0.875
+    // Third die: standard hit on d6 (rolls 5, TN=5, not critical since 5 < 6) - (5-1)/6 = 0.666...
+    vi.spyOn(Math, 'random')
+      .mockReturnValueOnce(0.5)   // d8 => 5 (hit, not critical since not max)
+      .mockReturnValueOnce(0.875) // d8 => 8 (hit, critical since max)
+      .mockReturnValueOnce(0.666); // d6 => 5 (hit, not critical since not max)
+
+    const dmg = resolveAttack(
+      { q: 0, r: 0 }, HexFacing.Fore,
+      { q: 1, r: -1 }, HexFacing.Aft,
+      5, shields, 'd4', 10, 10, false, ionWeapon, [
+        { type: 'd8', source: 'weapon' },
+        { type: 'd8', source: 'weapon' },
+        { type: 'd6', source: 'weapon' }
+      ], undefined, 0, 0, false, true // isIonWeapon = true for ion weapons
+    );
+
+    // Debug output
+    console.log('Ion weapon test results:', {
+      hullDamage: dmg.hullDamage,
+      shieldHits: dmg.shieldHits,
+      shieldRemaining: dmg.shieldRemaining,
+      overflowHits: dmg.overflowHits,
+      volleyResult: dmg.volleyResult,
+      struckSector: dmg.struckSector
+    });
+
+    // Should deal shield damage from standard hits (2 points each for ion) but 0 hull damage from critical hits
+    expect(dmg.hullDamage).toBe(0);
+    expect(dmg.shieldHits).toBeGreaterThan(0); // Should still hit shields from standard hits
+    expect(dmg.volleyResult.totalCrits).toBeGreaterThan(0); // Should have critical hits
+
+    vi.restoreAllMocks();
+  });
 });
