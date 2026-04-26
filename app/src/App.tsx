@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useGameStore } from './store/useGameStore';
 import { useUIStore } from './store/useUIStore';
+import { useTutorialStore } from './store/useTutorialStore';
 import GameScreen from './components/console/GameScreen';
 import MainMenu from './components/setup/MainMenu';
 import ScenarioEditor from './components/setup/ScenarioEditor';
@@ -11,6 +12,7 @@ import ModalOverlay from './components/ModalOverlay';
 import CampaignScreen from './components/campaign/CampaignScreen';
 import { useCampaignStore } from './store/useCampaignStore';
 import ToastContainer from './components/campaign/ToastContainer';
+import { buildTutorialGameConfig } from './data/tutorialScenario';
 
 function App() {
   const phase = useGameStore(s => s.phase);
@@ -19,12 +21,15 @@ function App() {
   const isRedAlert = useUIStore(s => s.isRedAlert);
   
   // App-level routing state
-  const [appMode, setAppMode] = useState<'menu' | 'editor' | 'skirmish-builder' | 'campaign-builder' | 'skirmish' | 'campaign' | 'campaign-combat'>('menu');
+  const [appMode, setAppMode] = useState<'menu' | 'editor' | 'skirmish-builder' | 'campaign-builder' | 'skirmish' | 'campaign' | 'campaign-combat' | 'tutorial'>('menu');
   const [scenarioConfig, setScenarioConfig] = useState<CustomScenarioConfig | null>(null);
 
   const startCampaign = useCampaignStore(s => s.startNewCampaign);
   const onCombatEnd = useCampaignStore(s => s.onCombatEnd);
   const resetGame = useGameStore(s => s.resetGame);
+  const initializeGame = useGameStore(s => s.initializeGame);
+  const startTutorial = useTutorialStore(s => s.startTutorial);
+  const endTutorial = useTutorialStore(s => s.endTutorial);
 
   // We no longer aggressively auto-advance campaign combat.
   // GameOverScreen will render when gameOver is true, and the user clicks the return button to trigger onCombatEnd.
@@ -35,6 +40,13 @@ function App() {
         onStart={() => setAppMode('editor')} 
         onStartCampaign={() => setAppMode('campaign-builder')} 
         onContinueCampaign={() => setAppMode('campaign')}
+        onStartTutorial={() => {
+          resetGame();
+          endTutorial();
+          initializeGame(buildTutorialGameConfig());
+          startTutorial();
+          setAppMode('tutorial');
+        }}
       />
     );
   }
@@ -72,6 +84,18 @@ function App() {
           setAppMode('campaign');
         }}
       />
+    );
+  }
+
+  if (appMode === 'tutorial') {
+    if (gameOver) {
+      return <GameOverScreen onReturn={() => { endTutorial(); setAppMode('menu'); }} />;
+    }
+    return (
+      <div className={`app-root ${isRedAlert ? 'red-alert' : ''}`}>
+        <GameScreen />
+        <ModalOverlay />
+      </div>
     );
   }
 

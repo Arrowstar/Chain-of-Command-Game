@@ -11,12 +11,18 @@ import {
 
 // ── Fixtures ──────────────────────────────────────────────────────
 
-function makeTech(id: string, consumed = false): ExperimentalTech {
-  return {
-    id, name: id, category: 'tactical', effect: '', flavorText: '',
-    isConsumable: false, isConsumed: consumed, rarity: 'common',
-  };
-}
+const makeTech = (id: string, overrides?: Partial<ExperimentalTech>): ExperimentalTech => ({
+  id,
+  name: 'Test Tech',
+  category: 'tactical',
+  effect: 'Does something cool',
+  flavorText: 'Very cool indeed',
+  imagePath: '',
+  isConsumable: false,
+  isConsumed: false,
+  rarity: 'common',
+  ...overrides,
+});
 
 const EMPTY: ExperimentalTech[] = [];
 
@@ -44,7 +50,7 @@ describe('applyPlasmaAccelerators', () => {
   });
 
   it('has no effect if tech is consumed', () => {
-    expect(applyPlasmaAccelerators(4, false, [makeTech('plasma-accelerators', true)])).toBe(4);
+    expect(applyPlasmaAccelerators(4, false, [makeTech('plasma-accelerators', { isConsumed: true })])).toBe(4);
   });
 });
 
@@ -208,7 +214,7 @@ describe('applyAutoDocOverride', () => {
   });
 
   it('has no effect when already consumed', () => {
-    const result = applyAutoDocOverride([makeTech('auto-doc-override', true)]);
+    const result = applyAutoDocOverride([makeTech('auto-doc-override', { isConsumed: true })]);
     expect(result.negated).toBe(false);
   });
 });

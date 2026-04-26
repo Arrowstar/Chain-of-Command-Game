@@ -5,9 +5,10 @@ interface MainMenuProps {
   onStart?: () => void;
   onStartCampaign?: () => void;
   onContinueCampaign?: () => void;
+  onStartTutorial?: () => void;
 }
 
-export default function MainMenu({ onStart, onStartCampaign, onContinueCampaign }: MainMenuProps) {
+export default function MainMenu({ onStart, onStartCampaign, onContinueCampaign, onStartTutorial }: MainMenuProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -54,6 +55,21 @@ export default function MainMenu({ onStart, onStartCampaign, onContinueCampaign 
             data-testid="start-scenario-btn"
           >
             START SKIRMISH
+          </button>
+
+          <button
+            className="btn"
+            style={{
+              fontSize: '1.2rem',
+              padding: 'var(--space-md)',
+              borderColor: 'rgba(0, 220, 180, 0.55)',
+              background: 'rgba(0, 220, 180, 0.08)',
+              color: 'var(--color-holo-cyan)',
+            }}
+            onClick={onStartTutorial}
+            data-testid="start-tutorial-btn"
+          >
+            COMBAT TUTORIAL
           </button>
           
           <button 

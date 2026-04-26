@@ -1,6 +1,6 @@
 import React, { useState, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import type { ExperimentalTech } from '../types/campaignTypes';
+import type { ExperimentalTech } from '../../types/campaignTypes';
 
 interface Props {
   tech: ExperimentalTech;

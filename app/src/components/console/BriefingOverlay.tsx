@@ -1,5 +1,6 @@
 import React from 'react';
 import { useGameStore } from '../../store/useGameStore';
+import { useTutorialStore } from '../../store/useTutorialStore';
 import CombatScenarioProgressTracker from '../combat/CombatScenarioProgressTracker';
 import EnemyTacticPanel from './EnemyTacticPanel';
 
@@ -9,6 +10,7 @@ export default function BriefingOverlay() {
   const roeOverridden = useGameStore(s => s.roeOverridden);
   const overrideRoE = useGameStore(s => s.overrideRoE);
   const advancePhase = useGameStore(s => s.advancePhase);
+  const tutorialActive = useTutorialStore(s => s.isActive);
 
   return (
     <div style={{
@@ -17,12 +19,14 @@ export default function BriefingOverlay() {
       backgroundColor: 'rgba(0, 10, 20, 0.95)',
       display: 'flex',
       flexDirection: 'column',
-      justifyContent: 'center',
+      justifyContent: tutorialActive ? 'flex-start' : 'center',
       alignItems: 'center',
       zIndex: 100,
       padding: 'var(--space-xl)',
+      paddingTop: tutorialActive ? '40px' : 'var(--space-xl)',
+      overflowY: 'auto',
     }}>
-      <div className="panel panel--glow" style={{ width: '800px', maxWidth: '90vw', padding: 'var(--space-xl)' }}>
+      <div id="briefing-overlay" className="panel panel--glow" style={{ width: '800px', maxWidth: '90vw', padding: 'var(--space-xl)' }}>
         <h1 style={{ color: 'var(--color-holo-cyan)', textAlign: 'center', marginBottom: 'var(--space-md)' }}>
           ROUND {round} - INTELLIGENCE BRIEFING
         </h1>

@@ -516,17 +516,27 @@ h4 { font-size: 1rem;   font-weight: 500; }
   pointer-events: none;
 }
 
-.fleet-status-rail {
+.fleet-status-rail-overlay {
+  position: absolute;
+  inset: 0;
   pointer-events: none;
+  z-index: 10;
   display: flex;
+  justify-content: space-between;
+  padding: 80px 16px 0 52px;
+}
+
+.fleet-status-side-rail {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
   gap: 10px;
-  overflow-x: auto;
-  padding-bottom: 6px;
-  max-width: min(980px, calc(100vw - 360px));
+  padding: 0 4px 16px 0;
 }
 
 .fleet-status-card {
-  flex: 0 0 240px;
+  width: 240px;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -842,8 +852,12 @@ h4 { font-size: 1rem;   font-weight: 500; }
     justify-content: flex-start;
   }
 
-  .fleet-status-rail {
-    max-width: calc(100vw - 32px);
+  .fleet-status-rail-overlay {
+    padding: 80px 8px 8px 52px;
+  }
+
+  .fleet-status-card {
+    width: 200px;
   }
 }
 

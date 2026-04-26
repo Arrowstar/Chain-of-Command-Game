@@ -96,6 +96,7 @@ export default function OfficerStationPanel({ officerState }: OfficerStationPane
     <div 
       className={`panel ${officerState.isLocked ? 'panel--danger' : 'panel--raised'}`} 
       style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}
+      id={`officer-station-${officerState.station}`}
       data-testid={`officer-station-${officerState.station}`}
     >
       {/* Header */}

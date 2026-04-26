@@ -403,20 +403,7 @@ export default function SectorMapView() {
               ? `${selectablePaths.length} JUMP COORDINATE${selectablePaths.length > 1 ? 'S' : ''} AVAILABLE`
               : 'AWAITING NAVIGATION ORDER'}
           </div>
-          <FleetStatusRail
-            players={persistedPlayers}
-            ships={persistedShips}
-            officerDataMap={officerDataMap}
-          />
-        </div>
-        {/* Legend */}
-        <div className="sector-map-legend">
-          {Object.entries(NODE_LABELS).map(([type, label]) => (
-            <div key={type} className="legend-item">
-              <div className="legend-dot" style={{ background: NODE_COLORS[type] }} />
-              <span>{label}</span>
-            </div>
-          ))}
+
         </div>
       </div>
 
@@ -470,6 +457,36 @@ export default function SectorMapView() {
         </div>
       </div>
 
+      {/* ── Fleet Status Side Rails ── */}
+      <div className="fleet-status-rail-overlay" data-testid="fleet-status-rail">
+        <div className="fleet-status-side-rail fleet-status-side-rail--left">
+          {persistedPlayers.slice(0, 2).map(player => {
+            const ship = persistedShips.find(candidate => candidate.id === player.shipId);
+            return (
+              <FleetStatusCard
+                key={player.id}
+                player={player}
+                ship={ship}
+                officerDataMap={officerDataMap}
+              />
+            );
+          })}
+        </div>
+        <div className="fleet-status-side-rail fleet-status-side-rail--right">
+          {persistedPlayers.slice(2, 4).map(player => {
+            const ship = persistedShips.find(candidate => candidate.id === player.shipId);
+            return (
+              <FleetStatusCard
+                key={player.id}
+                player={player}
+                ship={ship}
+                officerDataMap={officerDataMap}
+              />
+            );
+          })}
+        </div>
+      </div>
+
       {/* ── Tooltip ── */}
       {tooltip.visible && tooltip.node && (
         <div
@@ -479,34 +496,6 @@ export default function SectorMapView() {
           <TooltipContent node={tooltip.node} campaign={campaign} />
         </div>
       )}
-    </div>
-  );
-}
-
-function FleetStatusRail({
-  players,
-  ships,
-  officerDataMap,
-}: {
-  players: PlayerState[];
-  ships: ShipState[];
-  officerDataMap: Record<string, OfficerData>;
-}) {
-  if (players.length === 0) return null;
-
-  return (
-    <div className="fleet-status-rail" data-testid="fleet-status-rail">
-      {players.map(player => {
-        const ship = ships.find(candidate => candidate.id === player.shipId);
-        return (
-          <FleetStatusCard
-            key={player.id}
-            player={player}
-            ship={ship}
-            officerDataMap={officerDataMap}
-          />
-        );
-      })}
     </div>
   );
 }

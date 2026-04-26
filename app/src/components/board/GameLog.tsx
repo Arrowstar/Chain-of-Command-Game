@@ -241,6 +241,7 @@ export default function GameLog() {
     <>
       {/* ── Always-visible left tab ── */}
       <div
+        id="game-log-tab"
         className={`game-log-tab ${unread > 0 ? 'has-unread' : ''}`}
         onClick={toggleGameLog}
         title="Toggle Game Log"

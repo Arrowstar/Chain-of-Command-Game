@@ -12,7 +12,9 @@ import BriefingOverlay from './BriefingOverlay';
 import EnemyTacticPanel from './EnemyTacticPanel';
 import CombatScenarioProgressTracker from '../combat/CombatScenarioProgressTracker';
 import TechBadge from '../campaign/TechBadge';
+import TutorialOverlay from '../tutorial/TutorialOverlay';
 import { useGameStore } from '../../store/useGameStore';
+import { useTutorialStore } from '../../store/useTutorialStore';
 import { getOfficerById } from '../../data/officers';
 import type { QueuedAction, OfficerStation } from '../../types/game';
 
@@ -30,6 +32,7 @@ export default function GameScreen() {
   const phase = useGameStore(s => s.phase);
   const currentTactic = useGameStore(s => s.currentTactic);
   const experimentalTech = useGameStore(s => s.experimentalTech);
+  const tutorialActive = useTutorialStore(s => s.isActive);
 
   const [pendingActionDrop, setPendingActionDrop] = React.useState<{ actionDef: any; ctCost: number; stressCost: number } | null>(null);
   const [showScenarioTracker, setShowScenarioTracker] = React.useState(false);
@@ -112,6 +115,7 @@ export default function GameScreen() {
       {/* Game-wide overlays */}
       {phase === 'briefing' && <BriefingOverlay />}
       <GameLog />
+      {tutorialActive && <TutorialOverlay />}
 
       {/* Debug Menu */}
       <DebugMenu onAutoWin={debugAutoWin} />
@@ -142,6 +146,7 @@ export default function GameScreen() {
 
       {phase !== 'briefing' && (
         <div
+          id="top-center-buttons"
           style={{
             position: 'fixed',
             top: 8,
@@ -247,7 +252,7 @@ export default function GameScreen() {
       )}
 
       {/* Left Interface: Holo-table (PixiJS) */}
-      <div style={{ width: 'var(--holotable-width)', position: 'relative', borderRight: '1px solid var(--color-border)' }}>
+      <div id="hex-map-container" style={{ width: 'var(--holotable-width)', position: 'relative', borderRight: '1px solid var(--color-border)' }}>
         <HexMap />
       </div>
 
@@ -267,11 +272,13 @@ export default function GameScreen() {
         {phase === 'execution' ? (
           <>
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <div style={{ width: '280px', flexShrink: 0 }}>
+              <div id="fleet-assets-panel" style={{ width: '280px', flexShrink: 0 }}>
                 <FleetAssetsPanel />
               </div>
             </div>
-            <ExecutionPanel />
+            <div id="execution-panel">
+              <ExecutionPanel />
+            </div>
           </>
         ) : phase === 'setup' && deploymentMode ? (
           <DeploymentPanel
@@ -286,10 +293,10 @@ export default function GameScreen() {
           <DndContext onDragEnd={handleDragEnd}>
             {/* Top: Fleet Info & Captain's Pool */}
             <div style={{ display: 'flex', gap: 'var(--space-md)' }}>
-              <div style={{ flex: 1 }}>
+              <div id="captain-hand" style={{ flex: 1 }}>
                 <CaptainHand />
               </div>
-              <div style={{ width: '280px', flexShrink: 0 }}>
+              <div id="fleet-assets-panel" style={{ width: '280px', flexShrink: 0 }}>
                 <FleetAssetsPanel />
               </div>
             </div>
