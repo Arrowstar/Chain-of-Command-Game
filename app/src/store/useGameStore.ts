@@ -5,7 +5,7 @@ import type {
   HexCoord, TerrainType, LogEntry, QueuedAction, OfficerStation, FighterToken, TorpedoToken, ShieldState, HexFacing, ObjectiveMarkerState, DeploymentBounds, TacticHazardState,
   PendingTargetingPackage, TargetingPackageMode,
 } from '../types/game';
-import { ShipSize, isSmallCraftSize } from '../types/game';
+import { ShipSize, isSmallCraftSize, isCapitalShipSize } from '../types/game';
 import { getNextPhase, checkGameOverConditions, createLogEntry, getShipSizeForStep, isInBreakoutZone } from '../engine/GameStateMachine';
 import { createShuffledTacticDeck, drawTacticCard } from '../data/tacticDeck';
 import { drawRoECard, getRoECardById } from '../data/roeDeck';
@@ -329,10 +329,10 @@ function buildMinefieldHazards(
   [...enemyShips, ...playerShips].filter(ship => !ship.isDestroyed).forEach(ship => occupiedKeys.add(hexKey(ship.position)));
   objectiveMarkers.filter(marker => !marker.isDestroyed && !marker.isCollected).forEach(marker => occupiedKeys.add(hexKey(marker.position)));
 
-  const capitalShips = enemyShips.filter(ship => {
-    if (ship.isDestroyed || ship.isAllied) return false;
-    const adversary = getAdversaryById(ship.adversaryId);
-    return adversary?.size === 'medium' || adversary?.size === 'large';
+  const capitalShips = playerShips.filter(ship => {
+    if (ship.isDestroyed) return false;
+    const chassis = getChassisById(ship.chassisId);
+    return isCapitalShipSize(chassis?.size);
   });
 
   const candidates = capitalShips
@@ -355,7 +355,7 @@ function buildMinefieldHazards(
     name: 'Calibrated Mine',
     position,
     damage,
-    expiresAfterRound: round,
+    expiresAfterRound: Infinity,
   }));
 }
 

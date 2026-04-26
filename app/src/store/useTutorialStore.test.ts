@@ -194,6 +194,8 @@ describe('useTutorialStore — script coverage', () => {
       'officer-station-sensors',
       'execute-button',
       'briefing-overlay',
+      'top-center-buttons',
+      'game-log-tab',
     ]);
     const { steps } = useTutorialStore.getState();
     steps.forEach((step, i) => {

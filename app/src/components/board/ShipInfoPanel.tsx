@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import type { EnemyShipState, FighterToken, HexCoord, ObjectiveMarkerState, ShipArc, ShipState, TerrainType, TorpedoToken } from '../../types/game';
+import type { EnemyShipState, FighterToken, HexCoord, ObjectiveMarkerState, ShipArc, ShipState, TacticHazardState, TerrainType, TorpedoToken } from '../../types/game';
 import { getWeaponById } from '../../data/weapons';
 import { getChassisById } from '../../data/shipChassis';
 import { getAdversaryById } from '../../data/adversaries';
@@ -156,7 +156,8 @@ export type MapHoverTarget =
   | { kind: 'terrain'; terrainType: TerrainType; coord: HexCoord }
   | { kind: 'objective'; marker: ObjectiveMarkerState }
   | { kind: 'fighter'; fighter: FighterToken; stackCount?: number }
-  | { kind: 'torpedo'; torpedo: TorpedoToken };
+  | { kind: 'torpedo'; torpedo: TorpedoToken }
+  | { kind: 'hazard'; hazard: TacticHazardState };
 
 interface Props {
   target: MapHoverTarget | null;
@@ -214,6 +215,7 @@ export default function ShipInfoPanel({ target, position }: Props) {
       {target.kind === 'objective' && <ObjectiveTooltipContent marker={target.marker} />}
       {target.kind === 'fighter' && <FighterTooltipContent fighter={target.fighter} stackCount={target.stackCount ?? 1} />}
       {target.kind === 'torpedo' && <TorpedoTooltipContent torpedo={target.torpedo} />}
+      {target.kind === 'hazard' && <HazardTooltipContent hazard={target.hazard} />}
     </div>
   );
 }
@@ -458,6 +460,32 @@ function TorpedoTooltipContent({ torpedo }: { torpedo: TorpedoToken }) {
         <StatCard label="Hull" value={`${torpedo.currentHull} / ${torpedo.maxHull}`} color="var(--color-holo-green)" />
         <StatCard label="Speed" value={String(torpedo.speed)} />
         <StatCard label="Evasion" value={String(torpedo.baseEvasion)} />
+      </div>
+    </>
+  );
+}
+
+function HazardTooltipContent({ hazard }: { hazard: TacticHazardState }) {
+  return (
+    <>
+      <div style={{ marginBottom: 'var(--space-sm)' }}>
+        <div className="label" style={{ color: 'var(--color-hostile-red)' }}>Tactic Hazard</div>
+        <h3 style={{ margin: '4px 0 2px', color: 'var(--color-hostile-red)' }}>{hazard.name}</h3>
+        <div className="label" style={{ color: 'var(--color-text-dim)' }}>
+          Hex {hazard.position.q}, {hazard.position.r}
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-sm)' }}>
+        <StatCard label="Hull Damage" value={`${hazard.damage}`} color="var(--color-hostile-red)" />
+        <StatCard label="Trigger" value="Move through" />
+      </div>
+
+      <div className="panel panel--raised" style={{ padding: 'var(--space-sm)', marginTop: 'var(--space-sm)' }}>
+        <div className="label" style={{ marginBottom: '4px' }}>Effect</div>
+        <div style={{ color: 'var(--color-text-secondary)', lineHeight: 1.4, fontSize: '0.82rem' }}>
+          The first ship to move through this hex takes {hazard.damage} unblockable Hull damage. Expires after Round {hazard.expiresAfterRound}.
+        </div>
       </div>
     </>
   );

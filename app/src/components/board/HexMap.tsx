@@ -1139,6 +1139,17 @@ export default function HexMap() {
       }
     }
 
+    for (const hazard of tacticHazards) {
+      const center = hexToPixel(hazard.position);
+      if (Math.hypot(worldX - center.x, worldY - center.y) <= 18) {
+        return {
+          hex: hoveredHexCoord,
+          target: { kind: 'hazard', hazard } satisfies MapHoverTarget,
+          position: getTooltipPosition(screenX, screenY, bounds),
+        };
+      }
+    }
+
     const hoveredFighters = fighterTokens.filter(token => !token.isDestroyed && hexKey(token.position) === hoveredKey);
     if (hoveredFighters.length > 0) {
       return {
