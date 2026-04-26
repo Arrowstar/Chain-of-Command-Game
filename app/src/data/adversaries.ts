@@ -3,7 +3,7 @@ import type { AdversaryData } from '../types/game';
 export const ADVERSARIES: AdversaryData[] = [
   {
     id: 'hunter-killer',
-    name: 'Hegemony Hunter-Killer (Frigate)',
+    name: 'Hegemony Hunter-Killer',
     size: 'small',
     hull: 6,
     shieldsPerSector: 3,
@@ -20,7 +20,7 @@ export const ADVERSARIES: AdversaryData[] = [
   },
   {
     id: 'monitor',
-    name: 'Hegemony Monitor (Artillery Cruiser)',
+    name: 'Hegemony Monitor',
     size: 'medium',
     hull: 12,
     shieldsPerSector: 5,
@@ -36,7 +36,7 @@ export const ADVERSARIES: AdversaryData[] = [
   },
   {
     id: 'carrier',
-    name: 'Hegemony Carrier (Capital Ship)',
+    name: 'Hegemony Carrier',
     size: 'large',
     hull: 18,
     shieldsPerSector: 6,
@@ -52,7 +52,7 @@ export const ADVERSARIES: AdversaryData[] = [
   },
   {
     id: 'strike-fighter',
-    name: 'Hegemony Strike Fighter (Small Craft)',
+    name: 'Hegemony Strike Fighter',
     size: 'fighter',
     hull: 1,
     shieldsPerSector: 0,
@@ -68,7 +68,7 @@ export const ADVERSARIES: AdversaryData[] = [
   },
   {
     id: 'hegemony-corvette',
-    name: 'Hegemony Corvette (Fast Flanker)',
+    name: 'Hegemony Corvette',
     size: 'small',
     hull: 8,
     shieldsPerSector: 2,
@@ -85,7 +85,7 @@ export const ADVERSARIES: AdversaryData[] = [
   },
   {
     id: 'hegemony-dreadnought',
-    name: 'Hegemony Dreadnought (Boss)',
+    name: 'Hegemony Dreadnought',
     size: 'large',
     hull: 30,
     shieldsPerSector: 8,
@@ -101,7 +101,7 @@ export const ADVERSARIES: AdversaryData[] = [
   },
   {
     id: 'ai-minotaur',
-    name: 'Minotaur Class (AI)',
+    name: 'Minotaur Class',
     size: 'large',
     hull: 24,
     shieldsPerSector: 8,
@@ -117,7 +117,7 @@ export const ADVERSARIES: AdversaryData[] = [
   },
   {
     id: 'ai-wraith',
-    name: 'Wraith Class (AI)',
+    name: 'Wraith Class',
     size: 'small',
     hull: 6,
     shieldsPerSector: 2,
@@ -134,7 +134,7 @@ export const ADVERSARIES: AdversaryData[] = [
   },
   {
     id: 'ai-paladin',
-    name: 'Paladin Class (AI)',
+    name: 'Paladin Class',
     size: 'medium',
     hull: 18,
     shieldsPerSector: 6,
@@ -150,7 +150,7 @@ export const ADVERSARIES: AdversaryData[] = [
   },
   {
     id: 'ai-aegis',
-    name: 'Aegis Class (AI)',
+    name: 'Aegis Class',
     size: 'large',
     hull: 16,
     shieldsPerSector: 5,
