@@ -18,6 +18,7 @@ export const EXPERIMENTAL_TECH: ExperimentalTech[] = [
     isConsumable: false,
     isConsumed: false,
     rarity: 'common',
+    imagePath: '/assets/experimental_tech/plasma_accelerator.png',
   },
   {
     id: 'void-glass-lenses',
@@ -28,6 +29,7 @@ export const EXPERIMENTAL_TECH: ExperimentalTech[] = [
     isConsumable: false,
     isConsumed: false,
     rarity: 'common',
+    imagePath: '/assets/experimental_tech/void-glass-lenses.png',
   },
   {
     id: 'kinetic-siphon',
@@ -38,6 +40,7 @@ export const EXPERIMENTAL_TECH: ExperimentalTech[] = [
     isConsumable: false,
     isConsumed: false,
     rarity: 'common',
+    imagePath: '/assets/experimental_tech/kinetic-siphon.png',
   },
   {
     id: 'tachyon-targeting-matrix',
@@ -48,6 +51,7 @@ export const EXPERIMENTAL_TECH: ExperimentalTech[] = [
     isConsumable: false,
     isConsumed: false,
     rarity: 'rare',
+    imagePath: '/assets/experimental_tech/tachyon-targeting-matrix.png',
   },
 
   // ── 2. Engineering & Defensive Tech ──────────────────────────
@@ -61,6 +65,7 @@ export const EXPERIMENTAL_TECH: ExperimentalTech[] = [
     isConsumable: false,
     isConsumed: false,
     rarity: 'common',
+    imagePath: '/assets/experimental_tech/Inertial-Dampeners.png',
   },
   {
     id: 'hard-light-plating',
@@ -71,6 +76,7 @@ export const EXPERIMENTAL_TECH: ExperimentalTech[] = [
     isConsumable: false,
     isConsumed: false,
     rarity: 'common',
+    imagePath: '/assets/experimental_tech/Hard-Light-Plating.png',
   },
   {
     id: 'recycled-coolant',
@@ -81,6 +87,7 @@ export const EXPERIMENTAL_TECH: ExperimentalTech[] = [
     isConsumable: false,
     isConsumed: false,
     rarity: 'common',
+    imagePath: '/assets/experimental_tech/Recycled-Coolant.png',
   },
   {
     id: 'auto-doc-override',
@@ -91,6 +98,7 @@ export const EXPERIMENTAL_TECH: ExperimentalTech[] = [
     isConsumable: true,
     isConsumed: false,
     rarity: 'common',
+    imagePath: '/assets/experimental_tech/Auto-Doc-Override.png',
   },
 
   // ── 3. Command & Logistics ────────────────────────────────────
@@ -104,6 +112,7 @@ export const EXPERIMENTAL_TECH: ExperimentalTech[] = [
     isConsumable: false,
     isConsumed: false,
     rarity: 'common',
+    imagePath: '/assets/experimental_tech/The-Admirals-Black-Box.png',
   },
   {
     id: 'salvager-drones',
@@ -114,6 +123,7 @@ export const EXPERIMENTAL_TECH: ExperimentalTech[] = [
     isConsumable: false,
     isConsumed: false,
     rarity: 'common',
+    imagePath: '/assets/experimental_tech/Salvager-Drones.png',
   },
   {
     id: 'smugglers-manifest',
@@ -124,6 +134,7 @@ export const EXPERIMENTAL_TECH: ExperimentalTech[] = [
     isConsumable: false,
     isConsumed: false,
     rarity: 'common',
+    imagePath: '/assets/experimental_tech/Smugglers-Manifest.png',
   },
   {
     id: 'hegemony-encryption-key',
@@ -134,6 +145,7 @@ export const EXPERIMENTAL_TECH: ExperimentalTech[] = [
     isConsumable: false,
     isConsumed: false,
     rarity: 'rare',
+    imagePath: '/assets/experimental_tech/Hegemony-Encryption-Key.png',
   },
 
   // ── 4. Crew & Psychology ──────────────────────────────────────
@@ -147,6 +159,7 @@ export const EXPERIMENTAL_TECH: ExperimentalTech[] = [
     isConsumable: false,
     isConsumed: false,
     rarity: 'common',
+    imagePath: '/assets/experimental_tech/Combat-Stim-Injectors.png',
   },
   {
     id: 'astro-caf-synthesizer',
@@ -157,6 +170,7 @@ export const EXPERIMENTAL_TECH: ExperimentalTech[] = [
     isConsumable: false,
     isConsumed: false,
     rarity: 'common',
+    imagePath: '/assets/experimental_tech/Astro-Caf-Synthesizer.png',
   },
   {
     id: 'neural-link-uplink',
@@ -167,6 +181,7 @@ export const EXPERIMENTAL_TECH: ExperimentalTech[] = [
     isConsumable: false,
     isConsumed: false,
     rarity: 'rare',
+    imagePath: '/assets/experimental_tech/Neural-Link-Uplink.png',
   },
 ];
 

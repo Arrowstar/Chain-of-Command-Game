@@ -63,6 +63,7 @@ export interface ExperimentalTech {
   isConsumable: boolean;  // true only for Auto-Doc Override
   isConsumed: boolean;    // runtime state
   rarity: TechRarity;
+  imagePath: string;      // path to the tech's icon image, e.g. /assets/experimental_tech/...
 }
 
 // ─── Event Node Types ─────────────────────────────────────────────

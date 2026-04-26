@@ -11,6 +11,7 @@ import FleetAssetsPanel from './FleetAssetsPanel';
 import BriefingOverlay from './BriefingOverlay';
 import EnemyTacticPanel from './EnemyTacticPanel';
 import CombatScenarioProgressTracker from '../combat/CombatScenarioProgressTracker';
+import TechBadge from '../campaign/TechBadge';
 import { useGameStore } from '../../store/useGameStore';
 import { getOfficerById } from '../../data/officers';
 import type { QueuedAction, OfficerStation } from '../../types/game';
@@ -28,6 +29,7 @@ export default function GameScreen() {
   const debugAutoWin = useGameStore(s => s.debugAutoWin);
   const phase = useGameStore(s => s.phase);
   const currentTactic = useGameStore(s => s.currentTactic);
+  const experimentalTech = useGameStore(s => s.experimentalTech);
 
   const [pendingActionDrop, setPendingActionDrop] = React.useState<{ actionDef: any; ctCost: number; stressCost: number } | null>(null);
   const [showScenarioTracker, setShowScenarioTracker] = React.useState(false);
@@ -113,6 +115,30 @@ export default function GameScreen() {
 
       {/* Debug Menu */}
       <DebugMenu onAutoWin={debugAutoWin} />
+
+      {phase !== 'briefing' && experimentalTech.length > 0 && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 8,
+            left: 8,
+            zIndex: 180,
+            pointerEvents: 'none',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              gap: '6px',
+              pointerEvents: 'auto',
+            }}
+          >
+            {experimentalTech.map(tech => (
+              <TechBadge key={tech.id} tech={tech} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {phase !== 'briefing' && (
         <div

@@ -6,6 +6,7 @@ import NodeResolutionModal from './NodeResolutionModal';
 import PostCombatSummary from './PostCombatSummary';
 import CampaignLog from './CampaignLog';
 import FleetFavorConversionPanel from './FleetFavorConversionPanel';
+import TechBadge from './TechBadge';
 import { CampaignSaveManager } from '../../utils/CampaignSaveManager';
 
 interface Props {
@@ -39,9 +40,7 @@ export default function CampaignScreen({ onStartCombat }: Props) {
         
         <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
           {campaign.experimentalTech.map(tech => (
-            <div key={tech.id} className="label" style={{ border: '1px solid var(--color-border)', padding: '2px 6px', color: 'var(--color-holo-cyan)' }} title={tech.effect}>
-              {tech.name}
-            </div>
+            <TechBadge key={tech.id} tech={tech} />
           ))}
           {campaign.pendingEconomicBuffs.nextStoreDiscountPercent > 0 && (
             <div className="label" style={{ border: '1px solid var(--color-border)', padding: '2px 6px', color: 'var(--color-alert-amber)' }}>
