@@ -402,6 +402,11 @@ h4 { font-size: 1rem;   font-weight: 500; }
   100% { transform: scale(1) translateX(-50%);   opacity: 1; }
 }
 
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
 .animate-fadeIn    { animation: fadeIn 0.3s ease-out; }
 .animate-slideRight { animation: slideInRight 0.3s ease-out; }
 .animate-slideUp   { animation: slideInUp 0.3s ease-out; }

@@ -70,6 +70,7 @@ describe('useCampaignStore event resolution', () => {
         victory: null,
         difficulty: 'normal',
         dpBudget: 100,
+        pendingStoryId: null,
       },
       sectorMap: {
         nodes: [{ id: 'node-event', type: NodeType.Event, layer: 1, x: 0, y: 0, eventId: 'event-21' }],
@@ -151,7 +152,9 @@ describe('useCampaignStore event resolution', () => {
 
     expect(state.campaign?.currentSector).toBe(2);
     expect(state.campaign?.currentNodeId).toBe('start-0');
-    expect(state.campaign?.campaignPhase).toBe('sectorMap');
+    // completeBossNode now routes through 'story' before returning to sectorMap
+    expect(state.campaign?.campaignPhase).toBe('story');
+    expect(state.campaign?.pendingStoryId).toBe('sector-2');
     expect(state.campaign?.sectorMapSeed).not.toBe(oldSeed);
     expect(state.sectorMap).toBeDefined();
     expect(state.sectorMap?.nodes[0].id).toBe('start-0');
@@ -172,9 +175,11 @@ describe('useCampaignStore event resolution', () => {
     useCampaignStore.getState().completeBossNode();
     const state = useCampaignStore.getState();
 
-    expect(state.campaign?.isGameOver).toBe(true);
-    expect(state.campaign?.victory).toBe(true);
-    expect(state.campaign?.campaignPhase).toBe('gameOver');
+    expect(state.campaign?.isGameOver).toBe(false);
+    expect(state.campaign?.victory).toBe(null);
+    // completeBossNode now routes through 'story' before declaring gameOver
+    expect(state.campaign?.campaignPhase).toBe('story');
+    expect(state.campaign?.pendingStoryId).toBe('victory');
   });
 
   it('correctly identifies a Boss node for transition logic', () => {

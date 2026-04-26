@@ -7,6 +7,7 @@ import PostCombatSummary from './PostCombatSummary';
 import CampaignLog from './CampaignLog';
 import FleetFavorConversionPanel from './FleetFavorConversionPanel';
 import TechBadge from './TechBadge';
+import CampaignStoryScreen from './CampaignStoryScreen';
 import { CampaignSaveManager } from '../../utils/CampaignSaveManager';
 
 interface Props {
@@ -87,6 +88,7 @@ export default function CampaignScreen({ onStartCombat }: Props) {
 
       {/* Main Content Area */}
       <main style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+        {campaign.campaignPhase === 'story' && <CampaignStoryScreen />}
         <CampaignLog />
         {campaign.campaignPhase === 'sectorMap' && showConversionPanel && (
           <div style={{ position: 'absolute', top: 'var(--space-md)', right: 'var(--space-md)', width: '360px', maxWidth: 'calc(100vw - 32px)', zIndex: 12 }}>

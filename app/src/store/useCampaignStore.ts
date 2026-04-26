@@ -10,6 +10,7 @@ import type {
   EventResolution,
   CampaignLogEntry,
   CampaignLogType,
+  StoryBeatId,
 } from '../types/campaignTypes';
 import type { OfficerData, ShipState, PlayerState } from '../types/game';
 import { generateSectorMap, NodeType, type SectorMap } from '../engine/mapGenerator';
@@ -112,6 +113,10 @@ interface CampaignStore {
   // ── Sector Boss ────────────────────────────────────────────────
   completeBossNode: () => void;
 
+  // ── Story Beats ────────────────────────────────────────────────
+  /** Dismiss the currently-displayed story screen and advance to the next phase */
+  dismissStory: () => void;
+
   // ── Save/Load ──────────────────────────────────────────────────
   loadCampaignState: (stateToLoad: Partial<CampaignStore>) => void;
 
@@ -144,7 +149,8 @@ function makeCampaignState(params: {
     requisitionPoints: 0,
     fleetFavor: 0,
     experimentalTech: [],
-    campaignPhase: 'sectorMap',
+    campaignPhase: 'story',
+    pendingStoryId: 'sector-1',
     fleetAdmiralPlayerId: params.fleetAdmiralPlayerId,
     nextCombatModifiers: null,
     canSkipNode: false,
@@ -1339,7 +1345,7 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
     if (transition.campaignVictory) {
       set(state => ({
         campaign: state.campaign
-          ? { ...state.campaign, isGameOver: true, victory: true, campaignPhase: 'gameOver' }
+          ? { ...state.campaign, campaignPhase: 'story', pendingStoryId: 'victory' }
           : null,
       }));
       get().pushCampaignLog({
@@ -1377,7 +1383,8 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
               freeRepairAtNextStation: false,
               freeRepairConsumed: false,
             },
-            campaignPhase: 'sectorMap',
+            campaignPhase: 'story',
+            pendingStoryId: `sector-${transition.newSector}` as StoryBeatId,
           }
         : null,
     }));
@@ -1392,6 +1399,36 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
         rpBonus: transition.rpBonus,
       },
     });
+  },
+
+  // ── Story Dismissal ────────────────────────────────────────────
+  dismissStory: () => {
+    const { campaign } = get();
+    if (!campaign || campaign.campaignPhase !== 'story') return;
+
+    if (campaign.pendingStoryId === 'victory') {
+      set(state => ({
+        campaign: state.campaign
+          ? { ...state.campaign, isGameOver: true, victory: true, campaignPhase: 'gameOver', pendingStoryId: null }
+          : null,
+      }));
+      get().pushCampaignLog({
+        type: 'system',
+        message: 'Campaign concluded',
+        outcome: 'Victory confirmed. Commander acknowledged final transmission.',
+      });
+    } else {
+      set(state => ({
+        campaign: state.campaign
+          ? { ...state.campaign, campaignPhase: 'sectorMap', pendingStoryId: null }
+          : null,
+      }));
+      get().pushCampaignLog({
+        type: 'system',
+        message: `Briefing acknowledged`,
+        outcome: `Commander acknowledged sector briefing. Navigation grid is now active.`,
+      });
+    }
   },
 
   // ── Ship Destruction ───────────────────────────────────────────

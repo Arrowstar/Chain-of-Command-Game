@@ -15,11 +15,14 @@ export type CampaignLogType =
 // ─── Campaign Phase ───────────────────────────────────────────────
 
 export type CampaignPhase =
+  | 'story'          // Cinematic story beat (intro, sector transitions, campaign end)
   | 'sectorMap'      // Players are choosing the next node
   | 'nodeResolution' // A node is being resolved (combat launched, event shown, etc.)
   | 'postCombat'     // At-Ease Phase: payout, trauma, damage consolidation
   | 'drydock'        // Haven node: spending RP on repairs/upgrades
   | 'gameOver';      // Run complete (victory or total wipe)
+
+export type StoryBeatId = 'sector-1' | 'sector-2' | 'sector-3' | 'victory';
 
 // ─── Combat Modifier Passthrough ─────────────────────────────────
 // Carries bonuses/penalties from Events/Elites into the next combat scenario.
@@ -344,6 +347,9 @@ export interface CampaignState {
 
   /** Max allowed DP per ship for loadouts (100-150 depending on difficulty) */
   dpBudget: number;
+
+  /** Which story beat is currently being displayed. Null when not in the 'story' phase. */
+  pendingStoryId: StoryBeatId | null;
 }
 
 export interface CampaignLogEntry {
