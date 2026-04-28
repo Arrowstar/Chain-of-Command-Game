@@ -311,6 +311,11 @@ export interface ShipState {
   warpedOut?: boolean;
   predictiveVolleyActive?: boolean;
   spoofedFireControlActive?: boolean;
+  /**
+   * Tracks number of fighters launched from each internal slot this battle.
+   * Key is the internal slot index. Only relevant for 'fighter-hangar' subsystems.
+   */
+  fighterLaunchCounts?: Record<number, number>;
 }
 
 export interface CriticalDamageCard {
@@ -354,6 +359,7 @@ export interface QueuedAction {
   stressCost: number;
   context?: Record<string, any>;    // arbitrary context like delta for speed
   resolved?: boolean;
+  subsystemSlotIndex?: number;
 }
 
 // ─── Game Phase & Round ──────────────────────────────────────────
@@ -557,6 +563,21 @@ export interface EnemyShipState {
 
 // ─── Fighter / Small Craft Tokens ────────────────────────────────
 
+export type FighterBehavior = 'attack' | 'escort' | 'flanking' | 'hit_and_run' | 'screen' | 'harass';
+
+export interface FighterClassData {
+  id: string;
+  name: string;
+  role: string;
+  hull: number;
+  speed: number;
+  baseEvasion: number;
+  weaponRangeMax: number;
+  volleyPool: DieType[];
+  behavior: FighterBehavior;
+  specialRules?: string;
+}
+
 /**
  * Represents a Strike Fighter or small craft token on the hex board.
  * Fighters have no shields, subsystems, or officers.
@@ -565,17 +586,20 @@ export interface EnemyShipState {
 export interface FighterToken {
   id: string;
   name: string;
+  classId: string;          // references FighterClassData.id
   allegiance: 'allied' | 'enemy';
   /** Which capital ship launched / spawned this fighter. */
   sourceShipId: string;
   position: HexCoord;
   facing: HexFacing;
-  currentHull: number;      // always 1 for standard fighters
+  currentHull: number;
   maxHull: number;
-  speed: number;            // hexes moved per activation (4 for standard)
-  baseEvasion: number;      // 8 for enemy, 7 for allied
-  volleyPool: DieType[];    // e.g. ['d4', 'd4', 'd4']
-  weaponRange: number;      // 1 = must be in same or adjacent hex
+  speed: number;            // hexes moved per activation
+  baseEvasion: number;      
+  volleyPool: DieType[];    
+  weaponRangeMax: number;   
+  behavior: FighterBehavior;
+  hitAndRunPhase?: 'engage' | 'retreat';
   isDestroyed: boolean;
   hasDrifted: boolean;      // reset each briefing phase
   hasActed: boolean;        // reset each briefing phase
@@ -641,6 +665,54 @@ export interface PendingTargetingPackage {
   mode: TargetingPackageMode;
 }
 
+// ─── Stations & Defense Turrets ──────────────────────────────────
+
+export interface StationData {
+  id: string;
+  name: string;
+  type: 'station' | 'turret';
+  size: ShipSize;
+  hull: number;
+  shieldsPerSector: number;
+  armorDie: DieType;
+  baseEvasion: number;
+  /** Primary weapons fire in all arcs */
+  volleyPool: DieType[];
+  weaponRangeMin: number;
+  weaponRangeMax: number;
+  /** Heavy weapons only fire in forward arcs (fore, foreStarboard, forePort) */
+  heavyVolleyPool?: DieType[];
+  heavyWeaponRangeMin?: number;
+  heavyWeaponRangeMax?: number;
+  fighterHangar?: {
+    totalFighters: number;
+    fightersPerLaunch: number;
+    fighterAllegiance: 'enemy';
+  };
+  special?: string;
+}
+
+export interface StationState {
+  id: string;
+  name: string;
+  stationId: string; // references StationData.id
+  position: HexCoord;
+  facing: HexFacing;
+  currentHull: number;
+  maxHull: number;
+  shields: ShieldState;
+  maxShieldsPerSector: number;
+  armorDie: DieType;
+  baseEvasion: number;
+  isDestroyed: boolean;
+  hasDroppedBelow50: boolean;
+  /** Whether this station has fired this round */
+  hasActed: boolean;
+  /** Remaining fighters in hangar (starts at totalFighters) */
+  remainingFighters: number;
+  criticalDamage: CriticalDamageCard[];
+}
+
 // ─── Objective Markers ────────────────────────────────────────────
 
 /** A destructible / collectable token placed on the hex map as a mission objective. */
@@ -668,6 +740,7 @@ export interface ScenarioData {
   terrain: { coord: HexCoord; type: TerrainType }[];
   playerDeployZone: HexCoord[];
   enemySpawns: { adversaryId: string; position: HexCoord; spawnRound?: number }[];
+  stationSpawns?: { stationId: string; position: HexCoord; facing?: HexFacing }[];
   objectiveMarkers?: ObjectiveMarkerState[];
   victoryCondition: string;
   defeatCondition: string;
@@ -694,6 +767,7 @@ export interface ActionDefinition {
   hideUnlessObjective?: string;
   /** Optional: Hide this action if the ship has no weapons with the 'ordnance' tag. */
   hideIfNoOrdnance?: boolean;
+  subsystemSlotIndex?: number;
 }
 
 // ─── Game Log ────────────────────────────────────────────────────

@@ -1,7 +1,8 @@
-import type { FighterToken, HexCoord, HexFacing, TerrainType, ShipState, EnemyShipState, DieType, VolleyResult } from '../../types/game';
+import type { FighterToken, TorpedoToken, HexCoord, HexFacing, TerrainType, ShipState, EnemyShipState, DieType, VolleyResult } from '../../types/game';
 import { hexDistance, hexNeighbors, hexKey, getHexFacing } from '../hexGrid';
 import { rollVolley } from '../../utils/diceRoller';
 import { determineStruckShieldSector } from '../hexGrid';
+import { getFighterClassById } from '../../data/fighters';
 
 // ═══════════════════════════════════════════════════════════════════
 // Fighter AI / Resolution Engine
@@ -131,31 +132,131 @@ export function resolveFighterMovement(
   enemyShips: EnemyShipState[],
   allFighters: FighterToken[],
   terrainMap: Map<string, TerrainType>,
+  torpedoTokens: TorpedoToken[]
 ): FighterMoveResult {
   if (fighter.hasDrifted) return { newPosition: fighter.position, moved: false, traversedHexes: [], newFacing: fighter.facing };
 
   let goalHex: HexCoord | null = null;
+  const isRetreating = fighter.behavior === 'hit_and_run' && fighter.hitAndRunPhase === 'retreat';
 
-  if (fighter.allegiance === 'allied') {
-    // Move toward assigned target, or stay put if none
-    if (!fighter.assignedTargetId) return { newPosition: fighter.position, moved: false, traversedHexes: [], newFacing: fighter.facing };
-    const target = enemyShips.find(s => s.id === fighter.assignedTargetId && !s.isDestroyed)
-      || playerShips.find(s => s.id === fighter.assignedTargetId && !s.isDestroyed)
-      || allFighters.find(f => f.id === fighter.assignedTargetId && !f.isDestroyed);
-    if (!target) return { newPosition: fighter.position, moved: false, traversedHexes: [], newFacing: fighter.facing };
-    goalHex = target.position;
+  const sourceShip = fighter.allegiance === 'allied' 
+    ? playerShips.find(s => s.id === fighter.sourceShipId)
+    : enemyShips.find(s => s.id === fighter.sourceShipId);
+
+  // Behavior-specific goal selection
+  if (isRetreating) {
+    // Retreat: Move in opposite direction from target
+    const target = fighter.assignedTargetId 
+      ? [...enemyShips, ...playerShips].find(s => s.id === fighter.assignedTargetId)
+      : null;
+    if (target) {
+      const dx = fighter.position.q - target.position.q;
+      const dr = fighter.position.r - target.position.r;
+      // Simple invert vector for goal
+      goalHex = { q: fighter.position.q + dx * 5, r: fighter.position.r + dr * 5 };
+    }
+  } else if (fighter.behavior === 'escort') {
+    // Escort: Stay near source ship
+    if (sourceShip) {
+      const dist = hexDistance(fighter.position, sourceShip.position);
+      if (dist > 1) {
+        goalHex = sourceShip.position; // Move toward source ship
+      } else {
+        // If adjacent, hold position unless enemy is in range
+        return { newPosition: fighter.position, moved: false, traversedHexes: [], newFacing: fighter.facing };
+      }
+    }
+  } else if (fighter.behavior === 'screen') {
+    // Screen: Target nearest torpedo or fighter within 2 hexes of source ship
+    if (sourceShip) {
+      const threats = [
+        ...torpedoTokens.filter(t => t.allegiance !== fighter.allegiance),
+        ...allFighters.filter(f => f.allegiance !== fighter.allegiance && !f.isDestroyed)
+      ].filter(t => hexDistance(t.position, sourceShip.position) <= 2);
+      
+      if (threats.length > 0) {
+        threats.sort((a, b) => hexDistance(fighter.position, a.position) - hexDistance(fighter.position, b.position));
+        goalHex = threats[0].position;
+      }
+    }
+  } else if (fighter.behavior === 'harass') {
+    // Harass (Sticky State): Target assigned/nearest, maintain weaponRangeMax
+    let targetShip: ShipState | EnemyShipState | undefined;
+    if (fighter.allegiance === 'allied' && fighter.assignedTargetId) {
+      targetShip = enemyShips.find(s => s.id === fighter.assignedTargetId && !s.isDestroyed);
+    } else if (fighter.allegiance === 'enemy') {
+      const livingShips = playerShips.filter(s => !s.isDestroyed);
+      if (livingShips.length > 0) {
+        livingShips.sort((a, b) => hexDistance(fighter.position, a.position) - hexDistance(fighter.position, b.position));
+        targetShip = livingShips[0];
+      }
+    }
+    
+    if (targetShip) {
+      const dist = hexDistance(fighter.position, targetShip.position);
+      if (dist > fighter.weaponRangeMax) {
+        goalHex = targetShip.position; // Move in
+      } else if (dist === 1) {
+        // Retreat away
+        const dx = fighter.position.q - targetShip.position.q;
+        const dr = fighter.position.r - targetShip.position.r;
+        goalHex = { q: fighter.position.q + dx * 5, r: fighter.position.r + dr * 5 };
+      } else {
+        // Hold position (sticky state)
+        return { newPosition: fighter.position, moved: false, traversedHexes: [], newFacing: fighter.facing };
+      }
+    }
+  } else if (fighter.behavior === 'flanking') {
+    // Flanking (Ghost Target): Target hex directly behind enemy
+    let targetShip: ShipState | EnemyShipState | undefined;
+    if (fighter.allegiance === 'allied' && fighter.assignedTargetId) {
+      targetShip = enemyShips.find(s => s.id === fighter.assignedTargetId && !s.isDestroyed);
+    } else if (fighter.allegiance === 'enemy') {
+      const livingShips = playerShips.filter(s => !s.isDestroyed);
+      if (livingShips.length > 0) {
+        livingShips.sort((a, b) => hexDistance(fighter.position, a.position) - hexDistance(fighter.position, b.position));
+        targetShip = livingShips[0];
+      }
+    }
+    
+    if (targetShip) {
+      // Hex behind the target is the opposite of its facing
+      const aftDirection = (targetShip.facing + 3) % 6;
+      // Approximation of opposite facing offset
+      const offsets = [
+        { q: -1, r: 1 }, // 0: Fore -> Aft is 3
+        { q: -1, r: 0 }, // 1: ForeStarboard -> AftPort is 4
+        { q: 0, r: -1 }, // 2: AftStarboard -> ForePort is 5
+        { q: 1, r: -1 }, // 3: Aft -> Fore is 0
+        { q: 1, r: 0 },  // 4: AftPort -> ForeStarboard is 1
+        { q: 0, r: 1 }   // 5: ForePort -> AftStarboard is 2
+      ];
+      const offset = offsets[targetShip.facing % 6] ?? { q: 0, r: 0 };
+      goalHex = { q: targetShip.position.q + offset.q, r: targetShip.position.r + offset.r };
+    }
   } else {
-    // Enemy fighters swarm toward nearest player ship or allied fighter
-    const livingShips = playerShips.filter(s => !s.isDestroyed);
-    const livingFighters = allFighters.filter(f => f.allegiance === 'allied' && !f.isDestroyed);
+    // Default Attack/Swarm behavior
+    if (fighter.allegiance === 'allied') {
+      if (!fighter.assignedTargetId) return { newPosition: fighter.position, moved: false, traversedHexes: [], newFacing: fighter.facing };
+      const target = enemyShips.find(s => s.id === fighter.assignedTargetId && !s.isDestroyed)
+        || playerShips.find(s => s.id === fighter.assignedTargetId && !s.isDestroyed)
+        || allFighters.find(f => f.id === fighter.assignedTargetId && !f.isDestroyed);
+      if (!target) return { newPosition: fighter.position, moved: false, traversedHexes: [], newFacing: fighter.facing };
+      goalHex = target.position;
+    } else {
+      const livingShips = playerShips.filter(s => !s.isDestroyed);
+      const livingFighters = allFighters.filter(f => f.allegiance === 'allied' && !f.isDestroyed);
+      if (livingShips.length === 0 && livingFighters.length === 0) return { newPosition: fighter.position, moved: false, traversedHexes: [], newFacing: fighter.facing };
 
-    if (livingShips.length === 0 && livingFighters.length === 0) return { newPosition: fighter.position, moved: false, traversedHexes: [], newFacing: fighter.facing };
+      const shipDistances = livingShips.map(s => ({ pos: s.position, dist: hexDistance(fighter.position, s.position) }));
+      const fighterDistances = livingFighters.map(f => ({ pos: f.position, dist: hexDistance(fighter.position, f.position) }));
+      const allDistances = [...shipDistances, ...fighterDistances].sort((a, b) => a.dist - b.dist);
+      goalHex = allDistances[0].pos;
+    }
+  }
 
-    const shipDistances = livingShips.map(s => ({ pos: s.position, dist: hexDistance(fighter.position, s.position) }));
-    const fighterDistances = livingFighters.map(f => ({ pos: f.position, dist: hexDistance(fighter.position, f.position) }));
-
-    const allDistances = [...shipDistances, ...fighterDistances].sort((a, b) => a.dist - b.dist);
-    goalHex = allDistances[0].pos;
+  if (!goalHex) {
+    return { newPosition: fighter.position, moved: false, traversedHexes: [], newFacing: fighter.facing };
   }
 
   const path = bfsPath(fighter.position, goalHex, fighter.speed, fighter, allFighters, terrainMap);
@@ -173,12 +274,12 @@ export function resolveFighterMovement(
 
 /**
  * Attempt to attack a target capital ship.
- * Fighter must be within `fighter.weaponRange` hexes of the target.
+ * Fighter must be within `fighter.weaponRangeMax` hexes of the target.
  * Returns null if no attack occurs (out of range / no target).
  */
 /**
  * Attempt to attack a target (Ship or another Fighter).
- * Fighter must be within `fighter.weaponRange` hexes of the target.
+ * Fighter must be within `fighter.weaponRangeMax` hexes of the target.
  * Returns null if no attack occurs (out of range / no target).
  */
 export function resolveFighterAttack(
@@ -227,7 +328,7 @@ export function resolveFighterAttack(
 
   const targetPos = shipTarget ? shipTarget.position : fighterTarget!.position;
   const dist = hexDistance(fighter.position, targetPos);
-  if (dist > fighter.weaponRange) return null;
+  if (dist > fighter.weaponRangeMax) return null;
 
   // 2. Roll Attack
   let tn = 5; // Default for fighters
@@ -236,7 +337,7 @@ export function resolveFighterAttack(
       ? (shipTarget as ShipState).baseEvasion + (shipTarget as ShipState).evasionModifiers
       : (shipTarget as EnemyShipState & { baseEvasion?: number }).baseEvasion ?? 5;
   } else if (fighterTarget) {
-    tn = fighterTarget.baseEvasion;
+    tn = Math.max(1, fighterTarget.baseEvasion - 3); // Dogfight Rule
   }
 
   const volley = rollVolley(fighter.volleyPool.map(dt => ({ type: dt as DieType, source: 'fighter' })), tn);
@@ -332,6 +433,8 @@ export function buildCarrierFighters(
     return (occupiedFighterHexes.get(key) ?? 0) < MAX_FIGHTERS_PER_HEX;
   });
 
+  const fighterClass = getFighterClassById('strike-fighter')!;
+
   const results: FighterToken[] = [];
   for (let i = 0; i < 2 && i < validHexes.length; i++) {
     const hex = validHexes[i];
@@ -341,16 +444,18 @@ export function buildCarrierFighters(
     results.push({
       id: `${idPrefix}-${i}`,
       name: `Strike Wing ${idPrefix.split('-').pop()?.toUpperCase() ?? ''}${i + 1}`,
+      classId: fighterClass.id,
       allegiance: 'enemy',
       sourceShipId: shipId,
       position: hex,
       facing: shipFacing as any,
-      currentHull: 1,
-      maxHull: 1,
-      speed: 4,
-      baseEvasion: 5,
-      volleyPool: ['d4', 'd4', 'd4'],
-      weaponRange: 1,
+      currentHull: fighterClass.hull,
+      maxHull: fighterClass.hull,
+      speed: fighterClass.speed,
+      baseEvasion: fighterClass.baseEvasion,
+      volleyPool: fighterClass.volleyPool,
+      weaponRangeMax: fighterClass.weaponRangeMax,
+      behavior: fighterClass.behavior,
       isDestroyed: false,
       hasDrifted: false,
       hasActed: false,

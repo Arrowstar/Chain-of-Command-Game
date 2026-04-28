@@ -3,7 +3,7 @@ import type {
   GamePhase, ExecutionStep, ShipState, EnemyShipState, PlayerState,
   RoECard, TacticCard, FumbleCard, CriticalDamageCard,
   HexCoord, TerrainType, LogEntry, QueuedAction, OfficerStation, FighterToken, TorpedoToken, ShieldState, HexFacing, ObjectiveMarkerState, DeploymentBounds, TacticHazardState,
-  PendingTargetingPackage, TargetingPackageMode, ShipArc,
+  PendingTargetingPackage, TargetingPackageMode, ShipArc, StationState,
 } from '../types/game';
 import { ShipSize, isSmallCraftSize, isCapitalShipSize } from '../types/game';
 import { getNextPhase, checkGameOverConditions, createLogEntry, getShipSizeForStep, isInBreakoutZone } from '../engine/GameStateMachine';
@@ -21,7 +21,10 @@ import { getChassisById } from '../data/shipChassis';
 import { getWeaponById } from '../data/weapons';
 import { useUIStore } from './useUIStore';
 import { getAdversaryById, ADVERSARIES } from '../data/adversaries';
+import { getStationById } from '../data/stations';
+import { getFighterClassById } from '../data/fighters';
 import { executeAITier } from '../engine/ai/aiTurn';
+import { executeStationTurn } from '../engine/ai/stationAI';
 import { getOfficerById } from '../data/officers';
 import { getActionById, calculateActionCosts } from '../data/actions';
 import { getSubsystemById } from '../data/subsystems';
@@ -70,6 +73,7 @@ interface GameStore {
   enemyShips: EnemyShipState[];
   fighterTokens: FighterToken[];
   torpedoTokens: TorpedoToken[];
+  stations: StationState[];
 
   terrainMap: Map<string, TerrainType>;
 
@@ -152,6 +156,7 @@ interface GameStore {
   // Ship state mutations
   updatePlayerShip: (shipId: string, updates: Partial<ShipState>) => void;
   updateEnemyShip: (shipId: string, updates: Partial<EnemyShipState>) => void;
+  updateStation: (stationId: string, updates: Partial<StationState>) => void;
 
   // Fleet Favor
   adjustFleetFavor: (delta: number) => void;
@@ -211,6 +216,7 @@ export interface GameInitConfig {
   players: PlayerState[];
   playerShips: ShipState[];
   enemyShips: EnemyShipState[];
+  stations?: StationState[];
   terrain: { coord: HexCoord; type: TerrainType }[];
   startingRoEId?: string;  // optional override for testing a specific card
   objectiveMarkers?: ObjectiveMarkerState[];
@@ -225,6 +231,8 @@ export interface GameInitConfig {
   combatModifiers?: CombatModifiers | null;
   /** Delayed enemy spawns loaded from ScenarioData.enemySpawns where spawnRound is set. */
   pendingSpawns?: { adversaryId: string; position: HexCoord; spawnRound: number }[];
+  /** Station spawns loaded from ScenarioData.stationSpawns. */
+  stationSpawns?: { stationId: string; position: HexCoord; facing?: HexFacing }[];
 }
 
 function hasScar(ship: Pick<ShipState, 'scars'>, scarId: string): boolean {
@@ -461,6 +469,7 @@ function canSpawnDebrisAtHex(
     fighterTokens: FighterToken[];
     torpedoTokens: TorpedoToken[];
     objectiveMarkers: ObjectiveMarkerState[];
+    stations?: StationState[];
   },
   coord: HexCoord,
   destroyedShipId: string,
@@ -481,7 +490,12 @@ function canSpawnDebrisAtHex(
   const occupiedByObjective = state.objectiveMarkers.some(
     marker => !marker.isDestroyed && !marker.isCollected && hexKey(marker.position) === key,
   );
-  return !occupiedByObjective;
+  if (occupiedByObjective) return false;
+
+  const occupiedByStation = (state.stations ?? []).some(
+    station => !station.isDestroyed && hexKey(station.position) === key,
+  );
+  return !occupiedByStation;
 }
 
 function addDebrisFieldAtHex(state: { terrainMap: Map<string, TerrainType> }, coord: HexCoord) {
@@ -506,6 +520,7 @@ function isHexOpenAndUnoccupied(
     fighterTokens: FighterToken[];
     torpedoTokens: TorpedoToken[];
     objectiveMarkers: ObjectiveMarkerState[];
+    stations?: StationState[];
   },
   coord: HexCoord,
   shipIdToIgnore?: string,
@@ -516,7 +531,8 @@ function isHexOpenAndUnoccupied(
   if (state.enemyShips.some(ship => ship.id !== shipIdToIgnore && !ship.isDestroyed && hexKey(ship.position) === key)) return false;
   if (state.fighterTokens.some(token => !token.isDestroyed && hexKey(token.position) === key)) return false;
   if (state.torpedoTokens.some(token => !token.isDestroyed && hexKey(token.position) === key)) return false;
-  return !state.objectiveMarkers.some(marker => !marker.isDestroyed && !marker.isCollected && hexKey(marker.position) === key);
+  if (state.objectiveMarkers.some(marker => !marker.isDestroyed && !marker.isCollected && hexKey(marker.position) === key)) return false;
+  return !(state.stations ?? []).some(station => !station.isDestroyed && hexKey(station.position) === key);
 }
 
 function createDeploymentFormation(
@@ -572,6 +588,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   enemyShips: [],
   fighterTokens: [],
   torpedoTokens: [],
+  stations: [],
 
   terrainMap: new Map(),
 
@@ -692,6 +709,40 @@ export const useGameStore = create<GameStore>((set, get) => ({
         : ship
     ));
 
+    // Initialize stations from config (either direct StationState[] or stationSpawns)
+    const initialStations: StationState[] = config.stations ?? [];
+    if (config.stationSpawns && initialStations.length === 0) {
+      config.stationSpawns.forEach((spawn, idx) => {
+        const stationData = getStationById(spawn.stationId);
+        if (!stationData) return;
+        initialStations.push({
+          id: `station-${spawn.stationId}-${idx}`,
+          name: stationData.name,
+          stationId: stationData.id,
+          position: spawn.position,
+          facing: spawn.facing ?? 0,
+          currentHull: stationData.hull,
+          maxHull: stationData.hull,
+          shields: {
+            fore: stationData.shieldsPerSector,
+            foreStarboard: stationData.shieldsPerSector,
+            aftStarboard: stationData.shieldsPerSector,
+            aft: stationData.shieldsPerSector,
+            aftPort: stationData.shieldsPerSector,
+            forePort: stationData.shieldsPerSector,
+          },
+          maxShieldsPerSector: stationData.shieldsPerSector,
+          armorDie: stationData.armorDie,
+          baseEvasion: stationData.baseEvasion,
+          isDestroyed: false,
+          hasDroppedBelow50: false,
+          hasActed: false,
+          remainingFighters: stationData.fighterHangar?.totalFighters ?? 0,
+          criticalDamage: [],
+        });
+      });
+    }
+
     set({
       phase: 'setup',
       round: 0,
@@ -702,6 +753,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       enemyShips: initialEnemyShips,
       fighterTokens: [],
       torpedoTokens: [],
+      stations: initialStations,
       terrainMap,
       tacticDeck: createShuffledTacticDeck(initialEnemyShips),
       fumbleDeck: createShuffledFumbleDeck(),
@@ -779,6 +831,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       extractionWindowShipIds: [],
       currentTactic: null,
       tacticHazards: [],
+      stations: [],
       deploymentMode: false,
       deploymentBounds: null,
       deploymentSelectedShipId: null,
@@ -2017,8 +2070,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
         } else if (targetId) {
             const isEnemy = state.enemyShips.some(s => s.id === targetId);
             const marker = state.objectiveMarkers.find(m => m.name === targetId);
+            const station = state.stations.find(s => s.id === targetId && !s.isDestroyed);
             if (marker) {
                 targetsToEvaluate.push({ id: marker.name, target: marker as any, isEnemy: true, isMarker: true } as any);
+            } else if (station) {
+                targetsToEvaluate.push({ id: station.id, target: station as any, isEnemy: true, isStation: true } as any);
             } else if (initialTarget) {
                 targetsToEvaluate.push({ id: initialTarget.id, target: initialTarget, isEnemy });
             }
@@ -2028,7 +2084,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         let usedSurgicalStrike = false;
         let anyHullDamageThisAction = false; // for Overclocked Reactors crit trigger
 
-        targetsToEvaluate.forEach(({ id, target, isEnemy, isMarker, isFighter }: any) => {
+        targetsToEvaluate.forEach(({ id, target, isEnemy, isMarker, isFighter, isStation }: any) => {
             let pool = assembleVolleyPool(weapon, tacOfficer!, false, ship.predictiveVolleyActive);
             if (hasScar(ship, 'targeting-array-damaged')) {
               const damagedDieIndex = pool.findIndex(die => typeof die !== 'string' && die.source === 'weapon');
@@ -2046,9 +2102,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
             
             const targetMaxHull = isMarker 
                 ? (target as ObjectiveMarkerState).maxHull
-                : (isEnemy
-                    ? getAdversaryById((target as EnemyShipState).adversaryId)?.hull || 0
-                    : (target as ShipState).maxHull);
+                : isStation
+                    ? (target as StationState).maxHull
+                    : (isEnemy
+                        ? getAdversaryById((target as EnemyShipState).adversaryId)?.hull || 0
+                        : (target as ShipState).maxHull);
             
             if (tacOfficerData?.traitName === 'Bloodlust' && target.currentHull <= targetMaxHull / 2) {
                 pool.push({ type: 'd6', source: 'trait' });
@@ -2094,10 +2152,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
             }
 
             const targetTerrain = state.terrainMap.get(hexKey(target.position));
-            const adversaryData = isEnemy && !isMarker ? getAdversaryById((target as EnemyShipState).adversaryId) : null;
-            let targetEvasion = isMarker ? 0 : (adversaryData 
-                ? adversaryData.baseEvasion + ((target as EnemyShipState).evasionModifiers ?? 0)
-                : (target as ShipState).baseEvasion + ((target as ShipState).evasionModifiers ?? 0));
+            const adversaryData = isEnemy && !isMarker && !isStation ? getAdversaryById((target as EnemyShipState).adversaryId) : null;
+            let targetEvasion = isMarker ? 0 : isStation
+                ? (target as StationState).baseEvasion
+                : (adversaryData 
+                    ? adversaryData.baseEvasion + ((target as EnemyShipState).evasionModifiers ?? 0)
+                    : (target as ShipState).baseEvasion + ((target as ShipState).evasionModifiers ?? 0));
             if (isEnemy && !isMarker && state.exposedEnemyShipId === target.id) {
                 targetEvasion -= 1;
             }
@@ -2123,7 +2183,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 if (isFleetComms) targetEvasion += 1;
             }
 
-            const targetArmorDie = isMarker ? 'd4' : (adversaryData ? adversaryData.armorDie : (target as ShipState).armorDie) || 'd4';
+            const targetArmorDie = isMarker ? 'd4' : isStation
+                ? (target as StationState).armorDie
+                : (adversaryData ? adversaryData.armorDie : (target as ShipState).armorDie) || 'd4';
             let targetLockModifier = 0;
             const finalTargetLocks = [...((target as any).targetLocks || [])];
             if (finalTargetLocks.length > 0) {
@@ -2147,19 +2209,29 @@ export const useGameStore = create<GameStore>((set, get) => ({
             }
             const tachyonStrike = canUseTachyonMatrix(tachyonMatrixUsed, state.experimentalTech);
 
-            const evasiveManeuvers = isMarker ? 0 : (target as ShipState).evasiveManeuvers ?? 0;
+            const evasiveManeuvers = isMarker || isStation ? 0 : (target as ShipState).evasiveManeuvers ?? 0;
 
             const targetSize = isFighter
                 ? ShipSize.Fighter
-                : isEnemy && !isMarker
-                    ? getAdversaryById((target as EnemyShipState).adversaryId)?.size
-                    : (!isMarker ? getChassisById((target as ShipState).chassisId)?.size : undefined);
+                : isStation
+                    ? 'large'
+                    : isEnemy && !isMarker
+                        ? getAdversaryById((target as EnemyShipState).adversaryId)?.size
+                        : (!isMarker ? getChassisById((target as ShipState).chassisId)?.size : undefined);
+
+            const ewFighters = get().fighterTokens.filter(f => 
+              f.allegiance === 'allied' && 
+              f.classId === 'ew-fighter' && 
+              !f.isDestroyed && 
+              hexDistance(f.position, target.position) <= f.weaponRangeMax
+            );
+            const ewModifier = ewFighters.length > 0 ? -1 : 0;
 
             const damageResult = resolveAttack(
                 ship.position, ship.facing,
                 target.position, 
                 (target as any).facing ?? 0, 
-                isMarker ? 3 : targetEvasion,
+                isMarker ? 3 : isStation ? targetEvasion : targetEvasion,
                 isMarker ? {
                     fore: (target as ObjectiveMarkerState).shieldsPerSector, foreStarboard: (target as ObjectiveMarkerState).shieldsPerSector,
                     aftStarboard: (target as ObjectiveMarkerState).shieldsPerSector, aft: (target as ObjectiveMarkerState).shieldsPerSector,
@@ -2172,22 +2244,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 weapon,
                 pool,
                 targetTerrain,
-                isMarker ? 0 : evasiveManeuvers,
+                isMarker || isStation ? 0 : evasiveManeuvers,
                 targetLockModifier,
-                isMarker ? false : (target as any).armorDisabled,
+                isMarker || isStation ? false : (target as any).armorDisabled,
                 weapon.tags?.includes('shieldBreaker'),
                 targetPaintingArmorPiercing,
                 ignoreRangePenalty,
                 targetSize,
                 surgicalStrike,
                 tachyonStrike,
-                isMarker ? false : (target as any).pdcDisabled,
+                isMarker || isStation ? false : (target as any).pdcDisabled,
                 targetLockRerolls + bonusTargetRerolls,
                 ship.isJammed || false,
                 canRerollVoidGlass(1, state.experimentalTech),
                 state.currentTactic?.mechanicalEffect.critThresholdOverride,
                 false, // upgradeOneDie handled in assembleVolleyPool
-                ship.spoofedFireControlActive || false
+                ship.spoofedFireControlActive || false,
+                ewModifier
             );
             if (targetingPackageIndex !== -1) {
               targetingPackages.splice(targetingPackageIndex, 1);
@@ -2262,6 +2335,25 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     isDestroyed: newHull === 0,
                     shieldsPerSector: damageResult.shieldRemaining,
                 });
+            } else if (isStation) {
+                const stationTarget = target as StationState;
+                const targetUpdates: Partial<StationState> = {
+                    shields: { ...stationTarget.shields, [damageResult.struckSector]: damageResult.shieldRemaining },
+                    currentHull: Math.max(0, stationTarget.currentHull - finalHullDamage),
+                };
+                if (targetUpdates.currentHull === 0) targetUpdates.isDestroyed = true;
+                get().updateStation(stationTarget.id, targetUpdates);
+
+                if (damageResult.criticalTriggered && !targetUpdates.isDestroyed) {
+                    const { card: critCard, remainingDeck: newDeck } = drawCriticalCard(get().enemyCritDeck, 'enemy');
+                    set({ enemyCritDeck: newDeck });
+                    get().updateStation(stationTarget.id, {
+                        criticalDamage: [...stationTarget.criticalDamage, critCard],
+                        hasDroppedBelow50: stationTarget.currentHull > stationTarget.maxHull / 2 && (targetUpdates.currentHull ?? 0) <= stationTarget.maxHull / 2
+                    });
+                    get().addLog('critical', `══& CRITICAL HIT! ${stationTarget.name} suffered: ${critCard.name}!`);
+                    useUIStore.getState().queueModal('critical', { card: critCard });
+                }
             } else {
                 const targetUpdates: Partial<EnemyShipState & ShipState> = {
                     shields: { ...target.shields, [damageResult.struckSector]: damageResult.shieldRemaining },
@@ -2755,6 +2847,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
             `Cannot deploy fighter to (${deployHex.q},${deployHex.r}) ═  Debris Field blocks Small Craft!`);
           break;
         }
+        
+        const slotIdx = action.subsystemSlotIndex ?? 0;
+        const launchCount = ship.fighterLaunchCounts?.[slotIdx] ?? 0;
+        
+        if (launchCount >= 2) {
+          get().addLog('system', `Fighter Hangar in slot ${slotIdx + 1} is empty. Maximum of 2 strike squadrons per hangar.`);
+          break;
+        }
+
         const fighterCount = state.fighterTokens.filter(
           f => !f.isDestroyed && f.position.q === deployHex.q && f.position.r === deployHex.r
         ).length;
@@ -2763,24 +2864,35 @@ export const useGameStore = create<GameStore>((set, get) => ({
           break;
         }
         const assignedTargetId: string | null = (context?.targetShipId as string) ?? null;
+        const fighterClass = getFighterClassById('strike-fighter')!;
+
         const newFighter: FighterToken = {
           id: `allied-fighter-${ship.id}-${Date.now()}`,
           name: `Strike Group ${ship.id.split('-').pop()?.toUpperCase() ?? ''}${state.fighterTokens.filter(f => f.sourceShipId === ship.id).length + 1}`,
+          classId: fighterClass.id,
           allegiance: 'allied',
           sourceShipId: ship.id,
           position: deployHex,
           facing: ship.facing,
-          currentHull: 1,
-          maxHull: 1,
-          speed: 4,
-          baseEvasion: 5,
-          volleyPool: ['d4', 'd4', 'd4'],
-          weaponRange: 1,
+          currentHull: fighterClass.hull,
+          maxHull: fighterClass.hull,
+          speed: fighterClass.speed,
+          baseEvasion: fighterClass.baseEvasion,
+          volleyPool: fighterClass.volleyPool,
+          weaponRangeMax: fighterClass.weaponRangeMax,
+          behavior: fighterClass.behavior,
           isDestroyed: false,
           hasDrifted: false,
           hasActed: false,
           assignedTargetId,
         };
+        
+        // Update launch count
+        updates.fighterLaunchCounts = {
+          ...(ship.fighterLaunchCounts ?? {}),
+          [slotIdx]: launchCount + 1,
+        };
+
         set(s => ({ fighterTokens: [...s.fighterTokens, newFighter] }));
         const targetLabel = assignedTargetId
           ? `targeting ${get().getShipName(assignedTargetId)}`
@@ -3137,6 +3249,103 @@ export const useGameStore = create<GameStore>((set, get) => ({
       });
     }
 
+    // ═ ══ ═ Station Turns ═ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══
+    {
+      const liveState = get();
+      const actingStations = liveState.stations.filter(s => {
+        if (s.isDestroyed || s.hasActed) return false;
+        const stationData = getStationById(s.stationId);
+        if (size === ShipSize.Small && stationData?.size === ShipSize.Small) return true;
+        if (size === ShipSize.Medium && stationData?.size === ShipSize.Medium) return true;
+        if (size === ShipSize.Large && stationData?.size === ShipSize.Large) return true;
+        return false;
+      });
+
+      if (actingStations.length > 0) {
+        const { actions: stationActions, stationUpdates, playerDamage: stationPlayerDamage, spawnedFighters: stationFighters } = executeStationTurn(
+          actingStations,
+          liveState.playerShips,
+          liveState.enemyShips,
+          liveState.currentTactic,
+          liveState.terrainMap,
+          liveState.fighterTokens,
+          liveState.round,
+        );
+
+        // Apply station updates
+        stationUpdates.forEach((updates, stationId) => {
+          get().updateStation(stationId, updates);
+        });
+
+        // Apply damage to targets
+        stationPlayerDamage.forEach(dmg => {
+          const liveState2 = get();
+          const playerShip = liveState2.playerShips.find(s => s.id === dmg.targetId);
+          if (playerShip) {
+            const updates: Partial<ShipState> = {};
+            if (dmg.shieldDamage > 0) {
+              updates.shields = { ...playerShip.shields, [dmg.sector]: playerShip.shields[dmg.sector] - dmg.shieldDamage };
+            }
+            if (dmg.hullDamage > 0) {
+              updates.currentHull = Math.max(0, playerShip.currentHull - dmg.hullDamage);
+              if (updates.currentHull === 0) updates.isDestroyed = true;
+            }
+            get().updatePlayerShip(dmg.targetId, updates);
+          } else {
+            const enemyShip = liveState2.enemyShips.find(s => s.id === dmg.targetId);
+            if (enemyShip) {
+              const updates: Partial<EnemyShipState> = {};
+              if (dmg.shieldDamage > 0) {
+                updates.shields = { ...enemyShip.shields, [dmg.sector]: enemyShip.shields[dmg.sector] - dmg.shieldDamage };
+              }
+              if (dmg.hullDamage > 0) {
+                updates.currentHull = Math.max(0, enemyShip.currentHull - dmg.hullDamage);
+                if (updates.currentHull === 0) updates.isDestroyed = true;
+              }
+              get().updateEnemyShip(dmg.targetId, updates);
+            }
+          }
+        });
+
+        // Add spawned fighters
+        if (stationFighters.length > 0) {
+          set(s => ({ fighterTokens: [...s.fighterTokens, ...stationFighters] }));
+        }
+
+        // Log station actions
+        stationActions.forEach(a => {
+          if (a.type === 'attack') {
+            const det = a.details as Record<string, any>;
+            const station = liveState.stations.find(s => s.id === a.stationId);
+            const stationData = station ? getStationById(station.stationId) : null;
+            const attackerName = station?.name ?? stationData?.name ?? a.stationId;
+            const defenderName = get().getShipName(det.target);
+            const tn = det.damageResult?.tnBreakdown?.total ?? '?';
+            let atkMsg = `═a [STATION] ${attackerName} ═   ${defenderName} | TN ${tn} | ${det.hits} hit${det.hits !== 1 ? 's' : ''}`;
+            if (det.isHeavy) atkMsg += ` (HEAVY)`;
+            if ((det.shieldDmg ?? 0) > 0) atkMsg += ` | -${det.shieldDmg} ${String(det.sector ?? '').toUpperCase()} shield`;
+            if ((det.hullDmg ?? 0) > 0)   atkMsg += ` | -${det.hullDmg} hull`;
+            get().addLog('combat', atkMsg, { damageResult: det.damageResult });
+          } else if (a.type === 'launch') {
+            const station = liveState.stations.find(s => s.id === a.stationId);
+            const count = (a.details as any).count ?? 0;
+            get().addLog('system', `⬡ [STATION] ${station?.name ?? a.stationId} launched ${count} Strike Fighter(s).`);
+          }
+        });
+
+        // Log player damage summary
+        stationPlayerDamage.forEach(dmg => {
+          if (dmg.hullDamage > 0 || dmg.shieldDamage > 0) {
+            const targetName = get().getShipName(dmg.targetId);
+            let dmgMsg = `═x ═ ${targetName} took`;
+            if (dmg.shieldDamage > 0) dmgMsg += ` -${dmg.shieldDamage} ${dmg.sector.toUpperCase()} shield`;
+            if (dmg.hullDamage > 0) dmgMsg += ` -${dmg.hullDamage} hull`;
+            get().addLog('damage', dmgMsg);
+          }
+        });
+      }
+    }
+
     if (size === 'small') {
       get().resolveFighterStep('enemy');
       get().resolveTorpedoStep('enemy');
@@ -3234,7 +3443,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     fighters.forEach(fighter => {
       // 1. Move
       const moveResult = resolveFighterMovement(
-        fighter, state.playerShips, state.enemyShips, allFighters, state.terrainMap
+        fighter, state.playerShips, state.enemyShips, allFighters, state.terrainMap, state.torpedoTokens
       );
 
       const fIndex = updatedFighters.findIndex(f => f.id === fighter.id);
@@ -3625,7 +3834,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   updateEnemyShip: (shipId, updates) => {
     const currentState = get();
     const ship = currentState.enemyShips.find(s => s.id === shipId);
-    
+
     // Immediate Bounty Payouts
     if (ship && !ship.isDestroyed && updates.isDestroyed) {
       const adv = getAdversaryById(ship.adversaryId);
@@ -3662,6 +3871,51 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
       return {
         enemyShips: nextEnemyShips,
+        terrainMap,
+      };
+    });
+  },
+
+  updateStation: (stationId, updates) => {
+    const currentState = get();
+    const station = currentState.stations.find(s => s.id === stationId);
+
+    // Bounty for destroyed stations
+    if (station && !station.isDestroyed && updates.isDestroyed) {
+      const stationData = getStationById(station.stationId);
+      if (stationData) {
+        if (stationData.size === 'small') {
+          const newCount = currentState.smallShipsDestroyedThisMission + 1;
+          set({ smallShipsDestroyedThisMission: newCount });
+          if (newCount % 2 !== 0) {
+            get().adjustFleetFavor(1);
+            get().addLog('system', `☠ ${station.name} destroyed ═  High Command is pleased (+1 Fleet Favor)`);
+          } else {
+            get().addLog('system', `☠ ${station.name} destroyed`);
+          }
+        } else if (stationData.size === 'medium') {
+          get().adjustFleetFavor(1);
+          get().addLog('system', `☠ ${station.name} destroyed ═  High Command is pleased (+1 Fleet Favor)`);
+        } else if (stationData.size === 'large') {
+          get().adjustFleetFavor(2);
+          get().addLog('system', `☠ ${station.name} destroyed ═  High Command is ecstatic (+2 Fleet Favor)`);
+        }
+      }
+    }
+
+    set(state => {
+      const nextStations = state.stations.map(s =>
+        s.id === stationId ? { ...s, ...updates } : s,
+      );
+
+      let terrainMap = state.terrainMap;
+      const isNewlyDestroyed = station && !station.isDestroyed && (updates.isDestroyed === true || updates.currentHull === 0);
+      if (station && isNewlyDestroyed && canSpawnDebrisAtHex({ ...state, stations: nextStations }, station.position, stationId)) {
+        terrainMap = addDebrisFieldAtHex(state, station.position);
+      }
+
+      return {
+        stations: nextStations,
         terrainMap,
       };
     });
@@ -4393,7 +4647,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const s = get();
     const ship = s.playerShips.find(x => x.id === shipId) 
               || s.enemyShips.find(x => x.id === shipId)
-              || s.fighterTokens.find(x => x.id === shipId);
+              || s.fighterTokens.find(x => x.id === shipId)
+              || s.stations.find(x => x.id === shipId);
     return ship?.name || shipId;
   },
 
@@ -4610,6 +4865,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
       };
     });
 
+    // Station shield regen and reset hasActed
+    const updatedStations = stateAfterGravity.stations.map(station => {
+      const stationData = getStationById(station.stationId);
+      const maxPerSector = stationData?.shieldsPerSector ?? 0;
+      const generatorOffline = station.criticalDamage?.some(c => c.id === 'enemy-generator-offline');
+      const insideNebula = stateAfterGravity.terrainMap.get(hexKey(station.position)) === 'ionNebula';
+      const newShields = (insideNebula || generatorOffline || maxPerSector === 0)
+        ? station.shields
+        : regenerateShields(station.shields, maxPerSector, false);
+      return {
+        ...station,
+        shields: newShields,
+        hasActed: false,
+      };
+    });
+
     // Log shield regen — player ships
     updatedShips.forEach((ship, i) => {
       const prev = stateAfterGravity.playerShips[i];
@@ -4649,6 +4920,29 @@ export const useGameStore = create<GameStore>((set, get) => ({
           get().addLog('system', `${ship.name}: Shields regenerated (+${gained} total)`);
         } else {
           get().addLog('system', `${ship.name}: Shields at max ═  no regen needed`);
+        }
+      }
+    });
+
+    // Log shield regen — stations
+    updatedStations.forEach((station, i) => {
+      const prev = stateAfterGravity.stations[i];
+      const stationData = getStationById(station.stationId);
+      const maxPerSector = stationData?.shieldsPerSector ?? 0;
+      if (maxPerSector === 0) return;
+      const generatorOffline = prev.criticalDamage?.some(c => c.id === 'enemy-generator-offline');
+      const insideNebula = stateAfterGravity.terrainMap.get(hexKey(station.position)) === 'ionNebula';
+      if (insideNebula) {
+        get().addLog('system', `${station.name}: Inside Ion Nebula ═  shields cannot regenerate`);
+      } else if (generatorOffline) {
+        get().addLog('system', `${station.name}: Shield generator OFFLINE ═  no regen`);
+      } else {
+        const sectors = ['fore', 'foreStarboard', 'aftStarboard', 'aft', 'aftPort', 'forePort'] as const;
+        const gained = sectors.reduce((sum, s) => sum + (station.shields[s] - prev.shields[s]), 0);
+        if (gained > 0) {
+          get().addLog('system', `${station.name}: Shields regenerated (+${gained} total)`);
+        } else {
+          get().addLog('system', `${station.name}: Shields at max ═  no regen needed`);
         }
       }
     });
@@ -4739,7 +5033,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       });
     }
 
-    set({ playerShips: updatedShips, enemyShips: updatedEnemyShips, players: updatedPlayers });
+    set({ playerShips: updatedShips, enemyShips: updatedEnemyShips, stations: updatedStations, players: updatedPlayers });
 
     // Trauma Hook: Claustrophobic — +2 Stress if ship ends Execution adjacent to Asteroid/Debris terrain.
     // Applied AFTER recovery so stress recovery in this same cleanup phase doesn't wipe it.

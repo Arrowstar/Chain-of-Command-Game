@@ -40,6 +40,7 @@ describe('Point Defense vs Fighters', () => {
         {
           id: 'f1',
           name: 'Strike Fighter',
+          classId: 'strike-fighter',
           allegiance: 'enemy',
           sourceShipId: 'carrier-1',
           position: { q: 3, r: 0 },
@@ -49,7 +50,8 @@ describe('Point Defense vs Fighters', () => {
           speed: 4,
           baseEvasion: 8,
           volleyPool: ['d4', 'd4', 'd4'],
-          weaponRange: 1,
+          weaponRangeMax: 1,
+          behavior: 'attack',
           isDestroyed: false,
           hasDrifted: false,
           hasActed: false,

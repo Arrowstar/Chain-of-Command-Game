@@ -8,6 +8,7 @@ import type { TerrainType, ShipArc, ShipState, EnemyShipState, TacticHazardState
 import { getWeaponById } from '../../data/weapons';
 import { applyPlasmaAccelerators } from '../../engine/techEffects';
 import { getAdversaryById } from '../../data/adversaries';
+import { getStationById } from '../../data/stations';
 import { TerrainLegend } from './TerrainLegend';
 import { getTerrainColor, drawHexPolygon, drawShipTriangle, drawShipShields, attachOrUpdateSprite, drawFacingIndicator, drawShipHull } from '../../engine/pixiGraphics';
 import { getValidTargetsForWeapon } from '../../engine/combat';
@@ -43,11 +44,13 @@ export default function HexMap() {
     enemies: Map<string, TrackedEntity>;
     fighters: Map<string, TrackedEntity>;
     torpedoes: Map<string, TrackedEntity>;
+    stations: Map<string, TrackedEntity>;
   }>({
     ships: new Map(),
     enemies: new Map(),
     fighters: new Map(),
-    torpedoes: new Map()
+    torpedoes: new Map(),
+    stations: new Map(),
   });
 
   const terrainMap = useGameStore(s => s.terrainMap);
@@ -55,6 +58,7 @@ export default function HexMap() {
   const enemyShips = useGameStore(s => s.enemyShips);
   const fighterTokens = useGameStore(s => s.fighterTokens);
   const torpedoTokens = useGameStore(s => s.torpedoTokens);
+  const stations = useGameStore(s => s.stations);
   const objectiveMarkers = useGameStore(s => s.objectiveMarkers);
   const tacticHazards = useGameStore(s => s.tacticHazards);
   const objectiveType = useGameStore(s => s.objectiveType);
@@ -135,6 +139,7 @@ export default function HexMap() {
       animateMap(entitiesRef.current.enemies, true);
       animateMap(entitiesRef.current.torpedoes, true);
       animateMap(entitiesRef.current.fighters, true);
+      animateMap(entitiesRef.current.stations, false);
     });
 
     // Center the camera on hex (0,0) which is the player's starting position
@@ -145,7 +150,7 @@ export default function HexMap() {
       appRef.current = null;
       worldRef.current = null;
       layersRef.current = { terrain: null, entities: null, overlays: null };
-      entitiesRef.current = { ships: new Map(), enemies: new Map(), fighters: new Map(), torpedoes: new Map() };
+      entitiesRef.current = { ships: new Map(), enemies: new Map(), fighters: new Map(), torpedoes: new Map(), stations: new Map() };
     };
   }, []);
 
@@ -326,6 +331,60 @@ export default function HexMap() {
       const rot = ((f.facing * 60) - 30) * (Math.PI / 180);
       const p = getParams();
       p.x = fx; p.y = fy; p.rot = rot;
+    });
+
+    // Draw Stations
+    const activeStations = stations.filter(s => !s.isDestroyed);
+    syncEntities(activeStations, entitiesRef.current.stations, (station, g, getParams, isNew) => {
+      g.clear();
+      const stationData = getStationById(station.stationId);
+      const isTurret = stationData?.type === 'turret';
+      const color = 0xFF6633; // orange-red for stations
+      const fillColor = 0xAA3311;
+
+      if (isTurret) {
+        // Turret: smaller square-ish shape
+        g.lineStyle(2, color, 1);
+        g.beginFill(fillColor, 0.7);
+        g.drawRect(-10, -10, 20, 20);
+        g.endFill();
+        // Turret barrel pointing in facing direction
+        const barrelLen = 14;
+        const rot = ((station.facing * 60) - 30) * (Math.PI / 180);
+        g.lineStyle(2.5, 0xFFAA44, 1);
+        g.moveTo(0, 0);
+        g.lineTo(Math.cos(rot) * barrelLen, Math.sin(rot) * barrelLen);
+      } else {
+        // Station: larger hexagonal shape
+        g.lineStyle(2.5, color, 1);
+        g.beginFill(fillColor, 0.6);
+        const corners = hexCorners({ x: 0, y: 0 }, 16);
+        g.moveTo(corners[0].x, corners[0].y);
+        for (let i = 1; i < 6; i++) {
+          g.lineTo(corners[i].x, corners[i].y);
+        }
+        g.closePath();
+        g.endFill();
+        // Forward arc indicator
+        const rot = ((station.facing * 60) - 30) * (Math.PI / 180);
+        g.lineStyle(2, 0xFFAA44, 0.8);
+        g.moveTo(0, 0);
+        g.lineTo(Math.cos(rot) * 18, Math.sin(rot) * 18);
+      }
+
+      // Hull bar
+      let unrotatable = g.getChildByName('unrotatable') as PIXI.Graphics | null;
+      if (!unrotatable) {
+        unrotatable = new PIXI.Graphics();
+        unrotatable.name = 'unrotatable';
+        g.addChild(unrotatable);
+      }
+      unrotatable.clear();
+      drawShipHull(unrotatable, 0, 0, station.currentHull, station.maxHull);
+
+      const center = hexToPixel(station.position);
+      const p = getParams();
+      p.x = center.x; p.y = center.y; p.rot = 0;
     });
 
     // Draw Torpedo tokens
@@ -871,7 +930,7 @@ export default function HexMap() {
             layersRef.current.overlays!.addChild(subGfx);
         }
     }
-  }, [terrainMap, playerShips, enemyShips, fighterTokens, torpedoTokens, objectiveMarkers, tacticHazards, objectiveType, scenarioId, deploymentMode, selectedShipId, targetingMode, activeTargetingAction, activeTargetingContext, hoveredHex, currentTactic, players, cameraX, cameraY, cameraZoom]);
+  }, [terrainMap, playerShips, enemyShips, fighterTokens, torpedoTokens, stations, objectiveMarkers, tacticHazards, objectiveType, scenarioId, deploymentMode, selectedShipId, targetingMode, activeTargetingAction, activeTargetingContext, hoveredHex, currentTactic, players, cameraX, cameraY, cameraZoom]);
 
   // ─── Update camera ──────────────────────────────────
   useEffect(() => {
@@ -970,12 +1029,14 @@ export default function HexMap() {
               // Also allow targeting fighter tokens (e.g. PDC fire)
               const eFighter = useGameStore.getState().fighterTokens.find(f => !f.isDestroyed && hexKey(f.position) === key);
               const objectiveMarker = useGameStore.getState().objectiveMarkers.find(m => !m.isDestroyed && !m.isCollected && hexKey(m.position) === key);
+              const stationTarget = useGameStore.getState().stations.find(s => !s.isDestroyed && hexKey(s.position) === key);
               const hazard = useGameStore.getState().tacticHazards.find(h => hexKey(h.position) === key);
               const torpedo = useGameStore.getState().torpedoTokens.find(t => !t.isDestroyed && hexKey(t.position) === key);
 
               const target = pShip || eShip || 
                              (eFighter ? { id: eFighter.id } : null) || 
                              (objectiveMarker ? { id: objectiveMarker.name } : null) ||
+                             (stationTarget ? { id: stationTarget.id } : null) ||
                              (hazard ? { id: hazard.id } : null) ||
                              (torpedo ? { id: torpedo.id } : null);
 
@@ -998,7 +1059,11 @@ export default function HexMap() {
                       ),
                     };
                     const allShips = [...useGameStore.getState().playerShips, ...useGameStore.getState().enemyShips];
+                    const validStationIds = useGameStore.getState().stations
+                      .filter(s => !s.isDestroyed)
+                      .map(s => s.id);
                     const validIds = getValidTargetsForWeapon(attackerShip.position, attackerShip.facing, effectiveWeapon, allShips, useGameStore.getState().terrainMap);
+                    validIds.push(...validStationIds);
                     
                     if (!validIds.includes(target.id)) {
                       useGameStore.getState().addLog('system', `🚫 Invalid target: unit is out of range or firing arc.`);
@@ -1142,6 +1207,18 @@ export default function HexMap() {
         return {
           hex: hoveredHexCoord,
           target: { kind: 'ship', ship: entry.ship, isEnemy: entry.isEnemy } satisfies MapHoverTarget,
+          position: getTooltipPosition(screenX, screenY, bounds),
+        };
+      }
+    }
+
+    for (const station of stations) {
+      if (station.isDestroyed) continue;
+      const center = hexToPixel(station.position);
+      if (Math.hypot(worldX - center.x, worldY - center.y) <= 24) {
+        return {
+          hex: hoveredHexCoord,
+          target: { kind: 'station', station } satisfies MapHoverTarget,
           position: getTooltipPosition(screenX, screenY, bounds),
         };
       }

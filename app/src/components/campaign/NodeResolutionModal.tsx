@@ -74,6 +74,7 @@ export default function NodeResolutionModal({ onStartCombat }: Props) {
       players: persistedPlayers,
       playerShips: persistedShips,
       enemyShips: enemies,
+      stationSpawns: generated.stationSpawns,
       objectiveMarkers: generated.objectiveMarkers,
       objectiveType: generated.objectiveType,
       scenarioRules: generated.scenarioRules,

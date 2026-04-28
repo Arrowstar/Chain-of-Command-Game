@@ -1,8 +1,9 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import type { EnemyShipState, FighterToken, HexCoord, ObjectiveMarkerState, ShipArc, ShipState, TacticHazardState, TerrainType, TorpedoToken } from '../../types/game';
+import type { EnemyShipState, FighterToken, HexCoord, ObjectiveMarkerState, ShipArc, ShipState, StationState, TacticHazardState, TerrainType, TorpedoToken } from '../../types/game';
 import { getWeaponById } from '../../data/weapons';
 import { getChassisById } from '../../data/shipChassis';
 import { getAdversaryById } from '../../data/adversaries';
+import { getStationById } from '../../data/stations';
 import { getTerrainData } from '../../data/terrain';
 import { ASSET_MAP } from '../../engine/pixiGraphics';
 
@@ -153,6 +154,7 @@ function ShipSchematicPreview({ ship, isEnemy }: { ship: ShipState | EnemyShipSt
 
 export type MapHoverTarget =
   | { kind: 'ship'; ship: ShipState | EnemyShipState; isEnemy: boolean }
+  | { kind: 'station'; station: StationState }
   | { kind: 'terrain'; terrainType: TerrainType; coord: HexCoord }
   | { kind: 'objective'; marker: ObjectiveMarkerState }
   | { kind: 'fighter'; fighter: FighterToken; stackCount?: number }
@@ -211,6 +213,7 @@ export default function ShipInfoPanel({ target, position }: Props) {
       }}
     >
       {target.kind === 'ship' && <ShipTooltipContent ship={target.ship} isEnemy={target.isEnemy} />}
+      {target.kind === 'station' && <StationTooltipContent station={target.station} />}
       {target.kind === 'terrain' && <TerrainTooltipContent terrainType={target.terrainType} coord={target.coord} />}
       {target.kind === 'objective' && <ObjectiveTooltipContent marker={target.marker} />}
       {target.kind === 'fighter' && <FighterTooltipContent fighter={target.fighter} stackCount={target.stackCount ?? 1} />}
@@ -414,6 +417,79 @@ function ObjectiveTooltipContent({ marker }: { marker: ObjectiveMarkerState }) {
         <StatCard label="Hull Integrity" value={`${marker.hull} / ${marker.maxHull}`} color={hullColor} />
         <StatCard label="Shields / Arc" value={String(marker.shieldsPerSector)} color="var(--color-shield-blue)" />
       </div>
+    </>
+  );
+}
+
+function StationTooltipContent({ station }: { station: StationState }) {
+  const stationData = getStationById(station.stationId);
+  const hullColor = station.currentHull <= Math.ceil(station.maxHull / 2) ? 'var(--color-hostile-red)' : 'var(--color-holo-green)';
+  const maxShieldValue = Math.max(1, station.maxShieldsPerSector);
+
+  return (
+    <>
+      <div style={{ marginBottom: 'var(--space-sm)' }}>
+        <div className="label" style={{ color: 'var(--color-hostile-red)' }}>
+          {stationData?.type === 'turret' ? 'Defense Turret' : 'Enemy Installation'}
+        </div>
+        <h3 style={{ margin: '4px 0 2px', color: 'var(--color-hostile-red)' }}>{station.name}</h3>
+        <div className="label" style={{ color: 'var(--color-text-dim)' }}>
+          {stationData?.special ?? 'Static defensive position'}
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-sm)' }}>
+        <StatCard label="Hull" value={`${station.currentHull} / ${station.maxHull}`} color={hullColor} />
+        <StatCard label="Armor" value={station.armorDie.toUpperCase()} />
+        <StatCard label="Evasion" value={String(station.baseEvasion)} />
+        <StatCard label="Max Shield" value={String(station.maxShieldsPerSector)} />
+      </div>
+
+      <div style={{ marginTop: 'var(--space-sm)' }}>
+        <svg viewBox="0 0 120 120" width="140" height="140" style={{ display: 'block', margin: '0 auto' }}>
+          {ARC_ORDER.map((arc, index) => {
+            const startAngle = index * 60 - 30;
+            const endAngle = startAngle + 60;
+            const shieldValue = station.shields[arc];
+            const opacity = 0.18 + (shieldValue / maxShieldValue) * 0.58;
+            const labelPos = polarPoint(60, 60, 28, startAngle + 30);
+            return (
+              <g key={`shield-${arc}`}>
+                <path
+                  d={getArcBandPath(60, 60, 24, 38, startAngle + 2, endAngle - 2)}
+                  fill={`rgba(255, 107, 107, ${opacity})`}
+                  stroke="var(--color-hostile-red)"
+                  strokeWidth="1.2"
+                />
+                <text
+                  x={labelPos.x}
+                  y={labelPos.y}
+                  fill="white"
+                  fontSize="7"
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                >
+                  {shieldValue}
+                </text>
+              </g>
+            );
+          })}
+          <circle cx="60" cy="60" r="14" fill="rgba(0,0,0,0.35)" stroke="var(--color-hostile-red)" strokeWidth="1.5" />
+          <text x="60" y="60" fill="white" fontSize="8" textAnchor="middle" dominantBaseline="middle">
+            {stationData?.type === 'turret' ? 'TUR' : 'STN'}
+          </text>
+        </svg>
+      </div>
+
+      {stationData?.fighterHangar && (
+        <div className="panel panel--raised" style={{ padding: 'var(--space-sm)', marginTop: 'var(--space-sm)' }}>
+          <div className="label" style={{ marginBottom: '4px' }}>Fighter Hangar</div>
+          <div style={{ color: 'var(--color-text-secondary)', lineHeight: 1.4, fontSize: '0.82rem' }}>
+            {station.remainingFighters} / {stationData.fighterHangar.totalFighters} fighters remaining. 
+            Launches {stationData.fighterHangar.fightersPerLaunch} per round.
+          </div>
+        </div>
+      )}
     </>
   );
 }

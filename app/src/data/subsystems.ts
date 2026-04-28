@@ -60,7 +60,7 @@ export const SUBSYSTEMS: Subsystem[] = [
     rpCost: 45,
     dpCost: 15,
     actionName: 'Launch Squadron',
-    effect: 'Deploy one Allied Strike Fighter token into an adjacent hex.',
+    effect: 'Deploy one Allied Strike Fighter token into an adjacent hex. Max 2 launches per hangar per battle.',
     imagePath: '/assets/subsystems/FighterHanger.png',
   },
   {

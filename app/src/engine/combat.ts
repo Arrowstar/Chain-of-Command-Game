@@ -190,6 +190,7 @@ export function resolveAttack(
   critThresholdOverride?: number,
   upgradeOneDie: boolean = false,
   spoofedFireControlActive: boolean = false,
+  ewModifier: number = 0,
 ): DamageResult {
   const distance = hexDistance(attackerPos, defenderPos);
 
@@ -240,7 +241,7 @@ export function resolveAttack(
     evasiveManeuvers,
     targetLockModifier,
     trackingBonus,
-    0, // otherModifiers
+    ewModifier, // otherModifiers
     ignoreRangePenalty,
     attackerIsJammed
   );

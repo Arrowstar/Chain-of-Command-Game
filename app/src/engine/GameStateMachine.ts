@@ -1,4 +1,4 @@
-import type { GamePhase, ExecutionStep, ShipState, EnemyShipState, PlayerState, RoECard, TacticCard, FumbleCard, CriticalDamageCard, HexCoord, TerrainType, LogEntry, ObjectiveMarkerState } from '../types/game';
+import type { GamePhase, ExecutionStep, ShipState, EnemyShipState, PlayerState, RoECard, TacticCard, FumbleCard, CriticalDamageCard, HexCoord, TerrainType, LogEntry, ObjectiveMarkerState, StationState } from '../types/game';
 import { ShipSize } from '../types/game';
 
 // ═══════════════════════════════════════════════════════════════════
@@ -17,6 +17,7 @@ export interface GameState {
   // Ships
   playerShips: ShipState[];
   enemyShips: EnemyShipState[];
+  stations: StationState[];
 
   // Board
   terrainMap: Map<string, TerrainType>;
@@ -143,7 +144,9 @@ export function checkGameOverConditions(state: GameState): {
 
   // Default / Search & Destroy
   if (!obj || obj === 'Search & Destroy') {
-    if (state.enemyShips.length > 0 && state.enemyShips.every(s => s.isDestroyed)) {
+    const enemiesExist = state.enemyShips.length > 0 || (state.stations ?? []).length > 0;
+    const allEnemiesDestroyed = state.enemyShips.every(s => s.isDestroyed) && (state.stations ?? []).every(s => s.isDestroyed);
+    if (enemiesExist && allEnemiesDestroyed) {
       return { gameOver: true, victory: true, reason: 'All enemy forces eliminated. Victory!' };
     }
   }
@@ -152,6 +155,19 @@ export function checkGameOverConditions(state: GameState): {
     const flagship = state.enemyShips.find(s => s.name.includes('(Flagship)'));
     if (flagship?.isDestroyed) {
       return { gameOver: true, victory: true, reason: 'Flagship eliminated. The Hegemony command structure is broken. Victory!' };
+    }
+  }
+
+  if (obj === 'Station Siege') {
+    const primaryStations = (state.stations ?? []).filter(s => ['outpost', 'forward-base', 'orbital-station'].includes(s.stationId));
+    if (primaryStations.length > 0 && primaryStations.every(s => s.isDestroyed)) {
+      return { gameOver: true, victory: true, reason: 'Primary station destroyed. Mission accomplished. Victory!' };
+    }
+  }
+
+  if (obj === 'Turret Breach') {
+    if ((state.stations ?? []).length > 0 && (state.stations ?? []).every(s => s.isDestroyed)) {
+      return { gameOver: true, victory: true, reason: 'Defensive picket cleared. Victory!' };
     }
   }
 
@@ -194,7 +210,9 @@ export function checkGameOverConditions(state: GameState): {
   }
 
   // Generic fallback: all enemies dead
-  if (state.enemyShips.length > 0 && state.enemyShips.every(s => s.isDestroyed)) {
+  const enemiesExistFallback = state.enemyShips.length > 0 || (state.stations ?? []).length > 0;
+  const allEnemiesDestroyedFallback = state.enemyShips.every(s => s.isDestroyed) && (state.stations ?? []).every(s => s.isDestroyed);
+  if (enemiesExistFallback && allEnemiesDestroyedFallback) {
     return { gameOver: true, victory: true, reason: 'All enemy forces eliminated. Victory!' };
   }
 

@@ -56,7 +56,7 @@ export default function OfficerStationPanel({ officerState, playerId }: OfficerS
 
   const subsystemActions: ActionDefinition[] = [];
   if (myShip) {
-    myShip.equippedSubsystems.forEach(subId => {
+    myShip.equippedSubsystems.forEach((subId, index) => {
       if (!subId) return;
       const sub = getSubsystemById(subId);
       if (sub && sub.station === officerState.station && !sub.isPassive) {
@@ -68,6 +68,7 @@ export default function OfficerStationPanel({ officerState, playerId }: OfficerS
           stressCost: sub.stressCost,
           effect: sub.effect,
           requiresTarget: sub.requiresTarget,
+          subsystemSlotIndex: index,
         });
       }
     });
@@ -352,6 +353,11 @@ export default function OfficerStationPanel({ officerState, playerId }: OfficerS
           if (myShip && player.assignedActions.length === 0 && myShip.scars.some(scar => scar.fromCriticalId === 'power-bus-leak')) {
             displayCtCost += 1;
             ctAdjustments.push('Leaking Power Bus: +1 CT');
+          }
+          if (action.id === 'fighter-hangar' && action.subsystemSlotIndex !== undefined) {
+            const launchCount = myShip?.fighterLaunchCounts?.[action.subsystemSlotIndex] ?? 0;
+            const remaining = Math.max(0, 2 - launchCount);
+            ctAdjustments.push(`Reserves: ${remaining}/2`);
           }
 
           const fatiguePenalty = officerState.traumas.some(trauma => trauma.id === 'lethargic') ? 2 : 1;

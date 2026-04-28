@@ -89,6 +89,7 @@ export default function GameScreen() {
           actionId: actionDef.id,
           ctCost,
           stressCost,
+          subsystemSlotIndex: actionDef.subsystemSlotIndex,
         };
 
         assignToken(player.id, action);
@@ -106,6 +107,7 @@ export default function GameScreen() {
       ctCost,
       stressCost,
       context: { delta },
+      subsystemSlotIndex: actionDef.subsystemSlotIndex,
     };
     assignToken(player.id, action);
     setPendingActionDrop(null);

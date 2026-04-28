@@ -1,5 +1,5 @@
 import type { CombatModifiers } from '../../types/campaignTypes';
-import type { DeploymentBounds, EnemyShipState, HexCoord, TerrainType } from '../../types/game';
+import type { DeploymentBounds, EnemyShipState, HexCoord, TerrainType, HexFacing } from '../../types/game';
 import { ADVERSARIES } from '../../data/adversaries';
 import { hexDistance, hexNeighbors, hexKey } from '../hexGrid';
 
@@ -8,6 +8,7 @@ export interface ProceduralScenarioConfig {
   terrain: { coord: HexCoord; type: TerrainType }[];
   enemyShips: EnemyShipState[];
   objectiveMarkers: { name: string; position: HexCoord; hull: number; maxHull: number; shieldsPerSector: number }[];
+  stationSpawns?: { stationId: string; position: HexCoord; facing?: HexFacing }[];
   scenarioRules: string[];
   generationReport: string[];
   deploymentBounds: DeploymentBounds;
@@ -581,9 +582,11 @@ export function generateProceduralScenario(
   const objectiveMarkers: { name: string; position: HexCoord; hull: number; maxHull: number; shieldsPerSector: number }[] = [];
   const terrain: { coord: HexCoord; type: TerrainType }[] = [];
 
-  const objRoll = rollD6();
+  const objRoll = Math.floor(Math.random() * 8) + 1;
   let objectiveType = '';
   let objectiveSummary = '';
+  let spawnStationSiege = false;
+  let spawnTurretBreach = false;
 
   switch (objRoll) {
     case 1:
@@ -620,6 +623,18 @@ export function generateProceduralScenario(
         });
       }
       break;
+    case 6:
+      objectiveType = 'Station Siege';
+      objectiveSummary = 'Destroy the heavily fortified Hegemony central station.';
+      rules.push('Station Siege: A primary Hegemony station is anchored in the sector. Destroy it to win.');
+      spawnStationSiege = true;
+      break;
+    case 7:
+      objectiveType = 'Turret Breach';
+      objectiveSummary = 'Clear the defensive picket line of automated turrets.';
+      rules.push('Turret Breach: A defensive line of automated turrets blocks your path. Destroy all turrets to win.');
+      spawnTurretBreach = true;
+      break;
     default:
       objectiveType = 'Search & Destroy';
       objectiveSummary = 'Destroy every hostile capital ship deployed into the engagement zone.';
@@ -628,7 +643,7 @@ export function generateProceduralScenario(
   }
 
   generationReport.push(`[PROCGEN] Sector ${sector} procedural combat generation initiated for ${playerCount} player ship${playerCount === 1 ? '' : 's'}.`);
-  generationReport.push(`[PROCGEN] Step 1 - Objective Roll: d6 = ${objRoll} -> ${objectiveType}. ${objectiveSummary}`);
+  generationReport.push(`[PROCGEN] Step 1 - Objective Roll: 1d8 = ${objRoll} -> ${objectiveType}. ${objectiveSummary}`);
   if (objectiveMarkers.length > 0) {
     generationReport.push(`[PROCGEN] Objective Markers: ${objectiveMarkers.map(marker => `${marker.name} ${formatCoord(marker.position)} [Hull ${marker.hull}, Shields/Sector ${marker.shieldsPerSector}]`).join(' | ')}`);
   } else {
@@ -678,6 +693,15 @@ export function generateProceduralScenario(
     { id: 'hegemony-dreadnought', cost: 10 },
   ];
 
+  const stationTable = [
+    { id: 'pdc-turret', cost: 2 },
+    { id: 'heavy-turret', cost: 3 },
+    { id: 'missile-turret', cost: 3 },
+    { id: 'outpost', cost: 4 },
+    { id: 'forward-base', cost: 8 },
+    { id: 'orbital-station', cost: 15 },
+  ];
+
   const modifierNotes: string[] = [];
   if (modifierBudgetBonus !== 0) modifierNotes.push(`threat budget ${modifierBudgetBonus > 0 ? '+' : ''}${modifierBudgetBonus}`);
   if (combatModifiers?.guaranteedEliteSpawn) modifierNotes.push('guaranteed elite spawn');
@@ -694,7 +718,69 @@ export function generateProceduralScenario(
   generationReport.push(`[PROCGEN] Step 3 - Threat Budget: sector ${sector} => ${threatPerPlayer} threat/player x ${playerCount} = ${baseBudget}; modifiers ${modifierBudgetBonus >= 0 ? '+' : ''}${modifierBudgetBonus}; starting budget ${startingBudget}.`);
   generationReport.push(`[PROCGEN] Combat Modifiers: ${modifierNotes.length > 0 ? modifierNotes.join(', ') : 'none'}.`);
 
+  const stationSpawns: { stationId: string; position: HexCoord; facing?: number }[] = [];
   const enemyRoster: string[] = [];
+
+  const getOpenHexInZone = (minR: number, maxR: number): HexCoord => {
+    let attempts = 0;
+    while(attempts++ < 50) {
+      const q = Math.floor(Math.random() * 15) - 7;
+      const r = Math.floor(Math.random() * (maxR - minR + 1)) + minR;
+      if (Math.abs(q) + Math.abs(q + r) + Math.abs(r) > 16) continue;
+      const key = hexKey({q, r});
+      if (!terrain.some(t => hexKey(t.coord) === key) && !stationSpawns.some(s => hexKey(s.position) === key) && !objectiveMarkers.some(m => hexKey(m.position) === key)) {
+        return {q, r};
+      }
+    }
+    return { q: 0, r: minR };
+  };
+
+  // Station and Turret Spawning
+  if (spawnStationSiege) {
+    const availableStations = ['orbital-station', 'forward-base', 'outpost'];
+    let selected = 'outpost';
+    for (const st of availableStations) {
+      const cost = stationTable.find(s => s.id === st)?.cost ?? 4;
+      if (budget >= cost || st === 'outpost') {
+        selected = st;
+        budget -= cost;
+        break;
+      }
+    }
+    stationSpawns.push({ stationId: selected, position: getOpenHexInZone(-6, -6), facing: 3 });
+    generationReport.push(`[PROCGEN] Objective Constraint: spawned ${selected} as primary target. Remaining budget ${budget}.`);
+  } else if (spawnTurretBreach) {
+    const turretTypes = ['heavy-turret', 'missile-turret', 'pdc-turret'];
+    let numTurrets = Math.min(5, Math.max(3, Math.floor(budget / 3)));
+    const qStart = -Math.floor(numTurrets / 2) * 2;
+    for(let i=0; i<numTurrets; i++) {
+        const type = pickRandom(turretTypes);
+        const cost = stationTable.find(s => s.id === type)?.cost ?? 3;
+        budget -= cost;
+        stationSpawns.push({ stationId: type, position: getOpenHexInZone(-5, -4), facing: 3 });
+    }
+    generationReport.push(`[PROCGEN] Objective Constraint: spawned ${numTurrets} turrets for picket line. Remaining budget ${budget}.`);
+  } else {
+    // 30% chance for a Turret Picket in other missions
+    if (Math.random() < 0.3 && budget >= 4) {
+      const numTurrets = pickRandom([1, 2]);
+      const turretTypes = ['heavy-turret', 'missile-turret', 'pdc-turret'];
+      let spawnedCount = 0;
+      for(let i=0; i<numTurrets; i++) {
+        const type = pickRandom(turretTypes);
+        const cost = stationTable.find(s => s.id === type)?.cost ?? 3;
+        if (budget >= cost) {
+          budget -= cost;
+          stationSpawns.push({ stationId: type, position: getOpenHexInZone(-5, -3), facing: 3 });
+          spawnedCount++;
+        }
+      }
+      if (spawnedCount > 0) {
+        generationReport.push(`[PROCGEN] Turret Picket: spawned ${spawnedCount} defensive turrets. Remaining budget ${budget}.`);
+      }
+    }
+  }
+
   if (combatModifiers?.guaranteedEliteSpawn) {
     const eliteOpts = shipTable.filter(s => s.cost <= budget && s.cost >= 7);
     if (eliteOpts.length > 0) {
@@ -729,7 +815,13 @@ export function generateProceduralScenario(
 
   const callsigns = assignCallsigns(enemyRoster);
   generationReport.push(`[PROCGEN] Enemy Roster Selected: ${enemyRoster.length > 0 ? enemyRoster.map((id, index) => `${id} as "${callsigns[index]}"`).join(' | ') : 'none'}.`);
-  const spawnPlan = generateEnemySpawnPlan(enemyRoster, envRoll, terrain, objectiveMarkers);
+  
+  // Pass stationSpawns mapped to positions so generateEnemySpawnPlan respects them
+  const objectiveMarkersWithStations = [
+    ...objectiveMarkers,
+    ...stationSpawns.map(s => ({ name: 'Station', position: s.position, hull: 1, maxHull: 1, shieldsPerSector: 0 }))
+  ];
+  const spawnPlan = generateEnemySpawnPlan(enemyRoster, envRoll, terrain, objectiveMarkersWithStations);
   generationReport.push(`[PROCGEN] Step 4 - Enemy Deployment Pattern: ${spawnPlan.summary}.`);
 
   const enemyShips: EnemyShipState[] = enemyRoster.map((advId, idx) => {
@@ -824,6 +916,7 @@ export function generateProceduralScenario(
     terrain,
     enemyShips,
     objectiveMarkers,
+    stationSpawns: stationSpawns as { stationId: string; position: HexCoord; facing?: HexFacing | undefined; }[],
     scenarioRules: rules,
     generationReport,
     deploymentBounds,
