@@ -29,6 +29,15 @@ export function hexNeighbors(hex: HexCoord): HexCoord[] {
   return AXIAL_DIRECTIONS.map(d => ({ q: hex.q + d.q, r: hex.r + d.r }));
 }
 
+/** Determine the HexFacing direction from one hex to an adjacent hex. Returns null if not adjacent. */
+export function getHexFacing(from: HexCoord, to: HexCoord): HexFacing | null {
+  const dq = to.q - from.q;
+  const dr = to.r - from.r;
+  const idx = AXIAL_DIRECTIONS.findIndex(d => d.q === dq && d.r === dr);
+  if (idx === -1) return null;
+  return idx as HexFacing;
+}
+
 /** Convert axial to cube coordinates */
 export function axialToCube(hex: HexCoord): { x: number; y: number; z: number } {
   const x = hex.q;

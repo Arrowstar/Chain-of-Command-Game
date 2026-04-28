@@ -1,5 +1,5 @@
-import type { FighterToken, HexCoord, TerrainType, ShipState, EnemyShipState, DieType, VolleyResult } from '../../types/game';
-import { hexDistance, hexNeighbors, hexKey } from '../hexGrid';
+import type { FighterToken, HexCoord, HexFacing, TerrainType, ShipState, EnemyShipState, DieType, VolleyResult } from '../../types/game';
+import { hexDistance, hexNeighbors, hexKey, getHexFacing } from '../hexGrid';
 import { rollVolley } from '../../utils/diceRoller';
 import { determineStruckShieldSector } from '../hexGrid';
 
@@ -13,6 +13,7 @@ export interface FighterMoveResult {
   newPosition: HexCoord;
   moved: boolean;
   traversedHexes: HexCoord[];
+  newFacing: HexFacing;
 }
 
 export interface FighterAttackResult {
@@ -131,24 +132,24 @@ export function resolveFighterMovement(
   allFighters: FighterToken[],
   terrainMap: Map<string, TerrainType>,
 ): FighterMoveResult {
-  if (fighter.hasDrifted) return { newPosition: fighter.position, moved: false, traversedHexes: [] };
+  if (fighter.hasDrifted) return { newPosition: fighter.position, moved: false, traversedHexes: [], newFacing: fighter.facing };
 
   let goalHex: HexCoord | null = null;
 
   if (fighter.allegiance === 'allied') {
     // Move toward assigned target, or stay put if none
-    if (!fighter.assignedTargetId) return { newPosition: fighter.position, moved: false, traversedHexes: [] };
+    if (!fighter.assignedTargetId) return { newPosition: fighter.position, moved: false, traversedHexes: [], newFacing: fighter.facing };
     const target = enemyShips.find(s => s.id === fighter.assignedTargetId && !s.isDestroyed)
       || playerShips.find(s => s.id === fighter.assignedTargetId && !s.isDestroyed)
       || allFighters.find(f => f.id === fighter.assignedTargetId && !f.isDestroyed);
-    if (!target) return { newPosition: fighter.position, moved: false, traversedHexes: [] };
+    if (!target) return { newPosition: fighter.position, moved: false, traversedHexes: [], newFacing: fighter.facing };
     goalHex = target.position;
   } else {
     // Enemy fighters swarm toward nearest player ship or allied fighter
     const livingShips = playerShips.filter(s => !s.isDestroyed);
     const livingFighters = allFighters.filter(f => f.allegiance === 'allied' && !f.isDestroyed);
 
-    if (livingShips.length === 0 && livingFighters.length === 0) return { newPosition: fighter.position, moved: false, traversedHexes: [] };
+    if (livingShips.length === 0 && livingFighters.length === 0) return { newPosition: fighter.position, moved: false, traversedHexes: [], newFacing: fighter.facing };
 
     const shipDistances = livingShips.map(s => ({ pos: s.position, dist: hexDistance(fighter.position, s.position) }));
     const fighterDistances = livingFighters.map(f => ({ pos: f.position, dist: hexDistance(fighter.position, f.position) }));
@@ -159,10 +160,13 @@ export function resolveFighterMovement(
 
   const path = bfsPath(fighter.position, goalHex, fighter.speed, fighter, allFighters, terrainMap);
 
-  if (path.length === 0) return { newPosition: fighter.position, moved: false, traversedHexes: [] };
+  if (path.length === 0) return { newPosition: fighter.position, moved: false, traversedHexes: [], newFacing: fighter.facing };
 
   const newPosition = path[path.length - 1];
-  return { newPosition, moved: true, traversedHexes: path };
+  const prevHex = path.length > 1 ? path[path.length - 2] : fighter.position;
+  const stepFacing = getHexFacing(prevHex, newPosition);
+  const newFacing = stepFacing !== null ? stepFacing : fighter.facing;
+  return { newPosition, moved: true, traversedHexes: path, newFacing };
 }
 
 // ─── Fighter Attack ──────────────────────────────────────────────

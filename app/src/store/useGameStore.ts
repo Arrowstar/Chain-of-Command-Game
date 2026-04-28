@@ -3242,6 +3242,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         updatedFighters[fIndex] = {
           ...updatedFighters[fIndex],
           position: moveResult.newPosition,
+          facing: moveResult.newFacing,
           hasDrifted: true,
         };
       }
@@ -3293,7 +3294,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
 
       // 2. Attack (using updated position from move)
-      const movedFighter = { ...fighter, position: moveResult.newPosition, hasDrifted: true };
+      const movedFighter = { ...fighter, position: moveResult.newPosition, facing: moveResult.newFacing, hasDrifted: true };
       const attackResult = resolveFighterAttack(movedFighter, state.playerShips, state.enemyShips, allFighters, state.terrainMap);
 
       if (attackResult) {

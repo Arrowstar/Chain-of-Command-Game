@@ -134,7 +134,7 @@ export default function HexMap() {
       animateMap(entitiesRef.current.ships, true);
       animateMap(entitiesRef.current.enemies, true);
       animateMap(entitiesRef.current.torpedoes, true);
-      animateMap(entitiesRef.current.fighters, false); // fighters don't rotate
+      animateMap(entitiesRef.current.fighters, true);
     });
 
     // Center the camera on hex (0,0) which is the player's starting position
@@ -301,13 +301,13 @@ export default function HexMap() {
       if (!hasSprite) {
         const color = f.allegiance === 'allied' ? 0x7CFFB2 : 0xFF6B6B;
         const glowColor = f.allegiance === 'allied' ? 0x7CFFB2 : 0xFF8A8A;
-        
+
         g.lineStyle(1.5, color, 0.9);
         g.beginFill(glowColor, 0.5);
-        g.moveTo(0, -9);
-        g.lineTo(7, 0);
-        g.lineTo(0, 9);
-        g.lineTo(-7, 0);
+        // Small right-pointing triangle (container rotation handles facing)
+        g.moveTo(8, 0);
+        g.lineTo(-5, 5);
+        g.lineTo(-5, -5);
         g.closePath();
         g.endFill();
       }
@@ -323,8 +323,9 @@ export default function HexMap() {
       const fx = baseCenter.x + Math.cos(angleOffset) * spreadR;
       const fy = baseCenter.y + Math.sin(angleOffset) * spreadR;
 
+      const rot = ((f.facing * 60) - 30) * (Math.PI / 180);
       const p = getParams();
-      p.x = fx; p.y = fy; p.rot = 0;
+      p.x = fx; p.y = fy; p.rot = rot;
     });
 
     // Draw Torpedo tokens
