@@ -12,7 +12,7 @@ import { drawRoECard, getRoECardById } from '../data/roeDeck';
 import { createShuffledFumbleDeck, drawFumbleCard } from '../data/fumbleDeck';
 import { createShuffledPlayerCritDeck, createShuffledEnemyCritDeck, drawCriticalCard } from '../data/criticalDamage';
 import { calculateStressRecovery, recoverStress, resetOfficerRoundState, applyStress, getMaxStress } from '../engine/stress';
-import { regenerateShields, resolveAttack, assembleVolleyPool, getValidTargetsForWeapon, getAntiSmallCraftTNModifier } from '../engine/combat';
+import { regenerateShields, resolveAttack, assembleVolleyPool, getValidTargetsForWeapon, getAntiSmallCraftTNModifier, type DamageResult } from '../engine/combat';
 import { executeDrift, rotateShip, adjustSpeed } from '../engine/movement';
 import { moveTorpedo, resolveTorpedoAttack } from '../engine/torpedoMovement';
 import { hexKey, hexDistance, checkLineOfSight, parseHexKey, isInFiringArc, hexNeighbors, hexEquals } from '../engine/hexGrid';
@@ -349,7 +349,7 @@ function buildMinefieldHazards(
     .flatMap(ship => hexesWithinRadius(ship.position, radius))
     .filter(hex => {
       const key = hexKey(hex);
-      return !occupiedKeys.has(key) && terrainMap.get(key) === 'open';
+      return !occupiedKeys.has(key) && (terrainMap.get(key) || 'open') === 'open';
     })
     .filter((hex, index, array) => array.findIndex(other => hexEquals(other, hex)) === index)
     .sort((a, b) => {
@@ -466,7 +466,7 @@ function canSpawnDebrisAtHex(
   destroyedShipId: string,
 ): boolean {
   const key = hexKey(coord);
-  if (state.terrainMap.get(key) !== 'open') return false;
+  if ((state.terrainMap.get(key) || 'open') !== 'open') return false;
 
   const occupiedByShip =
     state.playerShips.some(ship => ship.id !== destroyedShipId && !ship.isDestroyed && hexKey(ship.position) === key) ||
@@ -511,7 +511,7 @@ function isHexOpenAndUnoccupied(
   shipIdToIgnore?: string,
 ): boolean {
   const key = hexKey(coord);
-  if (state.terrainMap.get(key) !== 'open') return false;
+  if ((state.terrainMap.get(key) || 'open') !== 'open') return false;
   if (state.playerShips.some(ship => ship.id !== shipIdToIgnore && !ship.isDestroyed && hexKey(ship.position) === key)) return false;
   if (state.enemyShips.some(ship => ship.id !== shipIdToIgnore && !ship.isDestroyed && hexKey(ship.position) === key)) return false;
   if (state.fighterTokens.some(token => !token.isDestroyed && hexKey(token.position) === key)) return false;
@@ -547,7 +547,7 @@ function createDeploymentFormation(
       const key = hexKey(candidate);
       return !used.has(key)
         && isHexWithinBounds(candidate, bounds)
-        && terrainMap.get(key) === 'open'
+        && (terrainMap.get(key) || 'open') === 'open'
         && !used.has(key);
     }) ?? fallback;
     used.add(hexKey(pos));
@@ -3362,6 +3362,42 @@ export const useGameStore = create<GameStore>((set, get) => ({
               });
             }
           }
+        }
+
+        // Show volley resolution modal
+        if (attackResult.volleyResult) {
+          useUIStore.getState().queueModal('volley', {
+            results: [{
+              damageResult: {
+                shieldHits: attackResult.shieldDamage,
+                struckSector: attackResult.sector as ShipArc,
+                shieldRemaining: Math.max(0, attackResult.struckShieldValue - attackResult.shieldDamage),
+                overflowHits: 0,
+                armorRoll: 0,
+                armorDie: 'd4' as any,
+                hullDamage: attackResult.hullDamage,
+                criticalTriggered: false,
+                volleyResult: attackResult.volleyResult,
+                tnBreakdown: {
+                  baseEvasion: attackResult.targetNumber,
+                  rangeModifier: 0,
+                  terrainModifier: 0,
+                  evasiveManeuvers: 0,
+                  targetLockModifier: 0,
+                  trackingBonus: 0,
+                  otherModifiers: 0,
+                  total: attackResult.targetNumber,
+                },
+                ionNebulaActive: attackResult.ionNebulaActive,
+              } as DamageResult,
+              defenderId: attackResult.targetId,
+              defenderName: targetName,
+              outOfArc: false,
+              outOfRange: false,
+            }],
+            weaponName: `${fighter.name}'s cannons`,
+            attackerId: fighter.name,
+          });
         }
 
         // Mark fighter as having acted

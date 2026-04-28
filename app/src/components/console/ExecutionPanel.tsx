@@ -63,6 +63,7 @@ export default function ExecutionPanel() {
   const [expandedActionId, setExpandedActionId] = useState<string | null>(null);
   const [cyberSelections, setCyberSelections] = useState<Record<string, CyberSelectionState>>({});
   const [rotateShieldsSelections, setRotateShieldsSelections] = useState<Record<string, { donorSector: import('../../types/game').ShipArc | null; receiverSector: import('../../types/game').ShipArc | null }>>({});
+  const [reinforceShieldsSelections, setReinforceShieldsSelections] = useState<Record<string, import('../../types/game').ShipArc | null>>({});
 
   const shipsInStep = isAllied ? playerShips.filter(s => !s.isDestroyed && getChassisById(s.chassisId)?.size === size) : [];
 
@@ -429,37 +430,64 @@ export default function ExecutionPanel() {
 
                           {def?.id === 'reinforce-shields' && (() => {
                             const allShieldsFull = SHIELD_SECTORS.every(sector => (ship.shields[sector] ?? 0) >= ship.maxShieldsPerSector);
+                            const selectedSector = reinforceShieldsSelections[action.id] ?? null;
                             
+                            if (allShieldsFull) {
+                              return (
+                                <div style={{ padding: '8px', border: '1px dashed var(--color-text-dim)', borderRadius: '4px', textAlign: 'center' }}>
+                                  <div className="mono" style={{ color: 'var(--color-text-dim)', fontSize: '0.8rem', marginBottom: '8px' }}>
+                                    All shield sectors are already at maximum integrity.
+                                  </div>
+                                  <button
+                                    className="btn btn--execute"
+                                    title="All shield arcs are currently at their maximum capacity."
+                                    onClick={() => {
+                                      resolveAction(owner!.id, ship.id, action.id, { wasted: true, reason: 'All shields at max' });
+                                      setExpandedActionId(null);
+                                    }}
+                                  >
+                                    WASTE ACTION
+                                  </button>
+                                </div>
+                              );
+                            }
+
+                            const handleConfirm = () => {
+                              if (selectedSector) {
+                                resolveAction(owner!.id, ship.id, action.id, { sector: selectedSector });
+                                setExpandedActionId(null);
+                                setReinforceShieldsSelections(prev => {
+                                  const next = { ...prev };
+                                  delete next[action.id];
+                                  return next;
+                                });
+                              }
+                            };
+
                             return (
-                              <>
-                                <div className="label" style={{ marginBottom: '8px' }}>Select Shield Sector to Reinforce:</div>
-                                {allShieldsFull ? (
-                                  <div style={{ padding: '8px', border: '1px dashed var(--color-text-dim)', borderRadius: '4px', textAlign: 'center' }}>
-                                    <div className="mono" style={{ color: 'var(--color-text-dim)', fontSize: '0.8rem', marginBottom: '8px' }}>
-                                      All shield sectors are already at maximum integrity.
-                                    </div>
-                                    <button
-                                      className="btn btn--execute"
-                                      title="All shield arcs are currently at their maximum capacity."
-                                      onClick={() => {
-                                        resolveAction(owner!.id, ship.id, action.id, { wasted: true, reason: 'All shields at max' });
-                                        setExpandedActionId(null);
-                                      }}
-                                    >
-                                      WASTE ACTION
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                                    {SHIELD_SECTORS.map(sector => (
-                                      <button key={sector} className="btn" style={{ fontSize: '0.7rem' }} onClick={() => {
-                                        resolveAction(owner!.id, ship.id, action.id, { sector });
-                                        setExpandedActionId(null);
-                                      }}>{sector.toUpperCase()}</button>
-                                    ))}
-                                  </div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <ReinforceShieldsArcSelector
+                                  shipId={ship.id}
+                                  spriteId={ship.chassisId}
+                                  shipName={ship.name}
+                                  shields={ship.shields}
+                                  selectedSector={selectedSector}
+                                  maxShieldsPerSector={ship.maxShieldsPerSector}
+                                  onSelectSector={(sector) => {
+                                    setReinforceShieldsSelections(prev => ({ ...prev, [action.id]: sector }));
+                                  }}
+                                />
+
+                                {selectedSector && (
+                                  <button
+                                    className="btn btn--execute"
+                                    style={{ marginTop: '4px' }}
+                                    onClick={handleConfirm}
+                                  >
+                                    CONFIRM REINFORCE {ARC_LABELS[selectedSector].toUpperCase()}
+                                  </button>
                                 )}
-                              </>
+                              </div>
                             );
                           })()}
 
@@ -467,20 +495,22 @@ export default function ExecutionPanel() {
                           {def?.id === 'rotate-shields' && (() => {
                             const selection = rotateShieldsSelections[action.id] ?? { donorSector: null, receiverSector: null };
                             
-                            // Check if action is impossible (no shields anywhere to rotate)
-                            const totalShields = Object.values(ship.shields).reduce((a, b) => a + (b ?? 0), 0);
-                            const canRotate = totalShields > 0;
+                            // Check if action is impossible (no shields to transfer, or all shields at max)
+                            const hasDonor = SHIELD_SECTORS.some(sector => (ship.shields[sector] ?? 0) > 0);
+                            const hasReceiver = SHIELD_SECTORS.some(sector => (ship.shields[sector] ?? 0) < ship.maxShieldsPerSector);
+                            const canRotate = hasDonor && hasReceiver;
 
                             if (!canRotate) {
+                              const reason = !hasDonor ? 'No shields to transfer' : 'All shields are at maximum';
                               return (
                                 <div style={{ padding: '8px', border: '1px dashed var(--color-text-dim)', borderRadius: '4px', textAlign: 'center' }}>
                                   <div className="mono" style={{ color: 'var(--color-text-dim)', fontSize: '0.8rem', marginBottom: '8px' }}>
-                                    No shields available to transfer.
+                                    {reason}.
                                   </div>
                                   <button
                                     className="btn btn--execute"
                                     onClick={() => {
-                                      resolveAction(owner!.id, ship.id, action.id, { wasted: true, reason: 'No shields to transfer' });
+                                      resolveAction(owner!.id, ship.id, action.id, { wasted: true, reason });
                                       setExpandedActionId(null);
                                     }}
                                   >
@@ -1228,6 +1258,133 @@ function RotateShieldsArcSelector({
         </div>
         <div className="mono" style={{ fontSize: '0.75rem', color: receiverSector ? 'var(--color-holo-green)' : 'var(--color-text-dim)' }}>
           {receiverSector ? `Receiver: ${ARC_LABELS[receiverSector]}` : 'No receiver selected.'}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReinforceShieldsArcSelector({
+  shipId,
+  spriteId,
+  shipName,
+  shields,
+  selectedSector,
+  maxShieldsPerSector,
+  onSelectSector,
+}: {
+  shipId: string;
+  spriteId: string;
+  shipName: string;
+  shields: ShieldState;
+  selectedSector: ShipArc | null;
+  maxShieldsPerSector: number;
+  onSelectSector: (sector: ShipArc) => void;
+}) {
+  const shipSprite = ASSET_MAP[spriteId];
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        gap: '12px',
+        alignItems: 'center',
+        padding: '10px',
+        border: '1px solid var(--color-border)',
+        background: 'rgba(9, 15, 28, 0.72)',
+      }}
+    >
+      <svg viewBox="0 0 120 120" width="120" height="120" role="img" aria-label={`Shield arcs for ${shipName}`}>
+        <defs>
+          <clipPath id={`reinforce-preview-clip-${shipId}`}>
+            <circle cx="60" cy="60" r="20" />
+          </clipPath>
+        </defs>
+        {SHIELD_SECTORS.map((arc, index) => {
+          const startAngle = index * 60 - 30;
+          const endAngle = startAngle + 60;
+          const shieldValue = shields[arc] ?? 0;
+          const isSelected = selectedSector === arc;
+          const isAvailable = shieldValue < maxShieldsPerSector;
+
+          const labelPos = polarPoint(60, 60, 28, startAngle + 30);
+          const fillOpacity = (shieldValue / maxShieldsPerSector) * 0.58 + 0.18;
+
+          let fillColor = `rgba(79, 209, 197, ${fillOpacity})`;
+          let strokeColor = 'rgba(160, 174, 192, 0.3)';
+          let strokeWidth = '1.2';
+
+          if (isSelected) {
+            fillColor = 'rgba(100, 255, 100, 0.4)';
+            strokeColor = 'var(--color-holo-green)';
+            strokeWidth = '2.2';
+          } else if (isAvailable) {
+            strokeColor = 'var(--color-holo-cyan)';
+          }
+
+          if (!isAvailable && !isSelected) {
+            fillColor = 'rgba(79, 209, 197, 0.06)';
+          }
+
+          return (
+            <g key={arc}>
+              <path
+                d={getArcBandPath(60, 60, 24, 38, startAngle + 2, endAngle - 2)}
+                fill={fillColor}
+                stroke={strokeColor}
+                strokeWidth={strokeWidth}
+                style={{ cursor: isAvailable || isSelected ? 'pointer' : 'not-allowed' }}
+                onClick={() => {
+                  if (isAvailable || isSelected) onSelectSector(arc);
+                }}
+              />
+              <text
+                x={labelPos.x}
+                y={labelPos.y}
+                fill={(isAvailable || isSelected) ? 'white' : 'rgba(255,255,255,0.45)'}
+                fontSize="7"
+                textAnchor="middle"
+                dominantBaseline="middle"
+                className="mono"
+                style={{ pointerEvents: 'none' }}
+              >
+                {shieldValue}
+              </text>
+            </g>
+          );
+        })}
+
+        <circle cx="60" cy="60" r="20.5" fill="rgba(9, 15, 28, 0.92)" stroke="rgba(160, 174, 192, 0.45)" strokeWidth="1.2" />
+        {shipSprite ? (
+          <image
+            href={shipSprite}
+            x="39"
+            y="39"
+            width="42"
+            height="42"
+            preserveAspectRatio="xMidYMid meet"
+            clipPath={`url(#reinforce-preview-clip-${shipId})`}
+            transform="rotate(-90 60 60)"
+          />
+        ) : (
+          <path
+            d="M 74 60 L 51 70 L 57 60 L 51 50 Z"
+            fill="var(--color-bg-panel)"
+            stroke="#A0AEC0"
+            strokeWidth="1.5"
+          />
+        )}
+      </svg>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+        <div className="label" style={{ color: 'var(--color-holo-cyan)' }}>Reinforce Shields</div>
+        <div className="mono" style={{ fontSize: '0.75rem', color: 'var(--color-text-dim)' }}>
+          {!selectedSector 
+            ? "Click an available arc to reinforce."
+            : "Ready to confirm."}
+        </div>
+        <div className="mono" style={{ fontSize: '0.75rem', color: selectedSector ? 'var(--color-holo-green)' : 'var(--color-text-dim)' }}>
+          {selectedSector ? `Selected: ${ARC_LABELS[selectedSector]}` : 'No arc selected.'}
         </div>
       </div>
     </div>

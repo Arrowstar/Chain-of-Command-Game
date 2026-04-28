@@ -1,4 +1,4 @@
-import type { FighterToken, HexCoord, TerrainType, ShipState, EnemyShipState, DieType } from '../../types/game';
+import type { FighterToken, HexCoord, TerrainType, ShipState, EnemyShipState, DieType, VolleyResult } from '../../types/game';
 import { hexDistance, hexNeighbors, hexKey } from '../hexGrid';
 import { rollVolley } from '../../utils/diceRoller';
 import { determineStruckShieldSector } from '../hexGrid';
@@ -26,6 +26,7 @@ export interface FighterAttackResult {
   targetNumber: number;
   /** True when the target was in an Ion Nebula — shields were bypassed. */
   ionNebulaActive?: boolean;
+  volleyResult?: VolleyResult;
 }
 
 // ─── BFS Pathfinding ────────────────────────────────────────────
@@ -248,7 +249,8 @@ export function resolveFighterAttack(
       sector: fighterTarget ? 'hull' : 'fore', 
       struckShieldValue: 0,
       rolls: allRolls,
-      targetNumber: tn
+      targetNumber: tn,
+      volleyResult: volley
     };
   }
 
@@ -263,7 +265,8 @@ export function resolveFighterAttack(
       sector: 'hull',
       struckShieldValue: 0,
       rolls: allRolls,
-      targetNumber: tn
+      targetNumber: tn,
+      volleyResult: volley
     };
   } else if (shipTarget) {
     // Capital Ship Attack
@@ -296,6 +299,7 @@ export function resolveFighterAttack(
       rolls: allRolls,
       targetNumber: tn,
       ionNebulaActive: ionNebulaActive || undefined,
+      volleyResult: volley
     };
   }
 

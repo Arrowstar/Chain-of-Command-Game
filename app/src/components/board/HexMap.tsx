@@ -297,7 +297,7 @@ export default function HexMap() {
     const activeFighters = fighterTokens.filter(f => !f.isDestroyed);
     syncEntities(activeFighters, fighters, (f, g, getParams, isNew) => {
       g.clear();
-      const hasSprite = attachOrUpdateSprite(g, f.allegiance === 'enemy' ? 'strike-fighter' : undefined, isNew, f.allegiance === 'enemy' ? 'enemy' : 'allied');
+      const hasSprite = attachOrUpdateSprite(g, f.allegiance === 'enemy' ? 'strike-fighter' : 'allied-fighter', isNew, f.allegiance === 'enemy' ? 'enemy' : 'allied');
       if (!hasSprite) {
         const color = f.allegiance === 'allied' ? 0x7CFFB2 : 0xFF6B6B;
         const glowColor = f.allegiance === 'allied' ? 0x7CFFB2 : 0xFF8A8A;

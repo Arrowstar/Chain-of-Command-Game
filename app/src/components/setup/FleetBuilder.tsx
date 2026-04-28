@@ -14,6 +14,70 @@ import type { CustomScenarioConfig } from './ScenarioEditor';
 const WEAPON_COLORS = ['#4FD1C5', '#F6E05E', '#F6AD55', '#FC8181', '#B794F4', '#63B3ED'];
 const ARC_INDEX: Record<string, number> = { 'fore': 0, 'foreStarboard': 1, 'aftStarboard': 2, 'aft': 3, 'aftPort': 4, 'forePort': 5 };
 
+const STATION_ICONS: Record<string, string> = {
+  helm: '✦',
+  tactical: '✕',
+  sensors: '◈',
+  engineering: '⚙',
+};
+
+const STATION_COLORS: Record<string, string> = {
+  helm: '#F6E05E',       // Gold/Amber
+  tactical: '#FC8181',   // Red/Hostile
+  engineering: '#68D391', // Green/Ready
+  sensors: '#4FD1C5',    // Teal/Holo
+};
+
+const renderStressPips = (limit: number | null, color: string) => {
+  if (limit === null) return <span style={{ color, fontSize: '0.65rem', fontWeight: 'bold', letterSpacing: '0.05em' }}>IMMUNE</span>;
+  return (
+    <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div 
+          key={i} 
+          style={{ 
+            width: '6px', 
+            height: '6px', 
+            borderRadius: '50%', 
+            background: i < limit ? color : 'rgba(255,255,255,0.05)',
+            border: `1px solid ${i < limit ? color : 'rgba(255,255,255,0.15)'}`,
+            boxShadow: i < limit ? `0 0 5px ${color}` : 'none',
+            transition: 'all 0.3s'
+          }} 
+        />
+      ))}
+    </div>
+  );
+};
+
+const getWeaponCategory = (weapon: any): string => {
+  const name = weapon.name.toLowerCase();
+  const tags = weapon.tags || [];
+  if (name.includes('plasma') || name.includes('laser') || name.includes('emitter') || name.includes('lance') || name.includes('disruptor')) return 'energy';
+  if (name.includes('torpedo') || tags.includes('torpedo')) return 'missile';
+  return 'kinetic';
+};
+
+const StatusBlocks = ({ filled, total, color = 'var(--color-holo-cyan)' }: { filled: number, total: number, color?: string }) => (
+  <div style={{ display: 'flex', gap: '3px' }}>
+    {Array.from({ length: total }).map((_, i) => (
+      <div 
+        key={i} 
+        style={{ 
+          width: '6px', 
+          height: '6px', 
+          background: i < filled ? color : 'rgba(255,255,255,0.08)',
+          border: `1px solid ${i < filled ? color : 'rgba(255,255,255,0.15)'}`,
+          borderRadius: '1px',
+          boxShadow: i < filled ? `0 0 5px ${color}` : 'none',
+          transition: 'all 0.3s ease'
+        }} 
+      />
+    ))}
+  </div>
+);
+
+
 function getArcBandPath(cx: number, cy: number, innerR: number, outerR: number, startAngle: number, endAngle: number) {
   if (endAngle - startAngle >= 360) endAngle = startAngle + 359.99;
   const rad = (deg: number) => (deg - 90) * Math.PI / 180;
@@ -48,12 +112,20 @@ function getHexGridPath(cx: number, cy: number, hexSize: number, q: number, r: n
   return `M ${pts[0]} L ${pts[1]} L ${pts[2]} L ${pts[3]} L ${pts[4]} L ${pts[5]} Z`;
 }
 
-function ShipLoadoutPreview({ chassis, selectedWeaponIds }: { chassis: any, selectedWeaponIds: string[] }) {
+function ShipLoadoutPreview({ chassis, selectedWeaponIds, hoveredWeaponId }: { chassis: any, selectedWeaponIds: string[], hoveredWeaponId?: string | null }) {
   const cx = 150;
   const cy = 150;
   const hexSize = 16; 
   const baseRadius = 26;
   const weapons = selectedWeaponIds.map(id => WEAPONS.find(w => w.id === id)).filter(Boolean) as any[];
+
+  // Group weapons for summary text
+  const weaponSummary = weapons.reduce((acc: any[], w) => {
+    const existing = acc.find(x => x.id === w.id);
+    if (existing) existing.count++;
+    else acc.push({ ...w, count: 1 });
+    return acc;
+  }, []);
 
   const origin = { q: 0, r: 0 };
   const allHexCoords: {q: number, r: number}[] = [];
@@ -68,9 +140,10 @@ function ShipLoadoutPreview({ chassis, selectedWeaponIds }: { chassis: any, sele
   const bgGridD = allHexCoords.map(h => getHexGridPath(cx, cy, hexSize, h.q, h.r)).join(' ');
 
   return (
-    <div className="panel panel--raised" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+    <div className="panel panel--raised" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '320px' }}>
       <div className="label" style={{ color: 'var(--color-holo-cyan)', marginBottom: 'var(--space-md)', alignSelf: 'flex-start' }}>LOADOUT PREVIEW</div>
-      <svg width="300" height="300" viewBox="0 0 300 300" style={{ background: 'var(--color-bg-deep)', borderRadius: '50%', border: '1px solid var(--color-border)' }}>
+      
+      <svg width="240" height="240" viewBox="0 0 300 300" style={{ background: 'var(--color-bg-deep)', borderRadius: '50%', border: '1px solid var(--color-border)', marginBottom: 'var(--space-md)' }}>
         {/* Hex Grid Background */}
         <path d={bgGridD} fill="none" stroke="var(--color-border)" strokeWidth="0.8" opacity="0.4" />
 
@@ -79,6 +152,7 @@ function ShipLoadoutPreview({ chassis, selectedWeaponIds }: { chassis: any, sele
           const color = WEAPON_COLORS[index % WEAPON_COLORS.length];
           const maxRange = w.rangeMax === Infinity ? 6 : w.rangeMax;
           const minRange = w.rangeMin || 0;
+          const isHovered = w.id === hoveredWeaponId;
           
           const coveredHexes = allHexCoords.filter(h => {
             if (h.q === 0 && h.r === 0) return false;
@@ -92,13 +166,14 @@ function ShipLoadoutPreview({ chassis, selectedWeaponIds }: { chassis: any, sele
 
           return (
             <path 
-              key={`${w.id}-hexes`} 
+              key={`${w.id}-hexes-${index}`} 
               d={d}
               fill={color} 
-              opacity="0.3"
+              opacity={isHovered ? "0.6" : "0.25"}
               stroke={color}
-              strokeWidth="1.5"
+              strokeWidth={isHovered ? "2.5" : "1.2"}
               strokeLinejoin="round"
+              style={{ transition: 'all 0.2s ease' }}
             />
           );
         })}
@@ -137,8 +212,26 @@ function ShipLoadoutPreview({ chassis, selectedWeaponIds }: { chassis: any, sele
           strokeWidth="1.5"
         />
       </svg>
-      <div className="mono" style={{ fontSize: '0.7rem', color: 'var(--color-text-dim)', marginTop: 'var(--space-sm)' }}>
-        SHIELD SECTORS & WEAPON ARCS
+
+      {/* Live Loadout Summary Text */}
+      <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div className="label" style={{ fontSize: '0.65rem', color: 'var(--color-text-dim)', borderBottom: '1px solid var(--color-border)', paddingBottom: '4px' }}>SELECTED ARMAMENT</div>
+        {weaponSummary.length === 0 ? (
+          <div className="mono" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.2)', fontStyle: 'italic' }}>No weapons equipped.</div>
+        ) : (
+          weaponSummary.map((w, i) => (
+            <div key={w.id} className="mono" style={{ fontSize: '0.75rem', display: 'flex', flexDirection: 'column', gap: '2px', background: 'rgba(255,255,255,0.03)', padding: '6px', borderRadius: '4px', borderLeft: `2px solid ${WEAPON_COLORS[weapons.findIndex(sw => sw.id === w.id) % WEAPON_COLORS.length]}` }}>
+              <div className="flex-between">
+                <strong style={{ color: 'var(--color-text-bright)' }}>{w.name} {w.count > 1 ? `(x${w.count})` : ''}</strong>
+                <span style={{ color: 'var(--color-holo-cyan)' }}>{w.volleyPool.join(', ')}</span>
+              </div>
+              <div className="flex-between" style={{ fontSize: '0.65rem', color: 'var(--color-text-dim)' }}>
+                <span>Range: {w.rangeMin}-{w.rangeMax === Infinity ? '∞' : w.rangeMax}</span>
+                <span>Arcs: {w.arcs.map((a: string) => a.charAt(0).toUpperCase()).join(', ')}</span>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
@@ -199,6 +292,8 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
   // Module state
   const [selectedWeapons, setSelectedWeapons] = useState<string[]>([]);
   const [selectedSubsystems, setSelectedSubsystems] = useState<string[]>([]);
+  const [weaponFilter, setWeaponFilter] = useState<'all' | 'energy' | 'kinetic' | 'missile'>('all');
+  const [hoveredWeaponId, setHoveredWeaponId] = useState<string | null>(null);
 
   // Saves current UI state into the drafts array for the active player
   const saveCurrentDraftRef = React.useRef<() => void>(() => {});
@@ -491,7 +586,8 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
           <h2 style={{ color: 'var(--color-holo-cyan)', margin: 0 }}>Deployment Setup</h2>
         </div>
         {/* Clickable step breadcrumbs */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        {/* Premium Step Breadcrumbs */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
           {(isCampaignSetup ? [1, 2] : [1, 2, 3]).map((s, idx, arr) => {
             const stepLabels: Record<number, string> = {
               1: isCampaignSetup ? 'INIT' : 'CHASSIS',
@@ -500,77 +596,89 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
             };
             const isActive = step === s;
             const isPast = step > s;
-            // Can navigate back to any completed step; can't skip forward past current
             const isClickable = isPast;
             return (
-              <React.Fragment key={s}>
-                <button
+              <div key={s} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div 
                   onClick={() => isClickable && setStep(s)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
+                  style={{ 
+                    width: '24px', height: '24px', borderRadius: '50%', 
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: isPast ? 'var(--color-holo-green)' : isActive ? 'var(--color-holo-cyan)' : 'rgba(255,255,255,0.1)',
+                    color: 'var(--color-bg-deep)', fontSize: '0.75rem', fontWeight: 'bold',
                     cursor: isClickable ? 'pointer' : 'default',
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: '0.72rem',
-                    letterSpacing: '0.1em',
-                    color: isActive
-                      ? 'var(--color-holo-cyan)'
-                      : isPast
-                        ? 'var(--color-holo-green)'
-                        : 'var(--color-text-dim)',
-                    textDecoration: isClickable ? 'underline' : 'none',
-                    textDecorationColor: 'hsla(140, 80%, 50%, 0.5)',
-                    fontWeight: isActive ? 'bold' : 'normal',
-                    transition: 'color 0.2s',
+                    boxShadow: isActive ? '0 0 10px var(--color-holo-cyan)' : 'none',
+                    transition: 'all 0.3s'
                   }}
-                  title={isClickable ? `Go back to ${stepLabels[s]}` : undefined}
                 >
-                  {isPast ? '✓ ' : isActive ? '▶ ' : ''}{s}. {stepLabels[s]}
-                </button>
-                {idx < arr.length - 1 && (
-                  <span style={{ color: 'var(--color-text-dim)', fontSize: '0.7rem' }}>/</span>
-                )}
-              </React.Fragment>
+                  {isPast ? '✓' : s}
+                </div>
+                <span 
+                  onClick={() => isClickable && setStep(s)}
+                  className="label" 
+                  style={{ 
+                    fontSize: '0.7rem', 
+                    color: isActive ? 'var(--color-holo-cyan)' : isPast ? 'var(--color-holo-green)' : 'var(--color-text-dim)',
+                    letterSpacing: '0.1em',
+                    cursor: isClickable ? 'pointer' : 'default',
+                    textDecoration: isClickable ? 'underline' : 'none',
+                    textDecorationStyle: 'dotted'
+                  }}
+                >
+                  {stepLabels[s]}
+                </span>
+                {idx < arr.length - 1 && <div style={{ width: '30px', height: '1px', background: 'var(--color-border)', opacity: 0.5 }} />}
+              </div>
             );
           })}
         </div>
       </div>
 
-      {/* ── Player Progress Tracker ── */}
+      {/* Premium Player Progress Tracker */}
       {totalPlayers > 1 && (
-        <div style={{ display: 'flex', borderBottom: '1px solid var(--color-border)', background: 'rgba(0,0,0,0.3)' }}>
+        <div style={{ display: 'flex', borderBottom: '1px solid var(--color-border)', background: 'rgba(0,0,0,0.4)', padding: '2px 0' }}>
           {Array.from({ length: totalPlayers }).map((_, idx) => {
             const isActive = idx === currentPlayerIndex;
             const draft = isActive
               ? { chassisId: selectedChassisId, officers: selectedOfficers, weapons: selectedWeapons, subsystems: selectedSubsystems, shipName: customShipName }
               : drafts[idx];
-            const _ch = draft?.chassisId ? getChassisById(draft.chassisId) : null;
             const hasOffs = ['helm','tactical','engineering','sensors'].every(st => draft?.officers[st]);
             const hasMods = (draft?.weapons.length ?? 0) >= 1;
             const isDone = !!(draft?.chassisId && hasOffs && hasMods);
             const shipNameForIdx = isCampaignSetup
               ? (campaignShipNames[idx]?.trim() || `ISS Vanguard ${idx + 1}`)
               : (draft?.shipName || `Player ${idx + 1}`);
+            
             return (
               <div
                 key={idx}
                 onClick={() => handleTabClick(idx)}
                 style={{
                   flex: 1,
-                  padding: '8px 16px',
-                  borderRight: idx < totalPlayers - 1 ? '1px solid var(--color-border)' : 'none',
+                  padding: '10px 16px',
                   background: isActive ? 'rgba(0, 204, 255, 0.08)' : 'transparent',
                   borderBottom: isActive ? '2px solid var(--color-holo-cyan)' : '2px solid transparent',
-                  transition: 'all 0.2s',
+                  borderRight: idx < totalPlayers - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+                  transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                   cursor: 'pointer',
+                  position: 'relative'
                 }}
               >
-                <div className="mono" style={{ fontSize: '0.65rem', color: isDone ? 'var(--color-holo-green)' : isActive ? 'var(--color-holo-cyan)' : 'var(--color-text-dim)' }}>
-                  {isDone ? '✓ ' : isActive ? '▶ ' : ''}{`PLAYER ${idx + 1}`}
+                {isActive && <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '1px', background: 'var(--color-holo-cyan)', boxShadow: '0 0 8px var(--color-holo-cyan)' }} />}
+                <div className="label" style={{ 
+                  fontSize: '0.62rem', 
+                  color: isDone ? 'var(--color-holo-green)' : isActive ? 'var(--color-holo-cyan)' : 'var(--color-text-dim)',
+                  display: 'flex', alignItems: 'center', gap: '6px'
+                }}>
+                  {isDone ? '✓' : isActive ? '▶' : '○'} PLAYER {idx + 1}
                 </div>
-                <div className="mono" style={{ fontSize: '0.8rem', color: isDone ? 'var(--color-holo-green)' : isActive ? 'var(--color-text-bright)' : 'var(--color-text-dim)', fontWeight: isActive ? 'bold' : 'normal' }}>
+                <div className="mono" style={{ 
+                  fontSize: '0.85rem', 
+                  color: isDone ? 'var(--color-holo-green)' : isActive ? 'var(--color-text-bright)' : 'var(--color-text-dim)', 
+                  fontWeight: isActive ? 'bold' : 'normal',
+                  marginTop: '2px',
+                  letterSpacing: '0.02em'
+                }}>
                   {shipNameForIdx}
                 </div>
               </div>
@@ -830,8 +938,12 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
             <div style={{ display: 'flex', gap: 'var(--space-md)', flexWrap: 'wrap' }}>
               {stations.map(station => (
                 <div key={station} className="panel panel--raised" style={{ flex: '1 1 300px' }}>
-                  <div className="label" style={{ marginBottom: 'var(--space-sm)', color: 'var(--color-holo-cyan)', textTransform: 'uppercase' }}>
-                    {station}
+                  <div className="flex-between" style={{ marginBottom: 'var(--space-sm)', borderBottom: `1px solid ${STATION_COLORS[station]}44`, paddingBottom: '4px' }}>
+                    <div className="label" style={{ color: STATION_COLORS[station], textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '1.1rem' }}>{STATION_ICONS[station]}</span>
+                      {station}
+                    </div>
+                    <StatusBlocks filled={selectedOfficers[station] ? 1 : 0} total={1} color={STATION_COLORS[station]} />
                   </div>
                   {OFFICERS.filter(o => o.station === station).map(officer => {
                     const claimedBy = claimedOfficerMap[officer.id];
@@ -861,7 +973,9 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
                               flexShrink: 0,
                               borderRadius: '8px', 
                               objectFit: 'cover',
-                              border: `1px solid ${isSelected ? 'var(--color-holo-green)' : isClaimed ? 'rgba(255,100,100,0.3)' : 'var(--color-border)'}` 
+                              border: `1px solid ${isSelected ? 'var(--color-holo-green)' : isClaimed ? 'rgba(255,100,100,0.3)' : 'var(--color-border)'}`,
+                              boxShadow: isSelected ? '0 0 12px rgba(0, 255, 120, 0.25)' : 'none',
+                              transition: 'all 0.3s'
                             }} 
                           />
                           <div style={{ flex: 1 }}>
@@ -872,8 +986,11 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
                                   ASSIGNED · {claimedBy}
                                 </span>
                               ) : (
-                                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                                  <span className="mono" style={{ fontSize: '0.7rem' }}>Stress: {officer.stressLimit ?? 'IMMUNE'}</span>
+                                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '70px' }}>
+                                    <div className="label" style={{ fontSize: '0.52rem', color: 'var(--color-text-dim)', whiteSpace: 'nowrap', letterSpacing: '0.05em' }}>STRESS LIMIT</div>
+                                    {renderStressPips(officer.stressLimit, STATION_COLORS[station])}
+                                  </div>
                                   <span className="mono" style={{
                                     fontSize: '0.68rem', padding: '1px 6px', borderRadius: '3px',
                                     background: 'rgba(0, 204, 255, 0.12)',
@@ -935,29 +1052,49 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
                 <div className="flex-between" style={{ marginBottom: 'var(--space-md)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div className="label" style={{ color: 'var(--color-holo-cyan)' }}>WEAPONS</div>
-                    <span className="mono" style={{ fontSize: '0.6rem', color: 'var(--color-text-dim)', border: '1px solid var(--color-border)', padding: '1px 5px', borderRadius: '3px' }}>MIN 1</span>
-                  </div>
-                  <div className="mono" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    {selectedWeapons.length >= 1 && <span style={{ color: 'var(--color-holo-green)', fontSize: '0.8rem' }}>✓</span>}
-                    <span style={{ color: selectedWeapons.length >= 1 ? 'var(--color-holo-green)' : 'var(--color-text-dim)' }}>
-                      {selectedWeapons.length}/{activeChassis.weaponSlots}
-                    </span>
+                    <StatusBlocks filled={selectedWeapons.length} total={activeChassis.weaponSlots} />
                   </div>
                 </div>
-                {purchasableWeapons.map(weapon => {
-                  const count = selectedWeapons.filter(id => id === weapon.id).length;
-                  const isSelected = count > 0;
-                  return (
-                  <div 
-                    key={weapon.id}
-                    className={`panel`}
-                    style={{ 
-                      margin: '8px 0',
-                      borderColor: isSelected ? 'var(--color-holo-green)' : 'var(--color-border)',
-                      opacity: !isSelected && selectedWeapons.length >= activeChassis.weaponSlots ? 0.3 : 1
-                    }}
-                    data-testid={`weapon-select-${weapon.id}`}
-                  >
+
+                {/* Filter Tabs */}
+                <div style={{ display: 'flex', gap: '4px', marginBottom: '12px', background: 'rgba(0,0,0,0.2)', padding: '2px', borderRadius: '4px' }}>
+                  {['all', 'energy', 'kinetic', 'missile'].map(f => (
+                    <button
+                      key={f}
+                      className="btn"
+                      onClick={() => setWeaponFilter(f as any)}
+                      style={{
+                        flex: 1, padding: '4px 0', fontSize: '0.62rem',
+                        background: weaponFilter === f ? 'var(--color-holo-cyan)' : 'transparent',
+                        color: weaponFilter === f ? 'var(--color-bg-deep)' : 'var(--color-text-dim)',
+                        border: 'none', borderRadius: '3px',
+                      }}
+                    >
+                      {f.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+
+                {purchasableWeapons
+                  .filter(w => weaponFilter === 'all' || getWeaponCategory(w) === weaponFilter)
+                  .map(weapon => {
+                    const count = selectedWeapons.filter(id => id === weapon.id).length;
+                    const isSelected = count > 0;
+                    return (
+                    <div 
+                      key={weapon.id}
+                      className={`panel`}
+                      onMouseEnter={() => setHoveredWeaponId(weapon.id)}
+                      onMouseLeave={() => setHoveredWeaponId(null)}
+                      style={{ 
+                        margin: '8px 0',
+                        borderColor: isSelected ? 'var(--color-holo-green)' : 'var(--color-border)',
+                        background: isSelected ? 'rgba(0,255,100,0.03)' : 'transparent',
+                        opacity: !isSelected && selectedWeapons.length >= activeChassis.weaponSlots ? 0.3 : 1,
+                        transition: 'all 0.2s ease'
+                      }}
+                      data-testid={`weapon-select-${weapon.id}`}
+                    >
                     <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                       {weapon.imagePath && (
                         <img
@@ -1061,70 +1198,83 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
                 <div className="flex-between" style={{ marginBottom: 'var(--space-md)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div className="label" style={{ color: 'var(--color-holo-cyan)' }}>SUBSYSTEMS</div>
-                    <span className="mono" style={{ fontSize: '0.6rem', color: 'var(--color-text-dim)', border: '1px solid var(--color-border)', padding: '1px 5px', borderRadius: '3px' }}>OPTIONAL</span>
-                  </div>
-                  <div className="mono" style={{ color: 'var(--color-text-dim)' }}>
-                    {selectedSubsystems.length}/{activeChassis.internalSlots}
+                    <StatusBlocks filled={selectedSubsystems.length} total={activeChassis.internalSlots} color="var(--color-alert-amber)" />
                   </div>
                 </div>
-                {purchasableSubsystems.map(sub => (
-                  <div 
-                    key={sub.id}
-                    className={`panel`}
-                    style={{ 
-                      margin: '8px 0', cursor: 'pointer',
-                      borderColor: selectedSubsystems.includes(sub.id) ? 'var(--color-holo-green)' : 'var(--color-border)',
-                      opacity: !selectedSubsystems.includes(sub.id) && selectedSubsystems.length >= activeChassis.internalSlots ? 0.3 : 1
-                    }}
-                    onClick={() => handleSubsystemToggle(sub.id)}
-                    data-testid={`subsystem-select-${sub.id}`}
-                  >
-                    <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                      {sub.imagePath && (
-                        <img
-                          src={sub.imagePath}
-                          alt={sub.name}
-                          style={{
-                            width: '56px',
-                            height: '56px',
-                            flexShrink: 0,
-                            objectFit: 'cover',
-                            borderRadius: '4px',
-                            border: `1px solid ${selectedSubsystems.includes(sub.id) ? 'var(--color-holo-green)' : 'var(--color-border)'}`,
-                            background: 'var(--color-bg-raised)',
-                          }}
-                        />
-                      )}
-                    <div style={{ flex: 1 }}>
-                    <div className="flex-between">
-                      <strong>{sub.name}</strong>
-                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                        <span className="mono" style={{ fontSize: '0.7rem', color: 'var(--color-text-dim)' }}>RP: {sub.rpCost}</span>
-                        <span className="mono" style={{
-                          fontSize: '0.68rem', padding: '1px 6px', borderRadius: '3px',
-                          background: 'rgba(0, 204, 255, 0.12)',
-                          border: '1px solid var(--color-holo-cyan)',
-                          color: 'var(--color-holo-cyan)',
-                          fontWeight: 'bold',
-                        }}>
-                          {sub.dpCost} DP
-                        </span>
+                
+                {['helm', 'tactical', 'engineering', 'sensors'].map(st => {
+                  const subsForStation = purchasableSubsystems.filter(s => s.station === st);
+                  if (subsForStation.length === 0) return null;
+                  return (
+                    <div key={st} style={{ marginBottom: '16px' }}>
+                      <div className="label" style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.2)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ height: '1px', flex: 1, background: 'rgba(255,255,255,0.05)' }} />
+                        {st.toUpperCase()}
+                        <div style={{ height: '1px', flex: 1, background: 'rgba(255,255,255,0.05)' }} />
                       </div>
+                      {subsForStation.map(sub => (
+                        <div 
+                          key={sub.id}
+                          className={`panel`}
+                          style={{ 
+                            margin: '8px 0', cursor: 'pointer',
+                            borderColor: selectedSubsystems.includes(sub.id) ? 'var(--color-holo-green)' : 'var(--color-border)',
+                            background: selectedSubsystems.includes(sub.id) ? 'rgba(0,255,100,0.03)' : 'transparent',
+                            opacity: !selectedSubsystems.includes(sub.id) && selectedSubsystems.length >= activeChassis.internalSlots ? 0.3 : 1,
+                            transition: 'all 0.2s ease'
+                          }}
+                          onClick={() => handleSubsystemToggle(sub.id)}
+                          data-testid={`subsystem-select-${sub.id}`}
+                        >
+                          <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                            {sub.imagePath && (
+                              <img
+                                src={sub.imagePath}
+                                alt={sub.name}
+                                style={{
+                                  width: '56px',
+                                  height: '56px',
+                                  flexShrink: 0,
+                                  objectFit: 'cover',
+                                  borderRadius: '4px',
+                                  border: `1px solid ${selectedSubsystems.includes(sub.id) ? 'var(--color-holo-green)' : 'var(--color-border)'}`,
+                                  background: 'var(--color-bg-raised)',
+                                }}
+                              />
+                            )}
+                          <div style={{ flex: 1 }}>
+                          <div className="flex-between">
+                            <strong>{sub.name}</strong>
+                            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                              <span className="mono" style={{ fontSize: '0.7rem', color: 'var(--color-text-dim)' }}>RP: {sub.rpCost}</span>
+                              <span className="mono" style={{
+                                fontSize: '0.68rem', padding: '1px 6px', borderRadius: '3px',
+                                background: 'rgba(0, 204, 255, 0.12)',
+                                border: '1px solid var(--color-holo-cyan)',
+                                color: 'var(--color-holo-cyan)',
+                                fontWeight: 'bold',
+                              }}>
+                                {sub.dpCost} DP
+                              </span>
+                            </div>
+                          </div>
+                          <div className="mono" style={{ fontSize: '0.68rem', color: 'var(--color-text-secondary)', marginTop: '4px' }}>
+                            CT: {sub.ctCost} | Stress: {sub.stressCost}
+                          </div>
+                          <div className="mono" style={{ fontSize: '0.68rem', color: 'var(--color-holo-cyan)', marginTop: '3px', lineHeight: '1.3' }}>
+                            {sub.actionName}: {sub.effect}
+                          </div>
+                        </div>
+                        </div>
+                        </div>
+                      ))}
                     </div>
-                    <div className="mono" style={{ fontSize: '0.68rem', color: 'var(--color-text-secondary)', marginTop: '4px' }}>
-                      CT: {sub.ctCost} | Stress: {sub.stressCost} | Station: {sub.station}
-                    </div>
-                    <div className="mono" style={{ fontSize: '0.68rem', color: 'var(--color-holo-cyan)', marginTop: '3px', lineHeight: '1.3' }}>
-                      {sub.actionName}: {sub.effect}
-                    </div>
-                  </div>
-                  </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Preview Segment */}
-              <ShipLoadoutPreview chassis={activeChassis} selectedWeaponIds={selectedWeapons} />
+              <ShipLoadoutPreview chassis={activeChassis} selectedWeaponIds={selectedWeapons} hoveredWeaponId={hoveredWeaponId} />
 
             </div>
             
@@ -1163,7 +1313,12 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
                   onClick={() => handleTabClick(idx)}
                   style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 10px', borderBottom: idx < totalPlayers - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none', cursor: idx === currentPlayerIndex ? 'default' : 'pointer', background: idx === currentPlayerIndex ? 'rgba(0,204,255,0.06)' : 'transparent', transition: 'background 0.15s' }}
                 >
-                  <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: ready ? 'var(--color-holo-green)' : 'var(--color-hostile-red)', flexShrink: 0 }} />
+                  <div style={{ 
+                    width: '8px', height: '8px', borderRadius: '50%', 
+                    background: ready ? 'var(--color-holo-green)' : 'var(--color-hostile-red)', 
+                    boxShadow: ready ? '0 0 8px var(--color-holo-green)' : '0 0 8px var(--color-hostile-red)',
+                    flexShrink: 0 
+                  }} />
                   <span className="mono" style={{ fontSize: '0.7rem', color: idx === currentPlayerIndex ? 'var(--color-text-bright)' : 'var(--color-text-secondary)', flex: 1 }}>{shipLabel}</span>
                   <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                     <span title={`Officers: ${officersFilled}/4`} style={{ fontSize: '0.62rem', padding: '1px 5px', borderRadius: '3px', background: hasOfficers ? 'rgba(0,200,100,0.15)' : 'rgba(255,80,80,0.15)', color: hasOfficers ? 'var(--color-holo-green)' : '#ff7070', fontFamily: 'var(--font-mono)' }}>

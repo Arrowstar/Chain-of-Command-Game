@@ -167,6 +167,7 @@ import paladinCruiserImg from '../../art/ships/player/PaladinCruiser.png';
 import vanguardCruiserImg from '../../art/ships/player/VanguardCruiser.png';
 import wraithCorvetteImg from '../../art/ships/player/WraithCorvette.png';
 import zephyrFrigateImg from '../../art/ships/player/ZephyrFriger.png';
+import playerFightersImg from '../../art/ships/player/player_fighters.png';
 
 export const ASSET_MAP: Record<string, string> = {
   // Hegemony (Enemies)
@@ -177,6 +178,9 @@ export const ASSET_MAP: Record<string, string> = {
   'carrier': hegDreadnoughtImg, 
   'strike-fighter': hegInterceptorWingImg,
   'enemy-fighter': hegInterceptorWingImg,
+
+  // Player / Allied Fighters
+  'allied-fighter': playerFightersImg,
 
   // Player Chassis IDs
   'vanguard': vanguardCruiserImg,
