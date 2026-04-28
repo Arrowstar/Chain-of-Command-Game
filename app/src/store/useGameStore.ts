@@ -3,7 +3,7 @@ import type {
   GamePhase, ExecutionStep, ShipState, EnemyShipState, PlayerState,
   RoECard, TacticCard, FumbleCard, CriticalDamageCard,
   HexCoord, TerrainType, LogEntry, QueuedAction, OfficerStation, FighterToken, TorpedoToken, ShieldState, HexFacing, ObjectiveMarkerState, DeploymentBounds, TacticHazardState,
-  PendingTargetingPackage, TargetingPackageMode,
+  PendingTargetingPackage, TargetingPackageMode, ShipArc,
 } from '../types/game';
 import { ShipSize, isSmallCraftSize, isCapitalShipSize } from '../types/game';
 import { getNextPhase, checkGameOverConditions, createLogEntry, getShipSizeForStep, isInBreakoutZone } from '../engine/GameStateMachine';
@@ -43,6 +43,16 @@ import {
   getStimInjectorBonus,
 } from '../engine/techEffects';
 import { getRoundStartCtState } from '../engine/commandTokens';
+
+// ─── Shared label map (mirrors ExecutionPanel's ARC_LABELS) ────────────────────
+const ARC_LABELS_STORE: Record<ShipArc, string> = {
+  fore: 'Fore',
+  foreStarboard: 'Fore-Starboard',
+  aftStarboard: 'Aft-Starboard',
+  aft: 'Aft',
+  aftPort: 'Aft-Port',
+  forePort: 'Fore-Port',
+};
 
 // ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 // Core Game Store (Zustand)
@@ -616,15 +626,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
   // ═ ══ ══ ═ Initialize ═ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ═
   initializeGame: (config) => {
     const terrainMap = new Map<string, TerrainType>();
-    // Always populate a baseline grid so the board is visible
-    const GRID_RADIUS = 10;
-    for (let q = -GRID_RADIUS; q <= GRID_RADIUS; q++) {
-      for (let r = -GRID_RADIUS; r <= GRID_RADIUS; r++) {
-        if (Math.abs(q + r) <= GRID_RADIUS) {
-          terrainMap.set(`${q},${r}`, 'open' as TerrainType);
-        }
-      }
-    }
     // Overlay scenario-specific terrain on top
     for (const t of config.terrain) {
       terrainMap.set(hexKey(t.coord), t.type);
@@ -1831,6 +1832,33 @@ export const useGameStore = create<GameStore>((set, get) => ({
         newShields[sector] = Math.min(ship.maxShieldsPerSector, (newShields[sector] ?? 0) + amount);
         updates.shields = newShields as unknown as typeof ship.shields;
         get().addLog('system', `${officerData?.name ?? 'Engineering'} reinforced ${sector.toUpperCase()} shields on ${get().getShipName(shipId)} (+${amount} ═   ${newShields[sector]})`);
+        break;
+      }
+      case 'rotate-shields': {
+        const tacOfficer = player.officers.find(o => o.station === action.station);
+        const tacOfficerData = tacOfficer ? getOfficerById(tacOfficer.officerId) : null;
+        const donorSector = context?.donorSector as import('../types/game').ShipArc | undefined;
+        const receiverSector = context?.receiverSector as import('../types/game').ShipArc | undefined;
+        if (!donorSector || !receiverSector) break;
+
+        const currentDonor = ship.shields[donorSector] ?? 0;
+        const currentReceiver = ship.shields[receiverSector] ?? 0;
+
+        if (currentDonor < 1) {
+          get().addLog('system', `Rotate Shields failed: ${donorSector.toUpperCase()} has no shields to transfer.`);
+          break;
+        }
+        if (currentReceiver >= ship.maxShieldsPerSector) {
+          get().addLog('system', `Rotate Shields failed: ${receiverSector.toUpperCase()} is already at maximum.`);
+          break;
+        }
+
+        const newShields = { ...ship.shields };
+        newShields[donorSector] = currentDonor - 1;
+        newShields[receiverSector] = currentReceiver + 1;
+        updates.shields = newShields;
+
+        get().addLog('system', `${tacOfficerData?.name ?? 'Tactical'} rotated shields on ${get().getShipName(shipId)}: ${ARC_LABELS_STORE[donorSector]} (${currentDonor}→${newShields[donorSector]}) → ${ARC_LABELS_STORE[receiverSector]} (${currentReceiver}→${newShields[receiverSector]})`);
         break;
       }
       case 'fire-primary': {

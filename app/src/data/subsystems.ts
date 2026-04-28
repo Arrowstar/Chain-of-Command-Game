@@ -11,6 +11,7 @@ export const SUBSYSTEMS: Subsystem[] = [
     dpCost: 8,
     actionName: 'Polarize Plating',
     effect: "For this round only, your ship's Armor Die is upgraded by one tier (e.g., D4 becomes D6).",
+    imagePath: '/assets/subsystems/ReinforcedBulkhead.png',
   },
   {
     id: 'ecm',
@@ -23,6 +24,7 @@ export const SUBSYSTEMS: Subsystem[] = [
     actionName: 'Active Jamming',
     effect: 'Target one Enemy ship within Range 1-5. It suffers a -2 penalty to all of its Attack Volley dice values for this round.',
     requiresTarget: true,
+    imagePath: '/assets/subsystems/ECM.png',
   },
   {
     id: 'medical-bay',
@@ -34,6 +36,7 @@ export const SUBSYSTEMS: Subsystem[] = [
     dpCost: 12,
     actionName: 'Emergency Triage',
     effect: 'Immediately reduce the Stress of the one other Bridge Officer with the highest Stress by 2. (The Engineering officer still takes the 1 Stress for performing this action).',
+    imagePath: '/assets/subsystems/AdvMedBay.png',
   },
   {
     id: 'auto-loader',
@@ -46,6 +49,7 @@ export const SUBSYSTEMS: Subsystem[] = [
     actionName: 'Passive',
     effect: 'Passive: Ordnance weapons can be loaded and fired in the same round.',
     isPassive: true,
+    imagePath: '/assets/subsystems/AutoloaderNetwork.png',
   },
   {
     id: 'fighter-hangar',
@@ -57,6 +61,7 @@ export const SUBSYSTEMS: Subsystem[] = [
     dpCost: 15,
     actionName: 'Launch Squadron',
     effect: 'Deploy one Allied Strike Fighter token into an adjacent hex.',
+    imagePath: '/assets/subsystems/FighterHanger.png',
   },
   {
     id: 'auxiliary-reactor',
@@ -68,6 +73,7 @@ export const SUBSYSTEMS: Subsystem[] = [
     dpCost: 20,
     actionName: 'Overcharge Core',
     effect: 'Immediately gain 4 CT to distribute among your other stations for this round. However, the surge causes your ship to take 1 unblockable Hull damage.',
+    imagePath: '/assets/subsystems/AuxReactor.png',
   },
   {
     id: 'black-market-targeting-suite',
@@ -81,6 +87,7 @@ export const SUBSYSTEMS: Subsystem[] = [
     effect: 'Target one allied ship within Range 1-4. Its next attack this round gains +2 to every Volley die that rolls a Standard Hit result.',
     requiresTarget: true,
     availability: 'event',
+    imagePath: '/assets/subsystems/BlackMarketTargetingSuite.png',
   },
   {
     id: 'hermit-reactor-baffles',
@@ -93,6 +100,7 @@ export const SUBSYSTEMS: Subsystem[] = [
     actionName: 'Bleed Heat',
     effect: 'Remove 1 Stress from Engineering and restore 1 CT to your ship. Cannot raise CT above its maximum.',
     availability: 'event',
+    imagePath: '/assets/subsystems/HermitReactorBaffles.png',
   },
   {
     id: 'remote-disarm-drone-rig',
@@ -107,6 +115,7 @@ export const SUBSYSTEMS: Subsystem[] = [
     requiresTarget: true,
     rangeMax: 3,
     availability: 'event',
+    imagePath: '/assets/subsystems/RemoteDisarmDroneRig.png',
   },
   {
     id: 'salvaged-ai-coprocessor',
@@ -120,6 +129,7 @@ export const SUBSYSTEMS: Subsystem[] = [
     effect: 'The next allied attack this round upgrades one Volley die by one tier before rolling.',
     requiresTarget: true,
     availability: 'event',
+    imagePath: '/assets/subsystems/SalvagedAICoprocessor.png',
   },
   {
     id: 'alien-phase-vanes',
@@ -133,6 +143,7 @@ export const SUBSYSTEMS: Subsystem[] = [
     effect: 'Immediately move 1 hex ignoring hazardous terrain penalties, then gain +1 Base Evasion until the end of the round.',
     requiresHexTarget: true,
     availability: 'event',
+    imagePath: '/assets/subsystems/AlienPhaseVanes.png',
   },
 ];
 

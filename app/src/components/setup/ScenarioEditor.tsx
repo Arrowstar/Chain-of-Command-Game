@@ -5,6 +5,7 @@ import { getTerrainColor, drawHexPolygon, drawShipTriangle, attachOrUpdateSprite
 import type { TerrainType, HexCoord } from '../../types/game';
 import { HexFacing } from '../../types/game';
 import { ADVERSARIES } from '../../data/adversaries';
+import { generateSkirmishConfig } from '../../utils/skirmishGeneratorUtils';
 
 export interface CustomScenarioConfig {
   terrain: { coord: HexCoord; type: TerrainType }[];
@@ -30,6 +31,10 @@ export default function ScenarioEditor({ onConfirm, onCancel }: ScenarioEditorPr
   const [enemies, setEnemies] = useState<{ id: string; hex: string; adversaryId: string; facing: number }[]>([]);
   const [allies, setAllies] = useState<{ id: string; hex: string; adversaryId: string; facing: number }[]>([]);
   const [spawns, setSpawns] = useState<{ id: string; hex: string; facing: number }[]>([]);
+
+  // Auto-Gen State
+  const [autoGenThreatLevel, setAutoGenThreatLevel] = useState<number>(1);
+  const [autoGenPlayerCount, setAutoGenPlayerCount] = useState<number>(1);
 
   // Camera State
   const [cameraX, setCameraX] = useState(0);
@@ -75,17 +80,7 @@ export default function ScenarioEditor({ onConfirm, onCancel }: ScenarioEditorPr
     worldRef.current = world;
     graphicsRef.current = { terrain: terrainGfx, entities: entitiesGfx, overlay: overlayGfx };
 
-    // Baseline grid initialization
-    const initialTerrain: Record<string, TerrainType> = {};
-    const GRID_RADIUS = 10;
-    for (let q = -GRID_RADIUS; q <= GRID_RADIUS; q++) {
-      for (let r = -GRID_RADIUS; r <= GRID_RADIUS; r++) {
-        if (Math.abs(q + r) <= GRID_RADIUS) {
-          initialTerrain[`${q},${r}`] = 'open';
-        }
-      }
-    }
-    setTerrainMap(initialTerrain);
+    setTerrainMap({});
 
     return () => {
       app.destroy(true, { children: true });
@@ -105,12 +100,29 @@ export default function ScenarioEditor({ onConfirm, onCancel }: ScenarioEditorPr
     if (!graphicsRef.current) return;
     const { terrain: tGfx, entities: eGfx } = graphicsRef.current;
     
-    // Draw Terrain
+    // Draw Infinite Background Terrain
     tGfx.clear();
-    for (const [key, type] of Object.entries(terrainMap)) {
-      const [q, r] = key.split(',').map(Number);
-      const center = hexToPixel({ q, r });
-      drawHexPolygon(tGfx, center.x, center.y, type);
+    const screenWidth = appRef.current?.screen.width || 800;
+    const screenHeight = appRef.current?.screen.height || 600;
+    const left = -cameraX / cameraZoom;
+    const right = (screenWidth - cameraX) / cameraZoom;
+    const top = -cameraY / cameraZoom;
+    const bottom = (screenHeight - cameraY) / cameraZoom;
+    
+    const centerHex = pixelToHex((left + right) / 2, (top + bottom) / 2);
+    const radiusX = Math.ceil((right - left) / 80);
+    const radiusY = Math.ceil((bottom - top) / 80);
+    const radius = Math.max(radiusX, radiusY) + 2;
+
+    for (let q = centerHex.q - radius; q <= centerHex.q + radius; q++) {
+      for (let r = centerHex.r - radius; r <= centerHex.r + radius; r++) {
+        const center = hexToPixel({ q, r });
+        if (center.x >= left - 60 && center.x <= right + 60 && center.y >= top - 60 && center.y <= bottom + 60) {
+          const key = hexKey({ q, r });
+          const type = terrainMap[key] || 'open';
+          drawHexPolygon(tGfx, center.x, center.y, type);
+        }
+      }
     }
 
     // Draw Entities
@@ -173,7 +185,7 @@ export default function ScenarioEditor({ onConfirm, onCancel }: ScenarioEditorPr
       eGfx.addChild(tempGfx);
     });
 
-  }, [terrainMap, enemies, allies, spawns]);
+  }, [terrainMap, enemies, allies, spawns, cameraX, cameraY, cameraZoom]);
 
   // Input Handlers
   const handleWheel = useCallback((e: React.WheelEvent) => {
@@ -202,7 +214,11 @@ export default function ScenarioEditor({ onConfirm, onCancel }: ScenarioEditorPr
         setEnemies(prev => prev.filter(e => e.hex !== key));
         setAllies(prev => prev.filter(a => a.hex !== key));
         setSpawns(prev => prev.filter(s => s.hex !== key));
-        setTerrainMap(prev => ({ ...prev, [key]: 'open' }));
+        setTerrainMap(prev => {
+          const next = { ...prev };
+          delete next[key];
+          return next;
+        });
         return;
       }
 
@@ -267,6 +283,37 @@ export default function ScenarioEditor({ onConfirm, onCancel }: ScenarioEditorPr
 
   const handlePointerUp = () => setIsPanning(false);
 
+  const handleAutoGenerate = () => {
+    const config = generateSkirmishConfig(autoGenThreatLevel, autoGenPlayerCount);
+    
+    if (config.terrain) {
+      const newTerrainMap: Record<string, TerrainType> = {};
+      config.terrain.forEach(t => {
+        newTerrainMap[hexKey(t.coord)] = t.type;
+      });
+      setTerrainMap(newTerrainMap);
+    }
+    
+    if (config.enemies) {
+      setEnemies(config.enemies.map(e => ({
+        id: e.id,
+        hex: hexKey(e.coord),
+        adversaryId: e.adversaryId,
+        facing: e.facing
+      })));
+    }
+    
+    setAllies([]);
+    
+    if (config.playerSpawns) {
+      setSpawns(config.playerSpawns.map(s => ({
+        id: s.id,
+        hex: hexKey(s.coord),
+        facing: s.facing
+      })));
+    }
+  };
+
   const handleConfirm = () => {
     const config: CustomScenarioConfig = {
       terrain: Object.entries(terrainMap).filter(([_, t]) => t !== 'open').map(([key, type]) => {
@@ -299,6 +346,41 @@ export default function ScenarioEditor({ onConfirm, onCancel }: ScenarioEditorPr
 
         <div style={{ padding: 'var(--space-md)', flex: 1, overflowY: 'auto' }}>
           
+          <div style={{ marginBottom: 'var(--space-md)', padding: 'var(--space-sm)', border: '1px solid var(--color-border)', borderRadius: '4px', background: 'rgba(0, 0, 0, 0.2)' }}>
+            <h3 style={{ color: 'var(--color-holo-cyan)', fontSize: '0.85rem', marginBottom: '8px' }}>AUTO GENERATE</h3>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>
+              <span>Threat Level</span>
+              <select 
+                value={autoGenThreatLevel} 
+                onChange={(e) => setAutoGenThreatLevel(Number(e.target.value))}
+                style={{ background: 'var(--color-bg-deep)', color: 'var(--color-text-main)', border: '1px solid var(--color-border)' }}
+              >
+                <option value={1}>Low</option>
+                <option value={2}>Medium</option>
+                <option value={3}>High</option>
+              </select>
+            </div>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>
+              <span>Player Ships</span>
+              <select 
+                value={autoGenPlayerCount} 
+                onChange={(e) => setAutoGenPlayerCount(Number(e.target.value))}
+                style={{ background: 'var(--color-bg-deep)', color: 'var(--color-text-main)', border: '1px solid var(--color-border)' }}
+              >
+                <option value={1}>1</option>
+                <option value={2}>2</option>
+                <option value={3}>3</option>
+                <option value={4}>4</option>
+              </select>
+            </div>
+            
+            <button className="btn" style={{ width: '100%', fontSize: '0.8rem' }} onClick={handleAutoGenerate}>
+              GENERATE MAP
+            </button>
+          </div>
+
           <div style={{ marginBottom: 'var(--space-md)' }}>
             <h3 style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem', marginBottom: '8px' }}>TOOLS</h3>
             <button className={`btn ${brushMode === 'playerSpawn' ? 'active' : ''}`} style={{ width: '100%', marginBottom: '4px', justifyContent: 'flex-start' }} onClick={() => setBrushMode('playerSpawn')}>
@@ -357,9 +439,9 @@ export default function ScenarioEditor({ onConfirm, onCancel }: ScenarioEditorPr
         </div>
 
         <div style={{ padding: 'var(--space-md)', borderTop: '1px solid var(--color-border)', display: 'flex', gap: 'var(--space-sm)' }}>
-          <button className="btn" style={{ flex: 1 }} onClick={onCancel}>CANCEL</button>
-          <button className="btn btn--execute" style={{ flex: 2 }} onClick={handleConfirm} disabled={spawns.length === 0}>
-            CONFIRM ({spawns.length} Spawns)
+          <button className="btn" style={{ flex: 1, padding: 'var(--space-sm)' }} onClick={onCancel}>CANCEL</button>
+          <button className="btn btn--execute" style={{ flex: 1.5, padding: 'var(--space-sm)', whiteSpace: 'normal' }} onClick={handleConfirm} disabled={spawns.length === 0}>
+            CONFIRM ({spawns.length})
           </button>
         </div>
       </div>

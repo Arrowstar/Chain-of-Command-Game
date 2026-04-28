@@ -31,6 +31,7 @@ export const OFFICERS: OfficerData[] = [
     traitTier: 1,
     // stressLimit(4) + tier1(3) = 7
     dpCost: 7,
+    bio: 'A decorated combat ace with a reckless streak and a perfect landing record — despite the evidence.',
   },
   {
     id: 'tlari',
@@ -44,6 +45,7 @@ export const OFFICERS: OfficerData[] = [
     traitTier: 1,
     // stressLimit(6) + tier1(3) = 9
     dpCost: 9,
+    bio: 'Methodical to a fault. Has never made an unplanned maneuver in twelve years of active service.',
   },
   {
     id: 'jitters-kael',
@@ -57,6 +59,7 @@ export const OFFICERS: OfficerData[] = [
     traitTier: 1,
     // stressLimit(3) + tier1(3) = 6
     dpCost: 6,
+    bio: 'Former racing pilot. His fear of dying makes him dangerously good at not dying.',
   },
   {
     id: 'orlov',
@@ -70,6 +73,7 @@ export const OFFICERS: OfficerData[] = [
     traitTier: 1,
     // stressLimit(5) + tier1(3) = 8
     dpCost: 8,
+    bio: 'Fell asleep at the helm once during a firefight. Was going too fast for anything to catch him.',
   },
 
   // ─── Tactical ──────────────────────────────────────
@@ -85,6 +89,7 @@ export const OFFICERS: OfficerData[] = [
     traitTier: 2,
     // stressLimit(5) + tier2(6) = 11
     dpCost: 11,
+    bio: 'Trophy hunter in peacetime. Considers the Hegemony a very large game reserve.',
   },
   {
     id: 'rutherford',
@@ -98,6 +103,7 @@ export const OFFICERS: OfficerData[] = [
     traitTier: 1,
     // doc table: 7 DP (stress 4 + tier1 3 — doc uses stress 4; we keep code stress but use doc DP value)
     dpCost: 7,
+    bio: 'Believes following procedure is the highest form of heroism. No one has argued with his kill count.',
   },
   {
     id: 'boomer-hayes',
@@ -111,6 +117,7 @@ export const OFFICERS: OfficerData[] = [
     traitTier: 3,
     // stressLimit(6) + tier3(10) = 16
     dpCost: 16,
+    bio: 'Keeps a running tally of ordnance expended. Has never bothered keeping score of the hits.',
   },
   {
     id: 'vex',
@@ -124,6 +131,7 @@ export const OFFICERS: OfficerData[] = [
     traitTier: 3,
     // stressLimit(5 in doc / 4 in code) + tier3(10) = 15 per doc table
     dpCost: 15,
+    bio: 'Former Hegemony defector. The precision with which she fires is only matched by her silence.',
   },
 
   // ─── Engineering ───────────────────────────────────
@@ -139,6 +147,7 @@ export const OFFICERS: OfficerData[] = [
     traitTier: 2,
     // doc: 12 DP (stress 6 + tier2 6)
     dpCost: 12,
+    bio: "Has repaired every ship he's ever served on. Most of them mid-battle, with improvised tools.",
   },
   {
     id: 'sparky',
@@ -152,6 +161,7 @@ export const OFFICERS: OfficerData[] = [
     traitTier: 2,
     // stress-immune uses 0 component; 0 + tier2(6) = 6... doc says 10. Using doc value.
     dpCost: 10,
+    bio: 'Synthetic crew integration unit. Classified as emotionally unavailable by three separate medical evaluations.',
   },
   {
     id: 'aris',
@@ -165,6 +175,7 @@ export const OFFICERS: OfficerData[] = [
     traitTier: 2,
     // stressLimit(5) + tier2(6) = 11
     dpCost: 11,
+    bio: "Treats the ship's shields the way a surgeon treats a patient — with obsessive precision.",
   },
   {
     id: 'scorch-malikov',
@@ -178,6 +189,7 @@ export const OFFICERS: OfficerData[] = [
     traitTier: 1,
     // stressLimit(6) + tier1(3) = 9
     dpCost: 9,
+    bio: 'Named after his first overload accident. Has survived three more since.',
   },
 
   // ─── Sensors ───────────────────────────────────────
@@ -193,6 +205,7 @@ export const OFFICERS: OfficerData[] = [
     traitTier: 2,
     // stressLimit(5) + tier2(6) = 11
     dpCost: 11,
+    bio: 'Has memorized the sensor profile of every Hegemony vessel class. Knows them by their heat signatures.',
   },
   {
     id: 'xel',
@@ -206,6 +219,7 @@ export const OFFICERS: OfficerData[] = [
     traitTier: 2,
     // stressLimit(4) + tier2(6) = 10
     dpCost: 10,
+    bio: 'Former intelligence operative. Nobody is entirely sure which side they were working for.',
   },
   {
     id: 'chatter-singh',
@@ -219,6 +233,7 @@ export const OFFICERS: OfficerData[] = [
     traitTier: 2,
     // stressLimit(5) + tier2(6) = 11
     dpCost: 11,
+    bio: 'Never stops talking. Somehow makes everyone around them significantly better at their jobs.',
   },
   {
     id: 'dvesh',
@@ -232,6 +247,7 @@ export const OFFICERS: OfficerData[] = [
     traitTier: 3,
     // stressLimit(5 in doc / 6 in code) + tier3(10) = 15 per doc table
     dpCost: 15,
+    bio: 'Has seen the Hegemony AI think. Refuses to elaborate.',
   },
 ];
 

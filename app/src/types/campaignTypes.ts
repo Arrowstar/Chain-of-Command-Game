@@ -55,7 +55,7 @@ export interface CombatModifiers {
 // ─── Experimental Tech (Relics) ──────────────────────────────────
 
 export type TechCategory = 'tactical' | 'engineering' | 'command' | 'crew';
-export type TechRarity = 'common' | 'rare';
+export type TechRarity = 'common' | 'uncommon' | 'rare';
 
 export interface ExperimentalTech {
   id: string;

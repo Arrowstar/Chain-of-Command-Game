@@ -44,11 +44,13 @@ describe('Experimental Tech Data Integrity', () => {
     }
   });
 
-  it('rarity: 3 rare, 12 common', () => {
+  it('rarity: 3 rare, 5 uncommon, 7 common', () => {
     const rare = EXPERIMENTAL_TECH.filter(t => t.rarity === 'rare');
+    const uncommon = EXPERIMENTAL_TECH.filter(t => t.rarity === 'uncommon');
     const common = EXPERIMENTAL_TECH.filter(t => t.rarity === 'common');
     expect(rare).toHaveLength(3);
-    expect(common).toHaveLength(12);
+    expect(uncommon).toHaveLength(5);
+    expect(common).toHaveLength(7);
   });
 
   it('the 3 rare techs are the named Rare items from the spec', () => {

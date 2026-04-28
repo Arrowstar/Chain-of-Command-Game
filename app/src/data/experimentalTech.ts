@@ -17,7 +17,7 @@ export const EXPERIMENTAL_TECH: ExperimentalTech[] = [
     flavorText: '"We bypassed the safety regulators. The coils will melt eventually, but today, we outrange them."',
     isConsumable: false,
     isConsumed: false,
-    rarity: 'common',
+    rarity: 'uncommon',
     imagePath: '/assets/experimental_tech/plasma_accelerator.png',
   },
   {
@@ -35,7 +35,7 @@ export const EXPERIMENTAL_TECH: ExperimentalTech[] = [
     id: 'kinetic-siphon',
     name: 'Kinetic Siphon',
     category: 'tactical',
-    effect: 'Whenever a player ship lands the killing blow on an Enemy Capital Ship, that player immediately restores 1 Shield point to all four of their ship\'s sectors.',
+    effect: 'Whenever a player ship lands the killing blow on an Enemy Capital Ship, that player immediately restores 1 Shield point to all six of their ship\'s sectors.',
     flavorText: '"It converts the enemy\'s reactor death-throe into a localized electromagnetic surge."',
     isConsumable: false,
     isConsumed: false,
@@ -86,7 +86,7 @@ export const EXPERIMENTAL_TECH: ExperimentalTech[] = [
     flavorText: '"It smells like ozone and bleach, but it keeps the consoles from catching fire."',
     isConsumable: false,
     isConsumed: false,
-    rarity: 'common',
+    rarity: 'uncommon',
     imagePath: '/assets/experimental_tech/Recycled-Coolant.png',
   },
   {
@@ -97,7 +97,7 @@ export const EXPERIMENTAL_TECH: ExperimentalTech[] = [
     flavorText: '"A highly illegal cocktail of combat stims and memory-wipes. Only good for one dose."',
     isConsumable: true,
     isConsumed: false,
-    rarity: 'common',
+    rarity: 'uncommon',
     imagePath: '/assets/experimental_tech/Auto-Doc-Override.png',
   },
 
@@ -111,7 +111,7 @@ export const EXPERIMENTAL_TECH: ExperimentalTech[] = [
     flavorText: '"We spoofed their IFF codes. High Command thinks we\'re just a loyal patrol fleet... for the first three minutes, anyway."',
     isConsumable: false,
     isConsumed: false,
-    rarity: 'common',
+    rarity: 'uncommon',
     imagePath: '/assets/experimental_tech/The-Admirals-Black-Box.png',
   },
   {
@@ -158,7 +158,7 @@ export const EXPERIMENTAL_TECH: ExperimentalTech[] = [
     flavorText: '"Legal? No. Effective? Very. Just ignore the twitching."',
     isConsumable: false,
     isConsumed: false,
-    rarity: 'common',
+    rarity: 'uncommon',
     imagePath: '/assets/experimental_tech/Combat-Stim-Injectors.png',
   },
   {
@@ -206,23 +206,56 @@ export function getTechByCategory(category: TechCategory): ExperimentalTech[] {
 }
 
 /**
- * Draw one random Experimental Tech from the pool.
+ * Draw one random Experimental Tech from the pool using weighted rarities.
+ * Rare: 15%, Uncommon: 35%, Common: 50%
  * Excludes any tech IDs already owned by the fleet to prevent duplicates.
  * Returns null if the entire pool is exhausted.
  */
 export function drawRandomTech(excludeIds: string[] = []): ExperimentalTech | null {
   const available = EXPERIMENTAL_TECH.filter(t => !excludeIds.includes(t.id));
   if (available.length === 0) return null;
-  const idx = Math.floor(Math.random() * available.length);
-  return { ...available[idx] };
+
+  const byRarity: Record<string, ExperimentalTech[]> = {
+    common: available.filter(t => t.rarity === 'common'),
+    uncommon: available.filter(t => t.rarity === 'uncommon'),
+    rare: available.filter(t => t.rarity === 'rare'),
+  };
+
+  const roll = Math.random();
+  let targetRarity: 'common' | 'uncommon' | 'rare' = 'common';
+  
+  if (roll < 0.15) {
+    targetRarity = 'rare';
+  } else if (roll < 0.50) { // 15% to 50% = 35% chance
+    targetRarity = 'uncommon';
+  } else {
+    targetRarity = 'common';
+  }
+
+  // Fallback if the chosen rarity is exhausted
+  let pool = byRarity[targetRarity];
+  if (pool.length === 0) {
+    pool = available;
+  }
+
+  const idx = Math.floor(Math.random() * pool.length);
+  return { ...pool[idx] };
 }
 
 /**
  * Draw N unique random techs from the pool, excluding already-owned IDs.
- * If the pool doesn't have enough, returns what's available.
+ * Uses the weighted rarity system for each draw.
  */
 export function drawMultipleRandomTech(count: number, excludeIds: string[] = []): ExperimentalTech[] {
-  const available = EXPERIMENTAL_TECH.filter(t => !excludeIds.includes(t.id));
-  const shuffled = [...available].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, count).map(t => ({ ...t }));
+  let drawn: ExperimentalTech[] = [];
+  let currentExcludes = [...excludeIds];
+  
+  for (let i = 0; i < count; i++) {
+    const tech = drawRandomTech(currentExcludes);
+    if (!tech) break;
+    drawn.push(tech);
+    currentExcludes.push(tech.id);
+  }
+  
+  return drawn;
 }

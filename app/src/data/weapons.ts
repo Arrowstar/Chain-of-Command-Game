@@ -13,6 +13,7 @@ export const WEAPONS: WeaponModule[] = [
     dpCost: 12,
     effect: 'Standard, reliable damage.',
     tags: ['standard'],
+    imagePath: '/assets/weapons/MarkIVPlasmaBattery.png',
   },
   {
     id: 'heavy-railgun',
@@ -26,6 +27,7 @@ export const WEAPONS: WeaponModule[] = [
     dpCost: 24,
     effect: 'Armor Piercing. Standard hits that reach the hull ignore the defender\'s armor roll.',
     tags: ['armorPiercing', 'ordnance'],
+    imagePath: '/assets/weapons/HeavyRailgun.png',
   },
   {
     id: 'broadside-macrocannons',
@@ -39,6 +41,7 @@ export const WEAPONS: WeaponModule[] = [
     dpCost: 11,
     effect: 'Devastating at close range, but requires complex maneuvering from Helm to line up the shot.',
     tags: ['broadside'],
+    imagePath: '/assets/weapons/BroadsideMacrocannon.png',
   },
   {
     id: 'seeker-torpedoes',
@@ -52,6 +55,7 @@ export const WEAPONS: WeaponModule[] = [
     dpCost: 17,
     effect: 'Fires a Torpedo Token that moves 4 hexes/round. Deals flat 3 Hull damage on hit.',
     tags: ['torpedo', 'ordnance'],
+    imagePath: '/assets/weapons/SeekerTorpTubes.png',
   },
   {
     id: 'pdc',
@@ -65,6 +69,7 @@ export const WEAPONS: WeaponModule[] = [
     dpCost: 14,
     effect: 'Anti-Small Craft. Fires as a free reaction when an enemy Torpedo/Fighter enters an adjacent hex.',
     tags: ['pointDefense'],
+    imagePath: '/assets/weapons/PointDefenseCannons.png',
   },
   {
     id: 'ion-emitter',
@@ -78,6 +83,7 @@ export const WEAPONS: WeaponModule[] = [
     dpCost: 16,
     effect: 'Shield Breaker. Every Standard Hit removes 2 Shield points instead of 1. However, Ion hits that overflow to the Hull deal 0 damage.',
     tags: ['shieldBreaker'],
+    imagePath: '/assets/weapons/IonEmitterArray.png',
   },
   {
     id: 'flak-artillery',
@@ -91,6 +97,7 @@ export const WEAPONS: WeaponModule[] = [
     dpCost: 21,
     effect: 'Area of Effect. Select a target Hex instead of a target Ship. Roll the attack against ALL units (Allied and Enemy) in that hex and all 6 adjacent hexes.',
     tags: ['areaOfEffect'],
+    imagePath: '/assets/weapons/FlakArtillery.png',
   },
   {
     id: 'experimental-plasma-lance',
@@ -104,6 +111,7 @@ export const WEAPONS: WeaponModule[] = [
     effect: 'Experimental. A focused plasma spear tuned to punch through shields before the beam blooms across the target hull.',
     tags: ['shieldBreaker', 'armorPiercing'],
     availability: 'event',
+    imagePath: '/assets/weapons/ExperimentalPlasmaLance.png',
   },
   {
     id: 'illegal-rail-accelerator',
@@ -117,6 +125,7 @@ export const WEAPONS: WeaponModule[] = [
     effect: 'Black-market siege piece. Hyper-dense sabot rounds are devastating at long range and ignore armor on Standard Hits.',
     tags: ['armorPiercing', 'ordnance'],
     availability: 'event',
+    imagePath: '/assets/weapons/IllegalRailAccelerator.png',
   },
   {
     id: 'defense-platform-laser',
@@ -130,6 +139,7 @@ export const WEAPONS: WeaponModule[] = [
     effect: 'Salvaged from an automated battery. Highly stable beam optics make it brutally consistent across mid-range engagements.',
     tags: ['standard'],
     availability: 'event',
+    imagePath: '/assets/weapons/DefensePlatformLaser.png',
   },
   {
     id: 'phase-disruptor-array',
@@ -143,6 +153,7 @@ export const WEAPONS: WeaponModule[] = [
     effect: 'An unstable waveform projector that overwhelms protective screens and leaves ruptures in exposed hull plating.',
     tags: ['shieldBreaker', 'areaOfEffect'],
     availability: 'event',
+    imagePath: '/assets/weapons/PhaseDisruptorArray.png',
   },
 ];
 

@@ -62,6 +62,7 @@ export default function ExecutionPanel() {
 
   const [expandedActionId, setExpandedActionId] = useState<string | null>(null);
   const [cyberSelections, setCyberSelections] = useState<Record<string, CyberSelectionState>>({});
+  const [rotateShieldsSelections, setRotateShieldsSelections] = useState<Record<string, { donorSector: import('../../types/game').ShipArc | null; receiverSector: import('../../types/game').ShipArc | null }>>({});
 
   const shipsInStep = isAllied ? playerShips.filter(s => !s.isDestroyed && getChassisById(s.chassisId)?.size === size) : [];
 
@@ -214,7 +215,7 @@ export default function ExecutionPanel() {
                   
                   const needsExpansion = [
                     'rotate', 'fire-primary', 'adjust-speed',
-                    'reinforce-shields', 'damage-control', 'cyber-warfare',
+                    'reinforce-shields', 'rotate-shields', 'damage-control', 'cyber-warfare',
                     'load-ordinance', 'steady-nerves',
                   ].includes(def?.id || '');
 
@@ -459,6 +460,98 @@ export default function ExecutionPanel() {
                                   </div>
                                 )}
                               </>
+                            );
+                          })()}
+
+                          {/* Rotate Shields Options */}
+                          {def?.id === 'rotate-shields' && (() => {
+                            const selection = rotateShieldsSelections[action.id] ?? { donorSector: null, receiverSector: null };
+                            
+                            // Check if action is impossible (no shields anywhere to rotate)
+                            const totalShields = Object.values(ship.shields).reduce((a, b) => a + (b ?? 0), 0);
+                            const canRotate = totalShields > 0;
+
+                            if (!canRotate) {
+                              return (
+                                <div style={{ padding: '8px', border: '1px dashed var(--color-text-dim)', borderRadius: '4px', textAlign: 'center' }}>
+                                  <div className="mono" style={{ color: 'var(--color-text-dim)', fontSize: '0.8rem', marginBottom: '8px' }}>
+                                    No shields available to transfer.
+                                  </div>
+                                  <button
+                                    className="btn btn--execute"
+                                    onClick={() => {
+                                      resolveAction(owner!.id, ship.id, action.id, { wasted: true, reason: 'No shields to transfer' });
+                                      setExpandedActionId(null);
+                                    }}
+                                  >
+                                    WASTE ACTION
+                                  </button>
+                                </div>
+                              );
+                            }
+
+                            const handleSelectSector = (sector: import('../../types/game').ShipArc) => {
+                              if (!selection.donorSector) {
+                                // First click: pick donor
+                                setRotateShieldsSelections(prev => ({
+                                  ...prev,
+                                  [action.id]: { donorSector: sector, receiverSector: null }
+                                }));
+                              } else if (!selection.receiverSector && sector !== selection.donorSector) {
+                                // Second click: pick receiver (if different from donor)
+                                setRotateShieldsSelections(prev => ({
+                                  ...prev,
+                                  [action.id]: { donorSector: selection.donorSector, receiverSector: sector }
+                                }));
+                              } else if (sector === selection.donorSector) {
+                                // Clicking donor again resets selection
+                                setRotateShieldsSelections(prev => ({
+                                  ...prev,
+                                  [action.id]: { donorSector: null, receiverSector: null }
+                                }));
+                              }
+                            };
+
+                            const handleConfirm = () => {
+                              if (selection.donorSector && selection.receiverSector) {
+                                resolveAction(owner!.id, ship.id, action.id, {
+                                  donorSector: selection.donorSector,
+                                  receiverSector: selection.receiverSector
+                                });
+                                setExpandedActionId(null);
+                                setRotateShieldsSelections(prev => {
+                                  const next = { ...prev };
+                                  delete next[action.id];
+                                  return next;
+                                });
+                              }
+                            };
+
+                            const canConfirm = selection.donorSector && selection.receiverSector;
+
+                            return (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <RotateShieldsArcSelector
+                                  shipId={ship.id}
+                                  spriteId={ship.chassisId}
+                                  shipName={ship.name}
+                                  shields={ship.shields}
+                                  donorSector={selection.donorSector}
+                                  receiverSector={selection.receiverSector}
+                                  maxShieldsPerSector={ship.maxShieldsPerSector}
+                                  onSelectSector={handleSelectSector}
+                                />
+
+                                {canConfirm && (
+                                  <button
+                                    className="btn btn--execute"
+                                    style={{ marginTop: '4px' }}
+                                    onClick={handleConfirm}
+                                  >
+                                    CONFIRM ROTATION
+                                  </button>
+                                )}
+                              </div>
                             );
                           })()}
 
@@ -992,4 +1085,151 @@ function polarPoint(cx: number, cy: number, radius: number, angle: number) {
     x: cx + Math.cos(radians) * radius,
     y: cy + Math.sin(radians) * radius,
   };
+}
+
+function RotateShieldsArcSelector({
+  shipId,
+  spriteId,
+  shipName,
+  shields,
+  donorSector,
+  receiverSector,
+  maxShieldsPerSector,
+  onSelectSector,
+}: {
+  shipId: string;
+  spriteId: string;
+  shipName: string;
+  shields: ShieldState;
+  donorSector: ShipArc | null;
+  receiverSector: ShipArc | null;
+  maxShieldsPerSector: number;
+  onSelectSector: (sector: ShipArc) => void;
+}) {
+  const shipSprite = ASSET_MAP[spriteId];
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        gap: '12px',
+        alignItems: 'center',
+        padding: '10px',
+        border: '1px solid var(--color-border)',
+        background: 'rgba(9, 15, 28, 0.72)',
+      }}
+    >
+      <svg viewBox="0 0 120 120" width="120" height="120" role="img" aria-label={`Shield arcs for ${shipName}`}>
+        <defs>
+          <clipPath id={`rotate-preview-clip-${shipId}`}>
+            <circle cx="60" cy="60" r="20" />
+          </clipPath>
+        </defs>
+        {SHIELD_SECTORS.map((arc, index) => {
+          const startAngle = index * 60 - 30;
+          const endAngle = startAngle + 60;
+          const shieldValue = shields[arc] ?? 0;
+          const isDonor = donorSector === arc;
+          const isReceiver = receiverSector === arc;
+          
+          let isAvailable = false;
+          if (!donorSector) {
+            isAvailable = shieldValue > 0;
+          } else if (!receiverSector) {
+            isAvailable = shieldValue < maxShieldsPerSector && arc !== donorSector;
+          } else {
+            isAvailable = isDonor || isReceiver;
+          }
+
+          const labelPos = polarPoint(60, 60, 28, startAngle + 30);
+          const fillOpacity = (shieldValue / maxShieldsPerSector) * 0.58 + 0.18;
+
+          let fillColor = `rgba(79, 209, 197, ${fillOpacity})`;
+          let strokeColor = 'rgba(160, 174, 192, 0.3)';
+          let strokeWidth = '1.2';
+
+          if (isDonor) {
+            fillColor = 'rgba(255, 100, 100, 0.4)';
+            strokeColor = 'var(--color-hostile-red)';
+            strokeWidth = '2.2';
+          } else if (isReceiver) {
+            fillColor = 'rgba(100, 255, 100, 0.4)';
+            strokeColor = 'var(--color-holo-green)';
+            strokeWidth = '2.2';
+          } else if (isAvailable) {
+            strokeColor = 'var(--color-holo-cyan)';
+          }
+
+          if (!isAvailable && !isDonor && !isReceiver) {
+            fillColor = 'rgba(79, 209, 197, 0.06)';
+          }
+
+          return (
+            <g key={arc}>
+              <path
+                d={getArcBandPath(60, 60, 24, 38, startAngle + 2, endAngle - 2)}
+                fill={fillColor}
+                stroke={strokeColor}
+                strokeWidth={strokeWidth}
+                style={{ cursor: isAvailable || isDonor || isReceiver ? 'pointer' : 'not-allowed' }}
+                onClick={() => {
+                  if (isAvailable || isDonor || isReceiver) onSelectSector(arc);
+                }}
+              />
+              <text
+                x={labelPos.x}
+                y={labelPos.y}
+                fill={(isAvailable || isDonor || isReceiver) ? 'white' : 'rgba(255,255,255,0.45)'}
+                fontSize="7"
+                textAnchor="middle"
+                dominantBaseline="middle"
+                className="mono"
+                style={{ pointerEvents: 'none' }}
+              >
+                {shieldValue}
+              </text>
+            </g>
+          );
+        })}
+
+        <circle cx="60" cy="60" r="20.5" fill="rgba(9, 15, 28, 0.92)" stroke="rgba(160, 174, 192, 0.45)" strokeWidth="1.2" />
+        {shipSprite ? (
+          <image
+            href={shipSprite}
+            x="39"
+            y="39"
+            width="42"
+            height="42"
+            preserveAspectRatio="xMidYMid meet"
+            clipPath={`url(#rotate-preview-clip-${shipId})`}
+            transform="rotate(-90 60 60)"
+          />
+        ) : (
+          <path
+            d="M 74 60 L 51 70 L 57 60 L 51 50 Z"
+            fill="var(--color-bg-panel)"
+            stroke="#A0AEC0"
+            strokeWidth="1.5"
+          />
+        )}
+      </svg>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+        <div className="label" style={{ color: 'var(--color-holo-cyan)' }}>Rotate Shields</div>
+        <div className="mono" style={{ fontSize: '0.75rem', color: 'var(--color-text-dim)' }}>
+          {!donorSector 
+            ? "Step 1: Select DONOR arc (must have ≥1 shield)" 
+            : !receiverSector 
+              ? "Step 2: Select RECEIVER arc (must not be at max)" 
+              : "Ready to confirm."}
+        </div>
+        <div className="mono" style={{ fontSize: '0.75rem', color: donorSector ? 'var(--color-hostile-red)' : 'var(--color-text-dim)' }}>
+          {donorSector ? `Donor: ${ARC_LABELS[donorSector]}` : 'No donor selected.'}
+        </div>
+        <div className="mono" style={{ fontSize: '0.75rem', color: receiverSector ? 'var(--color-holo-green)' : 'var(--color-text-dim)' }}>
+          {receiverSector ? `Receiver: ${ARC_LABELS[receiverSector]}` : 'No receiver selected.'}
+        </div>
+      </div>
+    </div>
+  );
 }

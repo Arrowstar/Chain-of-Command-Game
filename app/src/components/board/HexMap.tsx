@@ -156,10 +156,29 @@ export default function HexMap() {
     // ── TERRAIN ──
     layersRef.current.terrain.removeChildren();
     const terrainGfx = new PIXI.Graphics();
-    for (const [key, type] of terrainMap.entries()) {
-      const [q, r] = key.split(',').map(Number);
-      const center = hexToPixel({ q, r });
-      drawHexPolygon(terrainGfx, center.x, center.y, type);
+    
+    // Determine visible area for infinite grid
+    const screenWidth = appRef.current?.screen.width || 800;
+    const screenHeight = appRef.current?.screen.height || 600;
+    const left = -cameraX / cameraZoom;
+    const right = (screenWidth - cameraX) / cameraZoom;
+    const top = -cameraY / cameraZoom;
+    const bottom = (screenHeight - cameraY) / cameraZoom;
+    
+    const centerHex = pixelToHex((left + right) / 2, (top + bottom) / 2);
+    const radiusX = Math.ceil((right - left) / 80);
+    const radiusY = Math.ceil((bottom - top) / 80);
+    const radius = Math.max(radiusX, radiusY) + 2;
+
+    for (let q = centerHex.q - radius; q <= centerHex.q + radius; q++) {
+      for (let r = centerHex.r - radius; r <= centerHex.r + radius; r++) {
+        const center = hexToPixel({ q, r });
+        if (center.x >= left - 60 && center.x <= right + 60 && center.y >= top - 60 && center.y <= bottom + 60) {
+          const key = hexKey({ q, r });
+          const type = terrainMap.get(key) || 'open';
+          drawHexPolygon(terrainGfx, center.x, center.y, type);
+        }
+      }
     }
     layersRef.current.terrain.addChild(terrainGfx);
 
@@ -851,7 +870,7 @@ export default function HexMap() {
             layersRef.current.overlays!.addChild(subGfx);
         }
     }
-  }, [terrainMap, playerShips, enemyShips, fighterTokens, torpedoTokens, objectiveMarkers, tacticHazards, objectiveType, scenarioId, deploymentMode, selectedShipId, targetingMode, activeTargetingAction, activeTargetingContext, hoveredHex, currentTactic, players]);
+  }, [terrainMap, playerShips, enemyShips, fighterTokens, torpedoTokens, objectiveMarkers, tacticHazards, objectiveType, scenarioId, deploymentMode, selectedShipId, targetingMode, activeTargetingAction, activeTargetingContext, hoveredHex, currentTactic, players, cameraX, cameraY, cameraZoom]);
 
   // ─── Update camera ──────────────────────────────────
   useEffect(() => {

@@ -14,9 +14,10 @@ import { getScarImpactLegendText, getScarStatusMeta, getScarTooltip, getStationS
 
 interface OfficerStationPanelProps {
   officerState: OfficerState;
+  playerId: string;
 }
 
-export default function OfficerStationPanel({ officerState }: OfficerStationPanelProps) {
+export default function OfficerStationPanel({ officerState, playerId }: OfficerStationPanelProps) {
   const officerData = getOfficerById(officerState.officerId);
   const unassignToken = useGameStore(s => s.unassignToken);
   const players = useGameStore(s => s.players);
@@ -27,7 +28,7 @@ export default function OfficerStationPanel({ officerState }: OfficerStationPane
   const recycledCoolantUsedThisRound = useGameStore(s => s.recycledCoolantUsedThisRound);
   const invokeMiracleWorker = useGameStore(s => s.invokeMiracleWorker);
   const invokeCICSync = useGameStore(s => s.invokeCICSync);
-  const player = players[0];
+  const player = players.find(p => p.id === playerId);
 
   const [cicTargetPlayerId, setCicTargetPlayerId] = useState<string | null>(null);
 

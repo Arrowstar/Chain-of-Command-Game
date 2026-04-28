@@ -1,0 +1,18 @@
+const fs = require('fs');
+const file = 'src/components/setup/FleetBuilder.tsx';
+let c = fs.readFileSync(file, 'utf8');
+c = c.replace(/ÃƒÂ¢Ã¢â‚¬Â Ã¢â€šÂ¬/g, '─');
+c = c.replace(/ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“/g, '✓');
+c = c.replace(/ÃƒÂ¢Ã¢â‚¬â€œÃ‚Â¶/g, '▶');
+c = c.replace(/ÃƒÂ¢Ã…Â¡Ã‚Â /g, '⚠');
+c = c.replace(/ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢/g, '→');
+c = c.replace(/ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¢/g, '✕');
+c = c.replace(/Ãƒâ€šÃ‚Â·/g, '·');
+c = c.replace(/ÃƒÂ¢Ã¢â‚¬Â Ã‚Â /g, '←');
+c = c.replace(/ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â /g, '—');
+c = c.replace(/Ã¢â‚¬â€œ/g, '–');
+c = c.replace(/Ã¢Ë†Å¾/g, '∞');
+c = c.replace(/Ã¢â€ Â /g, '←');
+c = c.replace(/Ã¢â‚¬â€ /g, '—');
+fs.writeFileSync(file, c);
+console.log('Fixed file');

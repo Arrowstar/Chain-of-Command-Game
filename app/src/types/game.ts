@@ -144,6 +144,7 @@ export interface WeaponModule {
   effect: string;                  // special rule text
   tags: WeaponTag[];
   availability?: 'standard' | 'event';
+  imagePath?: string;              // optional path to weapon icon
 }
 
 export type WeaponTag =
@@ -175,6 +176,7 @@ export interface Subsystem {
   requiresHexTarget?: boolean;
   rangeMax?: number;
   availability?: 'standard' | 'event';
+  imagePath?: string;              // optional path to subsystem icon
 }
 
 // ─── Ship Chassis ────────────────────────────────────────────────
@@ -197,6 +199,7 @@ export interface ShipChassis {
   uniqueTraitName: string;
   uniqueTraitEffect: string;
   flavorText: string;
+  image?: string;                 // optional chassis image
 }
 
 // ─── Bridge Officers ─────────────────────────────────────────────
@@ -221,6 +224,7 @@ export interface OfficerData {
   avatar: string;
   traitTier: 1 | 2 | 3;           // Tier 1 = Utility, Tier 2 = Specialist, Tier 3 = Game Changer
   dpCost: number;                  // Deployment Point cost for campaign budget
+  bio?: string;                    // optional one-liner lore blurb for deployment screen tooltip
 }
 
 // ─── Officer Runtime State ───────────────────────────────────────
@@ -683,6 +687,8 @@ export interface ActionDefinition {
   requiresTarget?: boolean;
   requiresWeaponSlot?: boolean;
   requiresShieldSector?: boolean;
+  /** True when the action needs the player to pick a donor arc AND a receiver arc (e.g. Rotate Shields). */
+  requiresTwoShieldSectors?: boolean;
   requiresHexTarget?: boolean;
   /** Optional: Only show this action if the current objective type matches this string. */
   hideUnlessObjective?: string;

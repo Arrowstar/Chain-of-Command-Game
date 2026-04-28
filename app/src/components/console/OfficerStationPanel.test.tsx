@@ -58,7 +58,7 @@ describe('OfficerStationPanel', () => {
 
     render(
       <DndContext>
-        <OfficerStationPanel officerState={engineeringOfficer!} />
+        <OfficerStationPanel officerState={engineeringOfficer!} playerId="p1" />
       </DndContext>
     );
 
@@ -83,7 +83,7 @@ describe('OfficerStationPanel', () => {
 
     render(
       <DndContext>
-        <OfficerStationPanel officerState={sensorsOfficer!} />
+        <OfficerStationPanel officerState={sensorsOfficer!} playerId="p1" />
       </DndContext>
     );
 
@@ -98,7 +98,7 @@ describe('OfficerStationPanel', () => {
 
     render(
       <DndContext>
-        <OfficerStationPanel officerState={sensorsOfficer!} />
+        <OfficerStationPanel officerState={sensorsOfficer!} playerId="p1" />
       </DndContext>
     );
 
@@ -113,7 +113,7 @@ describe('OfficerStationPanel', () => {
     // Ship starts with only 'plasma-battery' (not ordnance)
     render(
       <DndContext>
-        <OfficerStationPanel officerState={tacticalOfficer!} />
+        <OfficerStationPanel officerState={tacticalOfficer!} playerId="p1" />
       </DndContext>
     );
 
@@ -132,7 +132,7 @@ describe('OfficerStationPanel', () => {
     
     render(
       <DndContext>
-        <OfficerStationPanel officerState={tacticalOfficer!} />
+        <OfficerStationPanel officerState={tacticalOfficer!} playerId="p1" />
       </DndContext>
     );
 

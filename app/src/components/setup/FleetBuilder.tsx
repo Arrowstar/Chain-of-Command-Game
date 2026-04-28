@@ -159,6 +159,16 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [completedPlayers, setCompletedPlayers] = useState<{ player: any, ship: any }[]>([]);
 
+  // Per-player draft state for non-linear tab switching
+  // Note: defaultChassisId is computed below, so we initialize to null and patch on first switch.
+  const [drafts, setDrafts] = useState<{
+    chassisId: string | null;
+    officers: Record<string, string>;
+    weapons: string[];
+    subsystems: string[];
+    shipName: string;
+  }[]>(() => Array.from({ length: 4 }).map(() => ({ chassisId: null, officers: {}, weapons: [], subsystems: [], shipName: '' })));
+
   // In campaign mode, players always start with the Vanguard chassis.
   const defaultChassisId = isCampaignSetup ? 'vanguard' : null;
   const defaultStep = 1;
@@ -189,6 +199,49 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
   // Module state
   const [selectedWeapons, setSelectedWeapons] = useState<string[]>([]);
   const [selectedSubsystems, setSelectedSubsystems] = useState<string[]>([]);
+
+  // Saves current UI state into the drafts array for the active player
+  const saveCurrentDraftRef = React.useRef<() => void>(() => {});
+  saveCurrentDraftRef.current = () => {
+    setDrafts(prev => {
+      const next = [...prev];
+      next[currentPlayerIndex] = {
+        chassisId: selectedChassisId,
+        officers: selectedOfficers,
+        weapons: selectedWeapons,
+        subsystems: selectedSubsystems,
+        shipName: customShipName,
+      };
+      return next;
+    });
+  };
+
+  const handleTabClick = (idx: number) => {
+    if (idx === currentPlayerIndex) return;
+    // Save current player's state into drafts
+    const savedDrafts = [...drafts];
+    savedDrafts[currentPlayerIndex] = {
+      chassisId: selectedChassisId,
+      officers: selectedOfficers,
+      weapons: selectedWeapons,
+      subsystems: selectedSubsystems,
+      shipName: customShipName,
+    };
+    setDrafts(savedDrafts);
+    // Load target player's draft, applying default chassis if in campaign mode
+    const raw = savedDrafts[idx];
+    const targetChassisId = raw.chassisId ?? defaultChassisId;
+    setSelectedChassisId(targetChassisId);
+    setSelectedOfficers(raw.officers);
+    setSelectedWeapons(raw.weapons);
+    setSelectedSubsystems(raw.subsystems);
+    setCustomShipName(raw.shipName);
+    setCurrentPlayerIndex(idx);
+    // Navigate to appropriate step
+    if (!targetChassisId) setStep(1);
+    else if (!['helm','tactical','engineering','sensors'].every(st => raw.officers[st])) setStep(2);
+    else setStep(3);
+  };
 
   const initializeGame = useGameStore(s => s.initializeGame);
 
@@ -229,184 +282,138 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
   const handleFinish = () => {
     if (!activeChassis) return;
 
-    // Build OfficerState[] from selections
-    const stations: OfficerStation[] = ['helm', 'tactical', 'engineering', 'sensors'];
-    const officers: OfficerState[] = stations.map(station => ({
-      officerId: selectedOfficers[station],
-      station,
-      currentStress: 0,
-      currentTier: 'rookie',
-      isLocked: false,
-      lockDuration: 0,
-      traumas: [],
-      hasFumbledThisRound: false,
-      actionsPerformedThisRound: 0,
-    }));
-
-    const pId = `p${currentPlayerIndex + 1}`;
-    const sId = `s${currentPlayerIndex + 1}`;
-    
-    // Assign spawn point if scenarioConfig is present
-    let startPos = { q: 0, r: 0 };
-    let startFacing: HexFacing = HexFacing.Fore;
-    
-    if (scenarioConfig && scenarioConfig.playerSpawns[currentPlayerIndex]) {
-        const spawn = scenarioConfig.playerSpawns[currentPlayerIndex];
-        startPos = spawn.coord;
-        startFacing = spawn.facing;
-    }
-
-    const finalShipName = isCampaignSetup 
-      ? (campaignShipNames[currentPlayerIndex]?.trim() || `ISS Vanguard ${currentPlayerIndex + 1}`)
-      : (customShipName.trim() || `ISS ${activeChassis.name} ${currentPlayerIndex > 0 ? currentPlayerIndex + 1 : ''}`.trim());
-
-    const playerShip: ShipState = {
-      id: sId,
-      name: finalShipName,
-      chassisId: activeChassis.id,
-      ownerId: pId,
-      position: startPos,
-      facing: startFacing,
-      currentSpeed: 1,
-      currentHull: activeChassis.baseHull,
-      maxHull: activeChassis.baseHull,
-      shields: {
-        fore: activeChassis.shieldsPerSector, foreStarboard: activeChassis.shieldsPerSector, aftStarboard: activeChassis.shieldsPerSector,
-        aft: activeChassis.shieldsPerSector, aftPort: activeChassis.shieldsPerSector, forePort: activeChassis.shieldsPerSector,
-      },
-      maxShieldsPerSector: activeChassis.shieldsPerSector,
-      equippedWeapons: selectedWeapons,
-      equippedSubsystems: selectedSubsystems,
-      criticalDamage: [],
-      scars: [],
-      armorDie: activeChassis.armorDie,
-      baseEvasion: activeChassis.baseEvasion,
-      evasionModifiers: 0,
-      isDestroyed: false,
-      hasDroppedBelow50: false,
-      hasDrifted: false,
-      targetLocks: [],
+    // Snapshot current player's UI state into allDrafts
+    const allDrafts = [...drafts];
+    allDrafts[currentPlayerIndex] = {
+      chassisId: selectedChassisId,
+      officers: selectedOfficers,
+      weapons: selectedWeapons,
+      subsystems: selectedSubsystems,
+      shipName: customShipName,
     };
 
-    const player = {
-        id: pId,
-        name: `Player ${currentPlayerIndex + 1}`,
-        shipId: sId,
-        commandTokens: activeChassis.ctGeneration,
-        maxCommandTokens: activeChassis.ctGeneration,
+    const totalPlayersCount = isCampaignSetup ? campaignPlayerCount : (scenarioConfig ? scenarioConfig.playerSpawns.length : 1);
+
+    // Build all players and ships from the drafts array
+    const finalPlayers: any[] = [];
+    const finalShips: ShipState[] = [];
+
+    for (let idx = 0; idx < totalPlayersCount; idx++) {
+      const draft = allDrafts[idx];
+      const draftChassisId = draft.chassisId ?? (isCampaignSetup ? 'vanguard' : null);
+      const draftChassis = draftChassisId ? getChassisById(draftChassisId) : null;
+      if (!draftChassis) continue;
+
+      const pid = `p${idx + 1}`;
+      const sid = `s${idx + 1}`;
+
+      let pos = { q: 0, r: 0 };
+      let facing: HexFacing = HexFacing.Fore;
+      if (scenarioConfig && scenarioConfig.playerSpawns[idx]) {
+        pos = scenarioConfig.playerSpawns[idx].coord;
+        facing = scenarioConfig.playerSpawns[idx].facing;
+      }
+
+      const draftShipName = isCampaignSetup
+        ? (campaignShipNames[idx]?.trim() || `ISS Vanguard ${idx + 1}`)
+        : (draft.shipName.trim() || `ISS ${draftChassis.name}${idx > 0 ? ` ${idx + 1}` : ''}`);
+
+      const draftStations: OfficerStation[] = ['helm', 'tactical', 'engineering', 'sensors'];
+      const draftOfficers: OfficerState[] = draftStations.map(st => ({
+        officerId: draft.officers[st],
+        station: st,
+        currentStress: 0,
+        currentTier: 'rookie',
+        isLocked: false,
+        lockDuration: 0,
+        traumas: [],
+        hasFumbledThisRound: false,
+        actionsPerformedThisRound: 0,
+      }));
+
+      finalShips.push({
+        id: sid,
+        name: draftShipName,
+        chassisId: draftChassis.id,
+        ownerId: pid,
+        position: pos,
+        facing,
+        currentSpeed: 1,
+        currentHull: draftChassis.baseHull,
+        maxHull: draftChassis.baseHull,
+        shields: {
+          fore: draftChassis.shieldsPerSector, foreStarboard: draftChassis.shieldsPerSector, aftStarboard: draftChassis.shieldsPerSector,
+          aft: draftChassis.shieldsPerSector, aftPort: draftChassis.shieldsPerSector, forePort: draftChassis.shieldsPerSector,
+        },
+        maxShieldsPerSector: draftChassis.shieldsPerSector,
+        equippedWeapons: draft.weapons,
+        equippedSubsystems: draft.subsystems,
+        criticalDamage: [],
+        scars: [],
+        armorDie: draftChassis.armorDie,
+        baseEvasion: draftChassis.baseEvasion,
+        evasionModifiers: 0,
+        isDestroyed: false,
+        hasDroppedBelow50: false,
+        hasDrifted: false,
+        targetLocks: [],
+      });
+
+      finalPlayers.push({
+        id: pid,
+        name: `Player ${idx + 1}`,
+        shipId: sid,
+        commandTokens: draftChassis.ctGeneration,
+        maxCommandTokens: draftChassis.ctGeneration,
         assignedActions: [],
-        officers,
-    };
-
-    const newCompleted = [...completedPlayers, { player, ship: playerShip }];
-    
-    const targetSpawnsCount = isCampaignSetup ? campaignPlayerCount : (scenarioConfig ? scenarioConfig.playerSpawns.length : 1);
-    
-    if (newCompleted.length < targetSpawnsCount) {
-        // Prepare for next player
-        setCompletedPlayers(newCompleted);
-        setCurrentPlayerIndex(currentPlayerIndex + 1);
-        setStep(isCampaignSetup ? 2 : 1);
-        setSelectedChassisId(isCampaignSetup ? 'vanguard' : null);
-        setSelectedOfficers({});
-        setSelectedWeapons([]);
-        setSelectedSubsystems([]);
-        return;
+        officers: draftOfficers,
+      });
     }
 
+    // Campaign launch
     if (isCampaignSetup && onCampaignStart) {
-        const finalPlayers = newCompleted.map(c => c.player);
-        const finalShips = newCompleted.map(c => c.ship);
-        onCampaignStart(finalPlayers[0].id, finalPlayers, finalShips, campaignDifficulty, campaignBudget);
-        return;
+      onCampaignStart(finalPlayers[0].id, finalPlayers, finalShips, campaignDifficulty, campaignBudget);
+      return;
     }
 
-    const finalPlayers = newCompleted.map(c => c.player);
-    const finalShips = newCompleted.map(c => c.ship);
-
+    // Skirmish / scenario launch
     let config: GameInitConfig;
     if (scenarioConfig) {
-        const combinedSpawns = [
-            ...(scenarioConfig.enemies || []).map(e => ({ ...e, isAllied: false })),
-            ...(scenarioConfig.allies || []).map(a => ({ ...a, isAllied: true }))
-        ];
-
-        const mappedEnemies = combinedSpawns.map((e, idx) => {
-            const adv = ADVERSARIES.find(a => a.id === e.adversaryId) || ADVERSARIES[0];
-            return {
-                id: `e${idx + 1}`,
-                name: adv.name,
-                adversaryId: adv.id,
-                position: e.coord,
-                facing: e.facing,
-                currentSpeed: adv.speed,
-                currentHull: adv.hull,
-                maxHull: adv.hull,
-                baseEvasion: adv.baseEvasion,
-                armorDie: adv.armorDie,
-                shields: {
-                    fore: adv.shieldsPerSector, foreStarboard: adv.shieldsPerSector,
-                    aftStarboard: adv.shieldsPerSector, aft: adv.shieldsPerSector,
-                    aftPort: adv.shieldsPerSector, forePort: adv.shieldsPerSector,
-                },
-                maxShieldsPerSector: adv.shieldsPerSector,
-                criticalDamage: [],
-                isDestroyed: false,
-                hasDroppedBelow50: false,
-                hasDrifted: false,
-                targetLocks: [],
-                isAllied: e.isAllied,
-            } as EnemyShipState;
-        });
-
-        config = {
-            scenarioId: 'custom-scenario',
-            maxRounds: 8,
-            terrain: scenarioConfig.terrain,
-            players: finalPlayers,
-            playerShips: finalShips,
-            enemyShips: mappedEnemies,
-        };
+      const combinedSpawns = [
+        ...(scenarioConfig.enemies || []).map(e => ({ ...e, isAllied: false })),
+        ...(scenarioConfig.allies || []).map(a => ({ ...a, isAllied: true }))
+      ];
+      const mappedEnemies = combinedSpawns.map((e, i) => {
+        const adv = ADVERSARIES.find(a => a.id === e.adversaryId) || ADVERSARIES[0];
+        return {
+          id: `e${i + 1}`, name: adv.name, adversaryId: adv.id,
+          position: e.coord, facing: e.facing, currentSpeed: adv.speed,
+          currentHull: adv.hull, maxHull: adv.hull,
+          baseEvasion: adv.baseEvasion, armorDie: adv.armorDie,
+          shields: { fore: adv.shieldsPerSector, foreStarboard: adv.shieldsPerSector, aftStarboard: adv.shieldsPerSector, aft: adv.shieldsPerSector, aftPort: adv.shieldsPerSector, forePort: adv.shieldsPerSector },
+          maxShieldsPerSector: adv.shieldsPerSector, criticalDamage: [],
+          isDestroyed: false, hasDroppedBelow50: false, hasDrifted: false, targetLocks: [], isAllied: e.isAllied,
+        } as EnemyShipState;
+      });
+      config = { scenarioId: 'custom-scenario', maxRounds: 8, terrain: scenarioConfig.terrain, players: finalPlayers, playerShips: finalShips, enemyShips: mappedEnemies };
     } else {
-        // Default Skirmish
-        const enemy = ADVERSARIES[0];
-        const enemyShip: EnemyShipState = {
-          id: 'e1',
-          name: enemy.name,
-          adversaryId: enemy.id,
-          position: { q: 9, r: -9 },
-          facing: HexFacing.Aft,
-          currentSpeed: enemy.speed,
-          currentHull: enemy.hull,
-          maxHull: enemy.hull,
-          baseEvasion: enemy.baseEvasion,
-          armorDie: enemy.armorDie,
-          shields: {
-            fore: enemy.shieldsPerSector, foreStarboard: enemy.shieldsPerSector,
-            aftStarboard: enemy.shieldsPerSector, aft: enemy.shieldsPerSector,
-            aftPort: enemy.shieldsPerSector, forePort: enemy.shieldsPerSector,
-          },
-          maxShieldsPerSector: enemy.shieldsPerSector,
-          criticalDamage: [],
-          isDestroyed: false,
-          hasDroppedBelow50: false,
-          hasDrifted: false,
-          targetLocks: [],
-        };
-
-        config = {
-          scenarioId: 'skirmish-1',
-          maxRounds: 8,
-          terrain: [],
-          players: finalPlayers,
-          playerShips: finalShips,
-          enemyShips: [enemyShip],
-        };
+      const enemy = ADVERSARIES[0];
+      const enemyShip: EnemyShipState = {
+        id: 'e1', name: enemy.name, adversaryId: enemy.id,
+        position: { q: 9, r: -9 }, facing: HexFacing.Aft, currentSpeed: enemy.speed,
+        currentHull: enemy.hull, maxHull: enemy.hull,
+        baseEvasion: enemy.baseEvasion, armorDie: enemy.armorDie,
+        shields: { fore: enemy.shieldsPerSector, foreStarboard: enemy.shieldsPerSector, aftStarboard: enemy.shieldsPerSector, aft: enemy.shieldsPerSector, aftPort: enemy.shieldsPerSector, forePort: enemy.shieldsPerSector },
+        maxShieldsPerSector: enemy.shieldsPerSector, criticalDamage: [],
+        isDestroyed: false, hasDroppedBelow50: false, hasDrifted: false, targetLocks: [],
+      };
+      config = { scenarioId: 'skirmish-1', maxRounds: 8, terrain: [], players: finalPlayers, playerShips: finalShips, enemyShips: [enemyShip] };
     }
 
     initializeGame(config);
     if (onSkirmishStart) onSkirmishStart();
   };
+
 
   const stations: OfficerStation[] = ['helm', 'tactical', 'engineering', 'sensors'];
   const hasAllOfficers = stations.every(s => selectedOfficers[s]);
@@ -432,11 +439,15 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
     return computeDpBreakdown(activeChassis.dpCost, officerDps, weaponDps, subDps, campaignBudget);
   })();
 
-  // Build a map of officerId -> ship name for officers already claimed by previous players
+  // Build a map of officerId -> ship name for officers claimed by other players' drafts
   const claimedOfficerMap: Record<string, string> = {};
-  completedPlayers.forEach(cp => {
-    cp.player.officers.forEach((o: any) => {
-      if (o.officerId) claimedOfficerMap[o.officerId] = cp.ship.name;
+  drafts.forEach((draft, idx) => {
+    if (idx === currentPlayerIndex) return; // Don't block the active player's own picks
+    const draftShipName = isCampaignSetup
+      ? (campaignShipNames[idx]?.trim() || `ISS Vanguard ${idx + 1}`)
+      : (draft.shipName || `Player ${idx + 1}`);
+    Object.values(draft.officers).forEach(offId => {
+      if (offId) claimedOfficerMap[offId] = draftShipName;
     });
   });
 
@@ -445,6 +456,31 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
     : (customShipName.trim() || 'Your Ship');
 
   const totalPlayers = isCampaignSetup ? campaignPlayerCount : (scenarioConfig ? scenarioConfig.playerSpawns.length : 1);
+
+  const allDraftsForReadiness = drafts.map((d, i) => i === currentPlayerIndex
+    ? { chassisId: selectedChassisId, officers: selectedOfficers, weapons: selectedWeapons, subsystems: selectedSubsystems, shipName: customShipName }
+    : d
+  );
+  const readinessRows = allDraftsForReadiness.slice(0, totalPlayers).map((d, idx) => {
+    const shipLabel = isCampaignSetup
+      ? (campaignShipNames[idx]?.trim() || `ISS Vanguard ${idx + 1}`)
+      : (d.shipName || `Player ${idx + 1}`);
+    const officersFilled = ['helm','tactical','engineering','sensors'].filter(st => d.officers[st as OfficerStation]).length;
+    const hasOfficers = officersFilled === 4;
+    const hasWeapons = d.weapons.length >= 1;
+    const isOver = isCampaignSetup && (() => {
+      const ch = d.chassisId ? getChassisById(d.chassisId) : null;
+      if (!ch) return false;
+      const offDp = Object.values(d.officers).reduce((s, id) => s + (OFFICERS.find(o => o.id === id)?.dpCost ?? 0), 0);
+      const wDp = d.weapons.reduce((s, id) => s + (WEAPONS.find(w => w.id === id)?.dpCost ?? 0), 0);
+      const sDp = d.subsystems.reduce((s, id) => s + (SUBSYSTEMS.find(sub => sub.id === id)?.dpCost ?? 0), 0);
+      return ch.dpCost + offDp + wDp + sDp > campaignBudget;
+    })();
+    const ready = hasOfficers && hasWeapons && !isOver;
+    return { idx, shipLabel, officersFilled, hasOfficers, hasWeapons, isOver, ready };
+  });
+
+  const allReady = readinessRows.every(r => r.ready);
 
   return (
     <div className="panel" style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', borderRadius: 0, border: 'none' }}>
@@ -506,14 +542,21 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
       {totalPlayers > 1 && (
         <div style={{ display: 'flex', borderBottom: '1px solid var(--color-border)', background: 'rgba(0,0,0,0.3)' }}>
           {Array.from({ length: totalPlayers }).map((_, idx) => {
-            const isDone = idx < currentPlayerIndex;
             const isActive = idx === currentPlayerIndex;
+            const draft = isActive
+              ? { chassisId: selectedChassisId, officers: selectedOfficers, weapons: selectedWeapons, subsystems: selectedSubsystems, shipName: customShipName }
+              : drafts[idx];
+            const _ch = draft?.chassisId ? getChassisById(draft.chassisId) : null;
+            const hasOffs = ['helm','tactical','engineering','sensors'].every(st => draft?.officers[st]);
+            const hasMods = (draft?.weapons.length ?? 0) >= 1;
+            const isDone = !!(draft?.chassisId && hasOffs && hasMods);
             const shipNameForIdx = isCampaignSetup
               ? (campaignShipNames[idx]?.trim() || `ISS Vanguard ${idx + 1}`)
-              : (completedPlayers[idx]?.ship.name || `Player ${idx + 1}`);
+              : (draft?.shipName || `Player ${idx + 1}`);
             return (
               <div
                 key={idx}
+                onClick={() => handleTabClick(idx)}
                 style={{
                   flex: 1,
                   padding: '8px 16px',
@@ -521,6 +564,7 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
                   background: isActive ? 'rgba(0, 204, 255, 0.08)' : 'transparent',
                   borderBottom: isActive ? '2px solid var(--color-holo-cyan)' : '2px solid transparent',
                   transition: 'all 0.2s',
+                  cursor: 'pointer',
                 }}
               >
                 <div className="mono" style={{ fontSize: '0.65rem', color: isDone ? 'var(--color-holo-green)' : isActive ? 'var(--color-holo-cyan)' : 'var(--color-text-dim)' }}>
@@ -914,6 +958,23 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
                     }}
                     data-testid={`weapon-select-${weapon.id}`}
                   >
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                      {weapon.imagePath && (
+                        <img
+                          src={weapon.imagePath}
+                          alt={weapon.name}
+                          style={{
+                            width: '56px',
+                            height: '56px',
+                            flexShrink: 0,
+                            objectFit: 'cover',
+                            borderRadius: '4px',
+                            border: `1px solid ${isSelected ? 'var(--color-holo-green)' : 'var(--color-border)'}`,
+                            background: 'var(--color-bg-raised)',
+                          }}
+                        />
+                      )}
+                    <div style={{ flex: 1 }}>
                     <div className="flex-between">
                       <strong>{weapon.name}</strong>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -990,7 +1051,9 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
                       {weapon.effect}
                     </div>
                   </div>
-                )})}
+                  </div>
+                  </div>
+                  )})}
               </div>
 
               {/* Subsystems */}
@@ -1016,6 +1079,23 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
                     onClick={() => handleSubsystemToggle(sub.id)}
                     data-testid={`subsystem-select-${sub.id}`}
                   >
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                      {sub.imagePath && (
+                        <img
+                          src={sub.imagePath}
+                          alt={sub.name}
+                          style={{
+                            width: '56px',
+                            height: '56px',
+                            flexShrink: 0,
+                            objectFit: 'cover',
+                            borderRadius: '4px',
+                            border: `1px solid ${selectedSubsystems.includes(sub.id) ? 'var(--color-holo-green)' : 'var(--color-border)'}`,
+                            background: 'var(--color-bg-raised)',
+                          }}
+                        />
+                      )}
+                    <div style={{ flex: 1 }}>
                     <div className="flex-between">
                       <strong>{sub.name}</strong>
                       <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
@@ -1038,6 +1118,8 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
                       {sub.actionName}: {sub.effect}
                     </div>
                   </div>
+                  </div>
+                  </div>
                 ))}
               </div>
 
@@ -1046,6 +1128,7 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
 
             </div>
             
+
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
               <button
                 className="btn"
@@ -1056,10 +1139,10 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
               </button>
               <button
                 className="btn btn--execute"
-                disabled={!hasAllModules || (isCampaignSetup && !!dpBreakdown?.isOverBudget)}
+                disabled={!allReady}
                 onClick={handleFinish}
                 data-testid="launch-btn"
-                title={isCampaignSetup && dpBreakdown?.isOverBudget ? `Over DP budget by ${dpBreakdown ? dpBreakdown.total - campaignBudget : 0} DP — remove items to proceed` : undefined}
+                title={!allReady ? "Not all ships are ready" : undefined}
               >
                 {scenarioConfig && currentPlayerIndex < scenarioConfig.playerSpawns.length - 1 ? 'NEXT PLAYER' : 'LAUNCH MISSION'}
               </button>
@@ -1067,6 +1150,40 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
           </>
         )}
       </div>
+      {/* ── Fleet Readiness Panel (Global) ── */}
+      {totalPlayers > 1 && (() => {
+        if (allReady) return null;
+        return (
+          <div style={{ padding: 'var(--space-md)', background: 'rgba(0,0,0,0.5)', borderTop: '1px solid var(--color-border)' }}>
+            <div style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid var(--color-border)', borderRadius: '6px', overflow: 'hidden' }}>
+              <div className="label" style={{ padding: '5px 10px', borderBottom: '1px solid var(--color-border)', fontSize: '0.6rem', color: 'var(--color-text-dim)', letterSpacing: '0.1em' }}>FLEET READINESS</div>
+              {readinessRows.map(({ idx, shipLabel, officersFilled, hasOfficers, hasWeapons, isOver, ready }) => (
+                <div
+                  key={idx}
+                  onClick={() => handleTabClick(idx)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 10px', borderBottom: idx < totalPlayers - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none', cursor: idx === currentPlayerIndex ? 'default' : 'pointer', background: idx === currentPlayerIndex ? 'rgba(0,204,255,0.06)' : 'transparent', transition: 'background 0.15s' }}
+                >
+                  <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: ready ? 'var(--color-holo-green)' : 'var(--color-hostile-red)', flexShrink: 0 }} />
+                  <span className="mono" style={{ fontSize: '0.7rem', color: idx === currentPlayerIndex ? 'var(--color-text-bright)' : 'var(--color-text-secondary)', flex: 1 }}>{shipLabel}</span>
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                    <span title={`Officers: ${officersFilled}/4`} style={{ fontSize: '0.62rem', padding: '1px 5px', borderRadius: '3px', background: hasOfficers ? 'rgba(0,200,100,0.15)' : 'rgba(255,80,80,0.15)', color: hasOfficers ? 'var(--color-holo-green)' : '#ff7070', fontFamily: 'var(--font-mono)' }}>
+                      {hasOfficers ? '✓' : `${officersFilled}/4`} OFF
+                    </span>
+                    <span title={hasWeapons ? 'Weapons equipped' : 'No weapons equipped'} style={{ fontSize: '0.62rem', padding: '1px 5px', borderRadius: '3px', background: hasWeapons ? 'rgba(0,200,100,0.15)' : 'rgba(255,80,80,0.15)', color: hasWeapons ? 'var(--color-holo-green)' : '#ff7070', fontFamily: 'var(--font-mono)' }}>
+                      {hasWeapons ? '✓' : '!'} WPN
+                    </span>
+                    {isCampaignSetup && (
+                      <span title={isOver ? 'Over DP budget' : 'Within DP budget'} style={{ fontSize: '0.62rem', padding: '1px 5px', borderRadius: '3px', background: isOver ? 'rgba(255,80,80,0.15)' : 'rgba(0,200,100,0.15)', color: isOver ? '#ff7070' : 'var(--color-holo-green)', fontFamily: 'var(--font-mono)' }}>
+                        {isOver ? '!' : '✓'} DP
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

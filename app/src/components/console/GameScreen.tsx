@@ -40,7 +40,8 @@ export default function GameScreen() {
   const [hasUnreadEnemyTactic, setHasUnreadEnemyTactic] = React.useState(false);
   const previousTacticIdRef = useRef<string | null>(currentTactic?.id ?? null);
 
-  const player = players[0];
+  const [activePlayerId, setActivePlayerId] = useState(players[0]?.id);
+  const player = players.find(p => p.id === activePlayerId) || players[0];
 
   useLayoutEffect(() => {
     const previousTacticId = previousTacticIdRef.current;
@@ -291,10 +292,32 @@ export default function GameScreen() {
           />
         ) : (
           <DndContext onDragEnd={handleDragEnd}>
+            {/* Player Tabs (Multiplayer only) */}
+            {players.length > 1 && (
+              <div style={{ display: 'flex', gap: '4px', marginBottom: '8px' }}>
+                {players.map((p, idx) => (
+                  <button
+                    key={p.id}
+                    className="btn"
+                    style={{
+                      padding: '6px 12px',
+                      fontSize: '0.8rem',
+                      borderColor: p.id === activePlayerId ? 'var(--color-holo-cyan)' : 'transparent',
+                      background: p.id === activePlayerId ? 'rgba(0, 204, 255, 0.1)' : 'transparent',
+                      color: p.id === activePlayerId ? 'var(--color-text-bright)' : 'var(--color-text-secondary)',
+                    }}
+                    onClick={() => setActivePlayerId(p.id)}
+                  >
+                    {p.name}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {/* Top: Fleet Info & Captain's Pool */}
             <div style={{ display: 'flex', gap: 'var(--space-md)' }}>
               <div id="captain-hand" style={{ flex: 1 }}>
-                <CaptainHand />
+                <CaptainHand playerId={player.id} />
               </div>
               <div id="fleet-assets-panel" style={{ width: '280px', flexShrink: 0 }}>
                 <FleetAssetsPanel />
@@ -312,7 +335,7 @@ export default function GameScreen() {
                 }}
               >
                 {[...player.officers].sort((a, b) => a.station.localeCompare(b.station)).map(o => (
-                  <OfficerStationPanel key={o.officerId} officerState={o} />
+                  <OfficerStationPanel key={o.officerId} officerState={o} playerId={player.id} />
                 ))}
               </div>
             )}

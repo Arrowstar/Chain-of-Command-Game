@@ -4,13 +4,13 @@ import CommandToken from './CommandToken';
 import { getScarImpactLegendText, getScarStatusMeta, getScarTooltip } from './scarStatus';
 import { getCurrentCtDisplayState } from '../../engine/commandTokens';
 
-export default function CaptainHand() {
+export default function CaptainHand({ playerId }: { playerId?: string }) {
   const players = useGameStore(s => s.players);
   const playerShips = useGameStore(s => s.playerShips);
   const round = useGameStore(s => s.round);
   const activeRoE = useGameStore(s => s.activeRoE);
   const combatModifiers = useGameStore(s => s.combatModifiers);
-  const player = players[0];
+  const player = playerId ? players.find(p => p.id === playerId) : players[0];
 
   if (!player) return null;
   const ship = playerShips.find(entry => entry.id === player.shipId);

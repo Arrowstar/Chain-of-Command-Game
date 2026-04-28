@@ -61,6 +61,15 @@ export const STANDARD_ACTIONS: ActionDefinition[] = [
     effect: 'Assign all of your Strike Fighter tokens to a single target. They will move toward and attack that target each round until reassigned or destroyed.',
     requiresTarget: true,
   },
+  {
+    id: 'rotate-shields',
+    station: 'tactical',
+    name: 'Rotate Shields',
+    ctCost: 1,
+    stressCost: 1,
+    effect: 'Transfer 1 Shield point from any donor arc (must have 1+) to any receiver arc (must be below maximum).',
+    requiresTwoShieldSectors: true,
+  },
 
   // ─── Engineering ───────────────────────────────────
   {

@@ -51,7 +51,7 @@ describe('Load Ordnance Visibility Integration', () => {
     // 1. Initial state: no ordnance
     const { rerender } = render(
       <DndContext>
-        <OfficerStationPanel officerState={tacticalOfficer} />
+        <OfficerStationPanel officerState={tacticalOfficer} playerId="p1" />
       </DndContext>
     );
     expect(screen.queryByTestId('action-slot-load-ordinance')).not.toBeInTheDocument();
@@ -66,7 +66,7 @@ describe('Load Ordnance Visibility Integration', () => {
     // 3. Rerender and verify
     rerender(
       <DndContext>
-        <OfficerStationPanel officerState={tacticalOfficer} />
+        <OfficerStationPanel officerState={tacticalOfficer} playerId="p1" />
       </DndContext>
     );
     expect(screen.getByTestId('action-slot-load-ordinance')).toBeInTheDocument();
@@ -81,7 +81,7 @@ describe('Load Ordnance Visibility Integration', () => {
     // 5. Rerender and verify hidden again
     rerender(
       <DndContext>
-        <OfficerStationPanel officerState={tacticalOfficer} />
+        <OfficerStationPanel officerState={tacticalOfficer} playerId="p1" />
       </DndContext>
     );
     expect(screen.queryByTestId('action-slot-load-ordinance')).not.toBeInTheDocument();

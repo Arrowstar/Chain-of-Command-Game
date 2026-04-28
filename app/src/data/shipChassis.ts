@@ -1,5 +1,14 @@
 import type { ShipChassis } from '../types/game';
 
+import vanguardImage from '../../art/ships/player/VanguardCruiser.png';
+import minotaurImage from '../../art/ships/player/Minotaur.png';
+import zephyrImage from '../../art/ships/player/ZephyrFriger.png';
+import aegisImage from '../../art/ships/player/AegisCarrier.png';
+import manticoreImage from '../../art/ships/player/ManticoreMissileDestroyer.png';
+import paladinImage from '../../art/ships/player/PaladinCruiser.png';
+import wraithImage from '../../art/ships/player/WraithCorvette.png';
+import forgeImage from '../../art/ships/player/ForgeTender.png';
+
 export const SHIP_CHASSIS: ShipChassis[] = [
   {
     id: 'vanguard',
@@ -19,6 +28,7 @@ export const SHIP_CHASSIS: ShipChassis[] = [
     uniqueTraitName: 'Versatile',
     uniqueTraitEffect: 'Once per round, you may reassign an unspent Command Token to a different officer without penalty.',
     flavorText: 'The workhorse of the Hegemony defector fleet. A perfectly balanced ship for any scenario.',
+    image: vanguardImage,
   },
   {
     id: 'minotaur',
@@ -38,6 +48,7 @@ export const SHIP_CHASSIS: ShipChassis[] = [
     uniqueTraitName: 'Lumbering',
     uniqueTraitEffect: 'Speed can never be increased above 1. Ramming an enemy deals 2D4 damage instead of 1D4.',
     flavorText: 'A massive, lumbering fortress. It turns like a moon, but can withstand apocalyptic punishment.',
+    image: minotaurImage,
   },
   {
     id: 'zephyr',
@@ -57,6 +68,7 @@ export const SHIP_CHASSIS: ShipChassis[] = [
     uniqueTraitName: 'Afterburners',
     uniqueTraitEffect: '"Adjust Speed" actions grant +2 or -2 Speed per CT spent, instead of 1.',
     flavorText: 'An incredibly fast glass cannon designed for flanking and hit-and-run tactics.',
+    image: zephyrImage,
   },
   {
     id: 'aegis',
@@ -76,6 +88,7 @@ export const SHIP_CHASSIS: ShipChassis[] = [
     uniqueTraitName: 'CIC Sync',
     uniqueTraitEffect: 'You may spend 1 of your Command Tokens to activate an action on an Allied Player\'s dashboard (they suffer the Stress).',
     flavorText: 'A fleet-support vessel designed to launch fighter screens and coordinate the battlefield.',
+    image: aegisImage,
   },
   {
     id: 'manticore',
@@ -95,6 +108,7 @@ export const SHIP_CHASSIS: ShipChassis[] = [
     uniqueTraitName: 'Advanced Telemetry',
     uniqueTraitEffect: 'Weapons fired at Long Range (5+ Hexes) do not suffer the standard +2 TN penalty.',
     flavorText: 'A mobile artillery platform meant to sit on the backline and lob heavy ordnance.',
+    image: manticoreImage,
   },
   {
     id: 'paladin',
@@ -114,6 +128,7 @@ export const SHIP_CHASSIS: ShipChassis[] = [
     uniqueTraitName: 'Bulwark',
     uniqueTraitEffect: 'Allied ships occupying a hex adjacent to the Paladin gain +1 to their Base Evasion.',
     flavorText: 'A frontline brawler designed to protect smaller ships and draw enemy fire.',
+    image: paladinImage,
   },
   {
     id: 'wraith',
@@ -133,6 +148,7 @@ export const SHIP_CHASSIS: ShipChassis[] = [
     uniqueTraitName: 'Cloaking Field',
     uniqueTraitEffect: 'At ranges greater than 3 Hexes, the Wraith cannot be targeted by Enemy attacks unless it fired a weapon in the previous round.',
     flavorText: 'An experimental electronic-warfare vessel that excels in deep-strike operations.',
+    image: wraithImage,
   },
   {
     id: 'forge',
@@ -152,6 +168,7 @@ export const SHIP_CHASSIS: ShipChassis[] = [
     uniqueTraitName: 'Repair Drones',
     uniqueTraitEffect: 'Engineering "Damage Control" actions can be applied to any Allied ship within 2 hexes, rather than just yourself.',
     flavorText: 'A flying drydock that keeps the rest of the fleet from falling apart.',
+    image: forgeImage,
   },
 ];
 
