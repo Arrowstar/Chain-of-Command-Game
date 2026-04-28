@@ -13,6 +13,7 @@ import type { ShieldState, ShipArc } from '../../types/game';
 import { ASSET_MAP } from '../../engine/pixiGraphics';
 import { FIGHTER_CLASSES } from '../../data/fighters';
 
+
 const SHIELD_SECTORS: ShipArc[] = ['fore', 'foreStarboard', 'aftStarboard', 'aft', 'aftPort', 'forePort'];
 const ARC_LABELS: Record<ShipArc, string> = {
   fore: 'Fore',
@@ -310,23 +311,52 @@ export default function ExecutionPanel() {
                                 <div>
                                   <div className="label" style={{ marginBottom: '6px', color: 'var(--color-holo-cyan)' }}>1. Select Fighter Class</div>
                                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
-                                    {Object.values(FIGHTER_CLASSES).map(fc => (
-                                      <button
-                                        key={fc.id}
-                                        className="btn"
-                                        style={{
-                                          textAlign: 'left',
-                                          padding: '6px 8px',
-                                          fontSize: '0.72rem',
-                                          borderColor: selection.classId === fc.id ? 'var(--color-holo-cyan)' : 'var(--color-border)',
-                                          background: selection.classId === fc.id ? 'rgba(79,209,197,0.12)' : undefined,
-                                        }}
-                                        onClick={() => setFighterLaunchSelections(prev => ({ ...prev, [action.id]: { ...selection, classId: fc.id } }))}
-                                      >
-                                        <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>{fc.name}</div>
-                                        <div style={{ color: 'var(--color-text-dim)', fontSize: '0.65rem' }}>{fc.role}</div>
-                                      </button>
-                                    ))}
+                                    {Object.values(FIGHTER_CLASSES).map(fc => {
+                                      const imgSrc = fc.imageKey ? ASSET_MAP[fc.imageKey] : undefined;
+                                      const isSelected = selection.classId === fc.id;
+                                      return (
+                                        <button
+                                          key={fc.id}
+                                          className="btn"
+                                          style={{
+                                            textAlign: 'left',
+                                            padding: '6px 8px',
+                                            fontSize: '0.72rem',
+                                            borderColor: isSelected ? 'var(--color-holo-cyan)' : 'var(--color-border)',
+                                            background: isSelected ? 'rgba(79,209,197,0.12)' : undefined,
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: '4px',
+                                          }}
+                                          onClick={() => setFighterLaunchSelections(prev => ({ ...prev, [action.id]: { ...selection, classId: fc.id } }))}
+                                        >
+                                          {/* Thumbnail or placeholder */}
+                                          {imgSrc ? (
+                                            <img
+                                              src={imgSrc}
+                                              alt={fc.name}
+                                              style={{ width: 48, height: 48, objectFit: 'contain', alignSelf: 'center', filter: isSelected ? 'none' : 'grayscale(30%) opacity(0.75)' }}
+                                            />
+                                          ) : (
+                                            <div style={{
+                                              width: 48, height: 48, alignSelf: 'center',
+                                              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                              background: 'var(--color-bg-deep)',
+                                              border: '1px dashed var(--color-border)',
+                                              borderRadius: '6px',
+                                              color: 'var(--color-text-dim)',
+                                              fontSize: '0.6rem',
+                                              gap: '2px',
+                                            }}>
+                                              <span style={{ fontSize: '1.2rem' }}>✦</span>
+                                              <span>NO ART</span>
+                                            </div>
+                                          )}
+                                          <div style={{ fontWeight: 'bold' }}>{fc.name}</div>
+                                          <div style={{ color: 'var(--color-text-dim)', fontSize: '0.65rem' }}>{fc.role}</div>
+                                        </button>
+                                      );
+                                    })}
                                   </div>
                                   {selectedClass && (
                                     <div style={{ marginTop: '6px', padding: '6px 8px', background: 'var(--color-bg-deep)', borderRadius: '4px', fontSize: '0.72rem', display: 'flex', gap: '12px', color: 'var(--color-text-dim)' }}>

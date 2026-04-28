@@ -576,6 +576,8 @@ export interface FighterClassData {
   volleyPool: DieType[];
   behavior: FighterBehavior;
   specialRules?: string;
+  /** Key into ASSET_MAP for this class's artwork. Omit to show a placeholder. */
+  imageKey?: string;
 }
 
 /**

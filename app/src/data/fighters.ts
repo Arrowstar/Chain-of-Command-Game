@@ -1,5 +1,20 @@
 import type { FighterClassData } from '../types/game';
 
+// ─── Fighter Class Definitions ────────────────────────────────────────────────
+//
+// Each entry's `imageKey` maps to a key in ASSET_MAP (pixiGraphics.ts).
+// Set imageKey to the matching key once artwork is placed in:
+//   app/art/ships/player/fighters/
+// Leave imageKey undefined (or comment it out) to show the placeholder icon.
+//
+// KEY REFERENCE:
+//   'fighter-strike'         → art/ships/player/player_fighters.png  (DONE)
+//   'fighter-heavy-bomber'   → art/ships/player/fighters/heavy_bomber.png
+//   'fighter-ew'             → art/ships/player/fighters/ew_fighter.png
+//   'fighter-intercept'      → art/ships/player/fighters/intercept_screen.png
+//   'fighter-gunship'        → art/ships/player/fighters/armored_gunship.png
+// ─────────────────────────────────────────────────────────────────────────────
+
 export const FIGHTER_CLASSES: Record<string, FighterClassData> = {
   'strike-fighter': {
     id: 'strike-fighter',
@@ -11,6 +26,7 @@ export const FIGHTER_CLASSES: Record<string, FighterClassData> = {
     weaponRangeMax: 1,
     volleyPool: ['d4', 'd4', 'd4'],
     behavior: 'attack',
+    imageKey: 'fighter-strike',       // ✅ Existing artwork (player_fighters.png)
   },
   'heavy-bomber': {
     id: 'heavy-bomber',
@@ -22,6 +38,7 @@ export const FIGHTER_CLASSES: Record<string, FighterClassData> = {
     weaponRangeMax: 3,
     volleyPool: ['d8', 'd8'],
     behavior: 'harass',
+    imageKey: 'fighter-heavy-bomber', // 📁 Place art at: art/ships/player/fighters/heavy_bomber.png
   },
   'ew-fighter': {
     id: 'ew-fighter',
@@ -34,6 +51,7 @@ export const FIGHTER_CLASSES: Record<string, FighterClassData> = {
     volleyPool: ['d4', 'd4'],
     behavior: 'harass',
     specialRules: 'Applies a temporary -1 TN to all friendly volleys against the target it is engaging.',
+    imageKey: 'fighter-ew',           // 📁 Place art at: art/ships/player/fighters/ew_fighter.png
   },
   'intercept-screen': {
     id: 'intercept-screen',
@@ -45,6 +63,7 @@ export const FIGHTER_CLASSES: Record<string, FighterClassData> = {
     weaponRangeMax: 1,
     volleyPool: ['d4'],
     behavior: 'screen',
+    imageKey: 'fighter-intercept',    // 📁 Place art at: art/ships/player/fighters/intercept_screen.png
   },
   'armored-gunship': {
     id: 'armored-gunship',
@@ -56,6 +75,7 @@ export const FIGHTER_CLASSES: Record<string, FighterClassData> = {
     weaponRangeMax: 1,
     volleyPool: ['d6', 'd6', 'd6'],
     behavior: 'attack',
+    imageKey: 'fighter-gunship',      // 📁 Place art at: art/ships/player/fighters/armored_gunship.png
   },
 };
 

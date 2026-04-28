@@ -180,7 +180,15 @@ export const ASSET_MAP: Record<string, string> = {
   'enemy-fighter': hegInterceptorWingImg,
 
   // Player / Allied Fighters
-  'allied-fighter': playerFightersImg,
+  // ── Strike Fighter uses the existing image ──
+  'allied-fighter': playerFightersImg,   // legacy key (generic fallback)
+  'fighter-strike': playerFightersImg,   // ✅ Strike Fighter — existing art
+
+  // ── New fighter classes — wire up once artwork is in art/ships/player/fighters/ ──
+  // 'fighter-heavy-bomber': heavyBomberImg,     // uncomment + add import when ready
+  // 'fighter-ew':           ewFighterImg,        // uncomment + add import when ready
+  // 'fighter-intercept':    interceptScreenImg,  // uncomment + add import when ready
+  // 'fighter-gunship':      armoredGunshipImg,   // uncomment + add import when ready
 
   // Player Chassis IDs
   'vanguard': vanguardCruiserImg,
