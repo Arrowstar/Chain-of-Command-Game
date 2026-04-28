@@ -11,6 +11,7 @@ import { getValidTargetsForWeapon } from '../../engine/combat';
 import { applyPlasmaAccelerators } from '../../engine/techEffects';
 import type { ShieldState, ShipArc } from '../../types/game';
 import { ASSET_MAP } from '../../engine/pixiGraphics';
+import { FIGHTER_CLASSES } from '../../data/fighters';
 
 const SHIELD_SECTORS: ShipArc[] = ['fore', 'foreStarboard', 'aftStarboard', 'aft', 'aftPort', 'forePort'];
 const ARC_LABELS: Record<ShipArc, string> = {
@@ -26,6 +27,20 @@ interface CyberSelectionState {
   targetShipId: string | null;
   sector: ShipArc | null;
 }
+
+interface FighterLaunchSelection {
+  classId: string;
+  behavior: string;
+}
+
+const BEHAVIOR_INFO: Record<string, { label: string; description: string; targetType: 'enemy' | 'allied' | 'none' }> = {
+  'attack':      { label: 'Attack',    description: 'Move directly to engage the nearest enemy ship.',                                         targetType: 'enemy' },
+  'flanking':    { label: 'Flanking',  description: 'Navigate to the enemy target\'s aft arc for bonus positioning.',                        targetType: 'enemy' },
+  'hit_and_run': { label: 'Hit & Run', description: 'Strike then retreat to safe distance, cycling in and out each round.',                    targetType: 'enemy' },
+  'harass':      { label: 'Harass',    description: 'Maintain optimal weapons range (Sticky State) — keeps distance, applies pressure.',      targetType: 'enemy' },
+  'escort':      { label: 'Escort',    description: 'Protect a friendly ship. Stays near its escort target and intercepts nearby threats.',    targetType: 'allied' },
+  'screen':      { label: 'Screen',    description: 'Intercept incoming torpedoes and enemy fighters near the designated friendly ship.',       targetType: 'allied' },
+};
 
 function getTargetableShieldSectors(ship: Pick<{ shields: ShieldState }, 'shields'>): ShipArc[] {
   return SHIELD_SECTORS.filter(sector => (ship.shields[sector] ?? 0) > 0);
@@ -64,6 +79,7 @@ export default function ExecutionPanel() {
   const [cyberSelections, setCyberSelections] = useState<Record<string, CyberSelectionState>>({});
   const [rotateShieldsSelections, setRotateShieldsSelections] = useState<Record<string, { donorSector: import('../../types/game').ShipArc | null; receiverSector: import('../../types/game').ShipArc | null }>>({});
   const [reinforceShieldsSelections, setReinforceShieldsSelections] = useState<Record<string, import('../../types/game').ShipArc | null>>({});
+  const [fighterLaunchSelections, setFighterLaunchSelections] = useState<Record<string, FighterLaunchSelection>>({});
 
   const shipsInStep = isAllied ? playerShips.filter(s => !s.isDestroyed && getChassisById(s.chassisId)?.size === size) : [];
 
@@ -144,10 +160,16 @@ export default function ExecutionPanel() {
             <span className="label" style={{ color: 'var(--color-hostile-red)' }}>
               {(() => {
                 const ctx = useUIStore.getState().activeTargetingContext;
-                if (targetingMode === 'hex') {
+                if (targetingMode === 'hex' && ctx?.classId) {
+                  const fc = FIGHTER_CLASSES[ctx.classId as string];
+                  return `SELECT DEPLOYMENT HEX FOR ${fc?.name?.toUpperCase() ?? 'FIGHTER'}...`;
+                } else if (targetingMode === 'hex') {
                   return 'SELECT ADJACENT HEX FOR DEPLOYMENT...';
                 } else if (ctx?.phase === 'pickTarget') {
-                  return 'SQUADRON DEPLOYED. SELECT ENGAGEMENT TARGET...';
+                  const beh = ctx?.behavior as string | undefined;
+                  const isDefensive = beh === 'escort' || beh === 'screen';
+                  if (isDefensive) return `🛡 SQUADRON DEPLOYED. SELECT FRIENDLY SHIP TO ${beh === 'escort' ? 'ESCORT' : 'SCREEN'}...`;
+                  return '🎯 SQUADRON DEPLOYED. SELECT ENEMY ENGAGEMENT TARGET...';
                 }
                 return 'AWAITING TARGET COORDINATES...';
               })()}
@@ -217,15 +239,12 @@ export default function ExecutionPanel() {
                   const needsExpansion = [
                     'rotate', 'fire-primary', 'adjust-speed',
                     'reinforce-shields', 'rotate-shields', 'damage-control', 'cyber-warfare',
-                    'load-ordinance', 'steady-nerves',
+                    'load-ordinance', 'steady-nerves', 'fighter-hangar',
                   ].includes(def?.id || '');
 
                   const handleResolveAction = () => {
                     if (driftRequired) return;
-                    if (def?.id === 'fighter-hangar') {
-                      // Enter hex-targeting mode — player clicks an adjacent hex to deploy
-                      startTargeting('hex', { shipId: ship.id, actionId: action.id });
-                    } else if (def?.id === 'vector-orders') {
+                    if (def?.id === 'vector-orders') {
                       // Enter ship-targeting mode — player clicks an enemy to vector fighters
                       startTargeting('ship', { shipId: ship.id, actionId: action.id });
                     } else if (needsExpansion) {
@@ -276,8 +295,104 @@ export default function ExecutionPanel() {
 
                       {/* Inline Options Panel */}
                       {isExpanded && !action.resolved && (
-                        <div style={{ padding: '8px', background: 'var(--color-bg-panel)', borderLeft: '2px solid var(--color-holo-green)', marginTop: '2px' }}>
+                        <div style={{ padding: '8px', background: 'var(--color-bg-panel)', borderLeft: '2px solid var(--color-holo-green)', marginTop: '2px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                           
+                          {/* Fighter Hangar — Class + Behavior Selector */}
+                          {def?.id === 'fighter-hangar' && (() => {
+                            const selection = fighterLaunchSelections[action.id] ?? { classId: 'strike-fighter', behavior: 'attack' };
+                            const selectedClass = FIGHTER_CLASSES[selection.classId];
+                            const selectedBehavior = BEHAVIOR_INFO[selection.behavior];
+                            const isEscortOrScreen = selection.behavior === 'escort' || selection.behavior === 'screen';
+
+                            return (
+                              <>
+                                {/* Step 1: Pick Fighter Class */}
+                                <div>
+                                  <div className="label" style={{ marginBottom: '6px', color: 'var(--color-holo-cyan)' }}>1. Select Fighter Class</div>
+                                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+                                    {Object.values(FIGHTER_CLASSES).map(fc => (
+                                      <button
+                                        key={fc.id}
+                                        className="btn"
+                                        style={{
+                                          textAlign: 'left',
+                                          padding: '6px 8px',
+                                          fontSize: '0.72rem',
+                                          borderColor: selection.classId === fc.id ? 'var(--color-holo-cyan)' : 'var(--color-border)',
+                                          background: selection.classId === fc.id ? 'rgba(79,209,197,0.12)' : undefined,
+                                        }}
+                                        onClick={() => setFighterLaunchSelections(prev => ({ ...prev, [action.id]: { ...selection, classId: fc.id } }))}
+                                      >
+                                        <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>{fc.name}</div>
+                                        <div style={{ color: 'var(--color-text-dim)', fontSize: '0.65rem' }}>{fc.role}</div>
+                                      </button>
+                                    ))}
+                                  </div>
+                                  {selectedClass && (
+                                    <div style={{ marginTop: '6px', padding: '6px 8px', background: 'var(--color-bg-deep)', borderRadius: '4px', fontSize: '0.72rem', display: 'flex', gap: '12px', color: 'var(--color-text-dim)' }}>
+                                      <span>Hull: <strong style={{ color: 'var(--color-text-bright)' }}>{selectedClass.hull}</strong></span>
+                                      <span>Speed: <strong style={{ color: 'var(--color-text-bright)' }}>{selectedClass.speed}</strong></span>
+                                      <span>Evasion TN: <strong style={{ color: 'var(--color-text-bright)' }}>{selectedClass.baseEvasion}</strong></span>
+                                      <span>Range: <strong style={{ color: 'var(--color-text-bright)' }}>{selectedClass.weaponRangeMax}</strong></span>
+                                      <span>Dice: <strong style={{ color: 'var(--color-holo-cyan)' }}>{selectedClass.volleyPool.join('+')}</strong></span>
+                                    </div>
+                                  )}
+                                  {selectedClass?.specialRules && (
+                                    <div style={{ marginTop: '4px', padding: '4px 8px', background: 'rgba(255,200,0,0.08)', border: '1px solid rgba(255,200,0,0.3)', borderRadius: '4px', fontSize: '0.65rem', color: 'var(--color-alert-amber)' }}>
+                                      ⚡ {selectedClass.specialRules}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Step 2: Pick Behavior */}
+                                <div>
+                                  <div className="label" style={{ marginBottom: '6px', color: 'var(--color-holo-cyan)' }}>2. Select Behavior</div>
+                                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+                                    {Object.entries(BEHAVIOR_INFO).map(([key, bInfo]) => (
+                                      <button
+                                        key={key}
+                                        className="btn"
+                                        style={{
+                                          textAlign: 'left',
+                                          padding: '6px 8px',
+                                          fontSize: '0.72rem',
+                                          borderColor: selection.behavior === key ? 'var(--color-holo-green)' : 'var(--color-border)',
+                                          background: selection.behavior === key ? 'rgba(72,199,142,0.12)' : undefined,
+                                        }}
+                                        onClick={() => setFighterLaunchSelections(prev => ({ ...prev, [action.id]: { ...selection, behavior: key } }))}
+                                      >
+                                        <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>{bInfo.label}</div>
+                                        <div style={{ color: 'var(--color-text-dim)', fontSize: '0.65rem' }}>{bInfo.description}</div>
+                                      </button>
+                                    ))}
+                                  </div>
+                                  {selectedBehavior && (
+                                    <div style={{ marginTop: '6px', fontSize: '0.72rem', color: 'var(--color-text-dim)', padding: '4px 8px', background: 'var(--color-bg-deep)', borderRadius: '4px' }}>
+                                      Target prompt: <strong style={{ color: isEscortOrScreen ? 'var(--color-holo-cyan)' : 'var(--color-hostile-red)' }}>
+                                        {isEscortOrScreen ? '🛡 Select friendly ship to protect' : '🎯 Select enemy target'}
+                                      </strong>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Step 3: Begin Launch */}
+                                <button
+                                  className="btn btn--execute"
+                                  style={{ width: '100%', padding: '8px', fontWeight: 'bold' }}
+                                  onClick={() => {
+                                    startTargeting('hex', { shipId: ship.id, actionId: action.id }, {
+                                      classId: selection.classId,
+                                      behavior: selection.behavior,
+                                    });
+                                    setExpandedActionId(null);
+                                  }}
+                                >
+                                  ⟶ BEGIN LAUNCH — SELECT DEPLOYMENT HEX
+                                </button>
+                              </>
+                            );
+                          })()}
+
                           {/* Rotation Options */}
                           {def?.id === 'rotate' && (
                             <>

@@ -2864,11 +2864,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
           break;
         }
         const assignedTargetId: string | null = (context?.targetShipId as string) ?? null;
-        const fighterClass = getFighterClassById('strike-fighter')!;
+        // Use the class and behavior the player chose in the launch UI, or fall back to defaults
+        const chosenClassId = (context?.classId as string) ?? 'strike-fighter';
+        const chosenBehavior = ((context?.behavior as string) ?? 'attack') as import('../types/game').FighterBehavior;
+        const fighterClass = getFighterClassById(chosenClassId) ?? getFighterClassById('strike-fighter')!;
 
         const newFighter: FighterToken = {
           id: `allied-fighter-${ship.id}-${Date.now()}`,
-          name: `Strike Group ${ship.id.split('-').pop()?.toUpperCase() ?? ''}${state.fighterTokens.filter(f => f.sourceShipId === ship.id).length + 1}`,
+          name: `${fighterClass.name} ${state.fighterTokens.filter(f => f.sourceShipId === ship.id).length + 1}`,
           classId: fighterClass.id,
           allegiance: 'allied',
           sourceShipId: ship.id,
@@ -2880,7 +2883,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           baseEvasion: fighterClass.baseEvasion,
           volleyPool: fighterClass.volleyPool,
           weaponRangeMax: fighterClass.weaponRangeMax,
-          behavior: fighterClass.behavior,
+          behavior: chosenBehavior,
           isDestroyed: false,
           hasDrifted: false,
           hasActed: false,

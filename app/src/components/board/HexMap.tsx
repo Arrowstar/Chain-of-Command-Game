@@ -930,6 +930,79 @@ export default function HexMap() {
             layersRef.current.overlays!.addChild(subGfx);
         }
     }
+    // Fighter Hangar — Phase 1 Deployment Hex Highlights
+    if (targetingMode === 'hex' && activeTargetingAction) {
+      const ctx = activeTargetingContext;
+      const launchingShipId = activeTargetingAction.shipId;
+      const launchingShip = playerShips.find(s => s.id === launchingShipId);
+      const isHangarAction = ctx?.classId != null; // classId in context means it's a fighter launch
+
+      if (launchingShip && isHangarAction) {
+        const deployGfx = new PIXI.Graphics();
+        const adjacentHexes = hexNeighbors(launchingShip.position);
+
+        adjacentHexes.forEach(hex => {
+          const terrain = terrainMap.get(hexKey(hex));
+          if (terrain === 'debrisField') return;
+          const stackCount = fighterTokens.filter(f => !f.isDestroyed && hexKey(f.position) === hexKey(hex)).length;
+          if (stackCount >= 3) return;
+
+          const center = hexToPixel(hex);
+          const corners = hexCorners({ x: 0, y: 0 });
+
+          deployGfx.lineStyle(2, 0x48C78E, 0.9);
+          deployGfx.beginFill(0x48C78E, 0.18);
+          deployGfx.moveTo(center.x + corners[0].x, center.y + corners[0].y);
+          for (let ci = 1; ci < 6; ci++) deployGfx.lineTo(center.x + corners[ci].x, center.y + corners[ci].y);
+          deployGfx.closePath();
+          deployGfx.endFill();
+
+          // Pulsing label
+          const label = new PIXI.Text('LAUNCH', { fontSize: 9, fill: 0x48C78E, fontFamily: 'monospace', fontWeight: 'bold' });
+          label.x = center.x - label.width / 2;
+          label.y = center.y - label.height / 2;
+          deployGfx.addChild(label);
+        });
+
+        layersRef.current.overlays!.addChild(deployGfx);
+      }
+    }
+
+    // Fighter Hangar — Phase 2 Target Ship Highlights
+    if (targetingMode === 'ship' && activeTargetingContext?.phase === 'pickTarget') {
+      const behavior = activeTargetingContext?.behavior as string | undefined;
+      const isDefensive = behavior === 'escort' || behavior === 'screen';
+      const targetGfx = new PIXI.Graphics();
+
+      if (isDefensive) {
+        // Highlight allied ships in blue/teal
+        playerShips.filter(s => !s.isDestroyed).forEach(s => {
+          const center = hexToPixel(s.position);
+          const corners = hexCorners({ x: 0, y: 0 });
+          targetGfx.lineStyle(2, 0x4FC3F7, 0.9);
+          targetGfx.beginFill(0x4FC3F7, 0.14);
+          targetGfx.moveTo(center.x + corners[0].x, center.y + corners[0].y);
+          for (let ci = 1; ci < 6; ci++) targetGfx.lineTo(center.x + corners[ci].x, center.y + corners[ci].y);
+          targetGfx.closePath();
+          targetGfx.endFill();
+        });
+      } else {
+        // Highlight enemy ships in red
+        enemyShips.filter(s => !s.isDestroyed).forEach(s => {
+          const center = hexToPixel(s.position);
+          const corners = hexCorners({ x: 0, y: 0 });
+          targetGfx.lineStyle(2, 0xFF5C7A, 0.9);
+          targetGfx.beginFill(0xFF5C7A, 0.14);
+          targetGfx.moveTo(center.x + corners[0].x, center.y + corners[0].y);
+          for (let ci = 1; ci < 6; ci++) targetGfx.lineTo(center.x + corners[ci].x, center.y + corners[ci].y);
+          targetGfx.closePath();
+          targetGfx.endFill();
+        });
+      }
+
+      layersRef.current.overlays!.addChild(targetGfx);
+    }
+
   }, [terrainMap, playerShips, enemyShips, fighterTokens, torpedoTokens, stations, objectiveMarkers, tacticHazards, objectiveType, scenarioId, deploymentMode, selectedShipId, targetingMode, activeTargetingAction, activeTargetingContext, hoveredHex, currentTactic, players, cameraX, cameraY, cameraZoom]);
 
   // ─── Update camera ──────────────────────────────────
@@ -1044,6 +1117,19 @@ export default function HexMap() {
                 const playersList = useGameStore.getState().players;
                 const player = playersList.find(p => p.shipId === actionData.shipId);
                 const ctx = useUIStore.getState().activeTargetingContext || {};
+
+                // --- Behavior-aware filter for fighter-hangar Phase 2 ---
+                if (ctx.phase === 'pickTarget') {
+                  const behavior = ctx.behavior as string | undefined;
+                  const isDefensive = behavior === 'escort' || behavior === 'screen';
+                  if (isDefensive) {
+                    // Only allow allied (player) ships
+                    if (!pShip) return;
+                  } else {
+                    // Only allow enemy ships/fighters
+                    if (!eShip && !eFighter) return;
+                  }
+                }
 
                 // Validate if it's a primary fire attack
                 if (actionData.actionId.includes('fire-primary') && ctx.weaponId) {
