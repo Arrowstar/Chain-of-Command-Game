@@ -82,3 +82,43 @@ export const FIGHTER_CLASSES: Record<string, FighterClassData> = {
 export function getFighterClassById(id: string): FighterClassData | undefined {
   return FIGHTER_CLASSES[id];
 }
+
+// ─── Enemy Fighter Randomisation ─────────────────────────────────────────────
+//
+// Maps each fighter class to the behavior the enemy AI should use when
+// deploying that type.  These deliberately differ from the player defaults in
+// a couple of cases:
+//
+//   ew-fighter      → 'flanking'  (close to a flank position to apply debuff)
+//   intercept-screen→ 'attack'    (no allied ships to screen, so target nearest)
+//
+// ─────────────────────────────────────────────────────────────────────────────
+
+const ENEMY_BEHAVIOR_OVERRIDES: Record<string, FighterClassData['behavior']> = {
+  'strike-fighter':   'attack',
+  'heavy-bomber':     'harass',
+  'ew-fighter':       'flanking',
+  'intercept-screen': 'attack',
+  'armored-gunship':  'attack',
+};
+
+/**
+ * Pick a random fighter class for an enemy spawn and return it alongside
+ * the enemy-appropriate behavior override for that class.
+ *
+ * @param excludeIds  Optional list of class IDs to exclude from the pool
+ *                    (e.g. to avoid spawning the same type twice in one wave).
+ */
+export function pickEnemyFighterClass(excludeIds: string[] = []): {
+  fighterClass: FighterClassData;
+  behavior: FighterClassData['behavior'];
+} {
+  const pool = Object.values(FIGHTER_CLASSES).filter(
+    fc => !excludeIds.includes(fc.id),
+  );
+  // Fallback to full pool if exclusions empty it
+  const source = pool.length > 0 ? pool : Object.values(FIGHTER_CLASSES);
+  const fighterClass = source[Math.floor(Math.random() * source.length)];
+  const behavior = ENEMY_BEHAVIOR_OVERRIDES[fighterClass.id] ?? 'attack';
+  return { fighterClass, behavior };
+}

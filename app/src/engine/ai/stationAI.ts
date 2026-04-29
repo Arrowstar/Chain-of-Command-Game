@@ -3,7 +3,8 @@ import { getStationById } from '../../data/stations';
 import { hexDistance, determineStruckShieldSector, isInFiringArc, hexNeighbors, hexKey } from '../hexGrid';
 import { calculateTN } from '../combat';
 import { rollVolley, rollDie } from '../../utils/diceRoller';
-import { getFighterClassById } from '../../data/fighters';
+import { pickEnemyFighterClass } from '../../data/fighters';
+
 
 // ═══════════════════════════════════════════════════════════════════
 // Station AI — Static defenses that fire but do not move
@@ -268,29 +269,31 @@ export function executeStationTurn(
       });
 
       let launchedCount = 0;
+
+      // Pick a random class for this launch wave — all fighters share the same class
+      const { fighterClass: stationFighterClass, behavior: stationBehavior } = pickEnemyFighterClass();
+
       for (let i = 0; i < toLaunch && i < validHexes.length; i++) {
         const hex = validHexes[i];
         const key = hexKey(hex);
         occupiedFighterHexes.set(key, (occupiedFighterHexes.get(key) ?? 0) + 1);
         launchedCount++;
 
-        const fighterClass = getFighterClassById('strike-fighter')!;
-
         spawnedFighters.push({
           id: `station-fighter-${station.id}-r${round}-${Date.now()}-${i}`,
-          name: `Strike Wing ${station.name.split(' ').pop()?.slice(0, 3).toUpperCase() ?? 'STN'}${i + 1}`,
-          classId: fighterClass.id,
+          name: `${stationFighterClass.name} ${station.name.split(' ').pop()?.slice(0, 3).toUpperCase() ?? 'STN'}${i + 1}`,
+          classId: stationFighterClass.id,
           allegiance: 'enemy',
           sourceShipId: station.id,
           position: hex,
           facing: station.facing,
-          currentHull: fighterClass.hull,
-          maxHull: fighterClass.hull,
-          speed: fighterClass.speed,
-          baseEvasion: fighterClass.baseEvasion,
-          volleyPool: fighterClass.volleyPool,
-          weaponRangeMax: fighterClass.weaponRangeMax,
-          behavior: fighterClass.behavior,
+          currentHull: stationFighterClass.hull,
+          maxHull: stationFighterClass.hull,
+          speed: stationFighterClass.speed,
+          baseEvasion: stationFighterClass.baseEvasion,
+          volleyPool: stationFighterClass.volleyPool,
+          weaponRangeMax: stationFighterClass.weaponRangeMax,
+          behavior: stationBehavior,
           isDestroyed: false,
           hasDrifted: false,
           hasActed: false,

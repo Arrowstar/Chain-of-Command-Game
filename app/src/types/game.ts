@@ -713,7 +713,17 @@ export interface StationState {
   /** Remaining fighters in hangar (starts at totalFighters) */
   remainingFighters: number;
   criticalDamage: CriticalDamageCard[];
+  isJammed?: boolean;
+  predictiveVolleyActive?: boolean;
+  spoofedFireControlActive?: boolean;
 }
+
+// ─── Combat Targeting ─────────────────────────────────────────────
+
+export type CombatTarget =
+  | { kind: 'enemy'; state: EnemyShipState }
+  | { kind: 'station'; state: StationState }
+  | { kind: 'player'; state: ShipState };
 
 // ─── Objective Markers ────────────────────────────────────────────
 

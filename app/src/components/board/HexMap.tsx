@@ -11,10 +11,13 @@ import { getAdversaryById } from '../../data/adversaries';
 import { getStationById } from '../../data/stations';
 import { TerrainLegend } from './TerrainLegend';
 import { getTerrainColor, drawHexPolygon, drawShipTriangle, drawShipShields, attachOrUpdateSprite, drawFacingIndicator, drawShipHull } from '../../engine/pixiGraphics';
+import { getFighterClassById } from '../../data/fighters';
 import { getValidTargetsForWeapon } from '../../engine/combat';
+
 import { getSubsystemById } from '../../data/subsystems';
 import { projectDriftPreview } from '../../engine/movement';
 import { previewAITierMovement, type AIMovementPreview } from '../../engine/ai/aiTurn';
+import { resolveFighterMovement } from '../../engine/ai/fighterAI';
 import ShipInfoPanel, { type MapHoverTarget } from './ShipInfoPanel';
 
 // ─── Raw PixiJS via useRef (no @pixi/react reconciler) ──────────
@@ -302,7 +305,9 @@ export default function HexMap() {
     const activeFighters = fighterTokens.filter(f => !f.isDestroyed);
     syncEntities(activeFighters, fighters, (f, g, getParams, isNew) => {
       g.clear();
-      const hasSprite = attachOrUpdateSprite(g, f.allegiance === 'enemy' ? 'strike-fighter' : 'allied-fighter', isNew, f.allegiance === 'enemy' ? 'enemy' : 'allied');
+      const fc = getFighterClassById(f.classId);
+      const spriteKey = fc?.imageKey || (f.allegiance === 'enemy' ? 'strike-fighter' : 'allied-fighter');
+      const hasSprite = attachOrUpdateSprite(g, spriteKey, isNew, f.allegiance === 'enemy' ? 'enemy' : 'allied');
       if (!hasSprite) {
         const color = f.allegiance === 'allied' ? 0x7CFFB2 : 0xFF6B6B;
         const glowColor = f.allegiance === 'allied' ? 0x7CFFB2 : 0xFF8A8A;
@@ -313,6 +318,17 @@ export default function HexMap() {
         g.moveTo(8, 0);
         g.lineTo(-5, 5);
         g.lineTo(-5, -5);
+        g.closePath();
+        g.endFill();
+      } else {
+        const color = f.allegiance === 'allied' ? 0x7CFFB2 : 0xFF6B6B;
+        g.lineStyle(1.5, color, 0.9);
+        g.beginFill(color, 0.7);
+        // Small chevron pointing right, just ahead of the sprite nose
+        g.moveTo(18, 0);
+        g.lineTo(12, 4);
+        g.lineTo(14, 0);
+        g.lineTo(12, -4);
         g.closePath();
         g.endFill();
       }
@@ -372,7 +388,10 @@ export default function HexMap() {
         g.lineTo(Math.cos(rot) * 18, Math.sin(rot) * 18);
       }
 
-      // Hull bar
+      // Draw shields at facing 0 — the container is rotated, same as ships.
+      drawShipShields(g, 0, 0, 0, station.shields as any, station.maxShieldsPerSector, 'enemy');
+
+      // Hull bar (must stay world-aligned, so put it in the unrotatable child)
       let unrotatable = g.getChildByName('unrotatable') as PIXI.Graphics | null;
       if (!unrotatable) {
         unrotatable = new PIXI.Graphics();
@@ -383,8 +402,9 @@ export default function HexMap() {
       drawShipHull(unrotatable, 0, 0, station.currentHull, station.maxHull);
 
       const center = hexToPixel(station.position);
+      const rot = ((station.facing * 60) - 30) * (Math.PI / 180);
       const p = getParams();
-      p.x = center.x; p.y = center.y; p.rot = 0;
+      p.x = center.x; p.y = center.y; p.rot = rot;
     });
 
     // Draw Torpedo tokens
@@ -592,6 +612,79 @@ export default function HexMap() {
         });
 
       layersRef.current.overlays!.addChild(driftPreviewGfx);
+    }
+
+    // Fighter movement previews
+    if (!deploymentMode) {
+      const fighterPreviewGfx = new PIXI.Graphics();
+      const activeFighterTokens = fighterTokens.filter(f => !f.isDestroyed && !f.hasDrifted);
+
+      activeFighterTokens.forEach(fighter => {
+        const moveResult = resolveFighterMovement(
+          fighter,
+          playerShips,
+          enemyShips,
+          fighterTokens,
+          terrainMap,
+          torpedoTokens,
+          stations,
+        );
+
+        if (!moveResult.moved || moveResult.traversedHexes.length === 0) return;
+
+        const isAllied = fighter.allegiance === 'allied';
+        const lineColor = isAllied ? 0x7CFFB2 : 0xFF6B6B;
+        const lineAlpha = 0.45;
+        const markerRadius = 10;
+
+        fighterPreviewGfx.lineStyle(1.5, lineColor, lineAlpha);
+        const startPx = hexToPixel(fighter.position);
+        fighterPreviewGfx.moveTo(startPx.x, startPx.y);
+        moveResult.traversedHexes.forEach(step => {
+          const stepPx = hexToPixel(step);
+          fighterPreviewGfx.lineTo(stepPx.x, stepPx.y);
+        });
+
+        const finalPx = hexToPixel(moveResult.newPosition);
+        // Destination hexagon marker
+        fighterPreviewGfx.lineStyle(1.5, lineColor, 0.65);
+        fighterPreviewGfx.beginFill(lineColor, 0.1);
+        const corners = hexCorners({ x: finalPx.x, y: finalPx.y }, markerRadius);
+        fighterPreviewGfx.moveTo(corners[0].x, corners[0].y);
+        for (let i = 1; i < 6; i++) {
+          fighterPreviewGfx.lineTo(corners[i].x, corners[i].y);
+        }
+        fighterPreviewGfx.closePath();
+        fighterPreviewGfx.endFill();
+
+        // Arrowhead
+        const prevHex = moveResult.traversedHexes.length > 1
+          ? moveResult.traversedHexes[moveResult.traversedHexes.length - 2]
+          : fighter.position;
+        const prevPx = hexToPixel(prevHex);
+        const dx = finalPx.x - prevPx.x;
+        const dy = finalPx.y - prevPx.y;
+        const length = Math.hypot(dx, dy);
+        if (length > 0.001) {
+          const ux = dx / length;
+          const uy = dy / length;
+          const arrowSize = 6;
+          const baseX = finalPx.x - ux * (markerRadius + 1);
+          const baseY = finalPx.y - uy * (markerRadius + 1);
+          const leftX = baseX - ux * arrowSize - uy * (arrowSize * 0.55);
+          const leftY = baseY - uy * arrowSize + ux * (arrowSize * 0.55);
+          const rightX = baseX - ux * arrowSize + uy * (arrowSize * 0.55);
+          const rightY = baseY - uy * arrowSize - ux * (arrowSize * 0.55);
+          fighterPreviewGfx.beginFill(lineColor, 0.72);
+          fighterPreviewGfx.moveTo(finalPx.x, finalPx.y);
+          fighterPreviewGfx.lineTo(leftX, leftY);
+          fighterPreviewGfx.lineTo(rightX, rightY);
+          fighterPreviewGfx.closePath();
+          fighterPreviewGfx.endFill();
+        }
+      });
+
+      layersRef.current.overlays!.addChild(fighterPreviewGfx);
     }
     
     // Fighter count badges
@@ -987,8 +1080,14 @@ export default function HexMap() {
           targetGfx.endFill();
         });
       } else {
-        // Highlight enemy ships in red
-        enemyShips.filter(s => !s.isDestroyed).forEach(s => {
+        // Highlight enemy ships, stations, and enemy fighters in red
+        const targetEntities = [
+          ...enemyShips.filter(s => !s.isDestroyed),
+          ...stations.filter(s => !s.isDestroyed),
+          ...fighterTokens.filter(f => !f.isDestroyed && f.allegiance === 'enemy')
+        ];
+        
+        targetEntities.forEach(s => {
           const center = hexToPixel(s.position);
           const corners = hexCorners({ x: 0, y: 0 });
           targetGfx.lineStyle(2, 0xFF5C7A, 0.9);
@@ -1126,8 +1225,8 @@ export default function HexMap() {
                     // Only allow allied (player) ships
                     if (!pShip) return;
                   } else {
-                    // Only allow enemy ships/fighters
-                    if (!eShip && !eFighter) return;
+                    // Only allow enemy ships/fighters/stations
+                    if (!eShip && !eFighter && !stationTarget) return;
                   }
                 }
 

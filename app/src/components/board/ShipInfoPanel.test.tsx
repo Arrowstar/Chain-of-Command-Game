@@ -150,4 +150,42 @@ describe('ShipInfoPanel', () => {
     clientWidthSpy.mockRestore();
     clientHeightSpy.mockRestore();
   });
+
+  it('renders station schematic with shield arcs', () => {
+    const target: MapHoverTarget = {
+      kind: 'station',
+      station: {
+        id: 'station-1',
+        stationId: 'mining-outpost',
+        name: 'Mining Outpost',
+        position: { q: 5, r: 5 },
+        facing: 0,
+        currentHull: 50,
+        maxHull: 50,
+        shields: { fore: 10, foreStarboard: 10, aftStarboard: 10, aft: 10, aftPort: 10, forePort: 10 },
+        maxShieldsPerSector: 10,
+        armorDie: 'd8',
+        baseEvasion: 1,
+        isDestroyed: false,
+        remainingFighters: 0,
+      } as any,
+    };
+
+    const { container } = render(<ShipInfoPanel target={target} position={position} />);
+
+    // Check for station name
+    expect(screen.getByText('Mining Outpost')).toBeInTheDocument();
+    
+    // Check for shield arc values in the SVG
+    // There should be 6 arcs, each showing "10"
+    const shieldTexts = container.querySelectorAll('svg text');
+    let tenCount = 0;
+    shieldTexts.forEach(t => {
+      if (t.textContent === '10') tenCount++;
+    });
+    expect(tenCount).toBe(6);
+
+    // Check for the station abbreviation (STN for mining outpost)
+    expect(screen.getByText('STN')).toBeInTheDocument();
+  });
 });

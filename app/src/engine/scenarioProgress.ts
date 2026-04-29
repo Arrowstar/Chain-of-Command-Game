@@ -1,4 +1,4 @@
-import type { EnemyShipState, ObjectiveMarkerState, ShipState } from '../types/game';
+import type { EnemyShipState, ObjectiveMarkerState, ShipState, StationState } from '../types/game';
 
 export interface CombatScenarioProgressItem {
   id: string;
@@ -22,6 +22,7 @@ export interface ScenarioProgressState {
   round: number;
   playerShips: ShipState[];
   enemyShips: EnemyShipState[];
+  stations: StationState[];
   objectiveMarkers: ObjectiveMarkerState[];
   warpedOutShipIds: string[];
   salvageCratesCollected: number;
@@ -222,19 +223,63 @@ export function getCombatScenarioProgress(state: ScenarioProgressState): CombatS
     );
   }
 
-  const totalEnemies = state.enemyShips.length;
-  const destroyedEnemies = countDestroyedEnemies(state.enemyShips);
+  if (objectiveType === 'Station Siege') {
+    const primaryStations = (state.stations ?? []).filter(s =>
+      ['outpost', 'forward-base', 'orbital-station'].includes(s.stationId),
+    );
+    const totalPrimary = primaryStations.length;
+    const destroyedPrimary = primaryStations.filter(s => s.isDestroyed).length;
+    const isComplete = totalPrimary > 0 && destroyedPrimary === totalPrimary;
+
+    return finalizeProgress(
+      'Station Siege',
+      'Destroy the primary Hegemony installations anchored in this sector.',
+      [
+        {
+          id: 'destroy-primary-stations',
+          label: 'Destroy primary stations',
+          requirement: 'Reduce all primary stations to 0 hull.',
+          statusText: `${destroyedPrimary}/${Math.max(totalPrimary, 1)} installations destroyed`,
+          isComplete,
+        },
+      ],
+    );
+  }
+
+  if (objectiveType === 'Turret Breach') {
+    const totalTurrets = (state.stations ?? []).length;
+    const destroyedTurrets = (state.stations ?? []).filter(s => s.isDestroyed).length;
+    const isComplete = totalTurrets > 0 && destroyedTurrets === totalTurrets;
+
+    return finalizeProgress(
+      'Turret Breach',
+      'Clear the defensive picket line to allow the fleet to pass.',
+      [
+        {
+          id: 'clear-turret-picket',
+          label: 'Clear defensive picket',
+          requirement: 'Destroy all defensive platforms and turrets in the area.',
+          statusText: `${destroyedTurrets}/${Math.max(totalTurrets, 1)} platforms destroyed`,
+          isComplete,
+        },
+      ],
+    );
+  }
+
+  const totalEnemies = state.enemyShips.length + (state.stations ?? []).length;
+  const destroyedEnemies =
+    countDestroyedEnemies(state.enemyShips) + (state.stations ?? []).filter(s => s.isDestroyed).length;
   const allEnemiesDestroyed = totalEnemies === 0 || destroyedEnemies === totalEnemies;
 
   return finalizeProgress(
     objectiveType === 'Search & Destroy' ? 'Search & Destroy' : objectiveType,
-    'Eliminate all hostile ships to secure the battlespace.',
+    'Eliminate all hostile forces to secure the battlespace.',
     [
       {
         id: 'eliminate-hostiles',
-        label: 'Eliminate hostile ships',
-        requirement: 'Destroy every remaining enemy ship in the scenario.',
-        statusText: `${destroyedEnemies}/${Math.max(totalEnemies, 1)} hostile ships destroyed`,
+        label: 'Eliminate hostile forces',
+        requirement: 'Destroy every remaining enemy ship and station in the scenario.',
+        statusText: `${destroyedEnemies}/${Math.max(totalEnemies, 1)} hostiles eliminated`,
         isComplete: allEnemiesDestroyed,
       },
     ],

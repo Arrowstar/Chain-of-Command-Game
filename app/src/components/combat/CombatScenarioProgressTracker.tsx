@@ -14,6 +14,7 @@ export default function CombatScenarioProgressTracker({
   const round = useGameStore(s => s.round);
   const playerShips = useGameStore(s => s.playerShips);
   const enemyShips = useGameStore(s => s.enemyShips);
+  const stations = useGameStore(s => s.stations);
   const objectiveMarkers = useGameStore(s => s.objectiveMarkers);
   const warpedOutShipIds = useGameStore(s => s.warpedOutShipIds);
   const salvageCratesCollected = useGameStore(s => s.salvageCratesCollected);
@@ -27,6 +28,7 @@ export default function CombatScenarioProgressTracker({
     round,
     playerShips,
     enemyShips,
+    stations,
     objectiveMarkers,
     warpedOutShipIds,
     salvageCratesCollected,

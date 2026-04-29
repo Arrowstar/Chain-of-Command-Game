@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useGameStore } from '../../store/useGameStore';
+import { useGameStore, getHostileTargets } from '../../store/useGameStore';
 import { useUIStore } from '../../store/useUIStore';
 import { isAlliedStep, getShipSizeForStep } from '../../engine/GameStateMachine';
 import { getChassisById } from '../../data/shipChassis';
@@ -57,6 +57,7 @@ export default function ExecutionPanel() {
   const size = getShipSizeForStep(executionStep);
   const playerShips = useGameStore(s => s.playerShips);
   const enemyShips = useGameStore(s => s.enemyShips);
+  const stations = useGameStore(s => s.stations);
   const fighterTokens = useGameStore(s => s.fighterTokens);
   const torpedoTokens = useGameStore(s => s.torpedoTokens);
   const players = useGameStore(s => s.players);
@@ -899,11 +900,11 @@ export default function ExecutionPanel() {
 
                           {/* Cyber Warfare Sector Selector */}
                           {def?.id === 'cyber-warfare' && (() => {
-                            const cyberTargets = enemyShips
-                              .filter(enemy => !enemy.isDestroyed)
-                              .map(enemy => ({ enemy, sectors: getTargetableShieldSectors(enemy) }))
+                            const cyberTargets = getHostileTargets({ enemyShips, stations })
+                              .filter(target => !target.state.isDestroyed)
+                              .map(target => ({ target, sectors: getTargetableShieldSectors(target.state) }))
                               .filter(({ sectors }) => sectors.length > 0);
-                            const selectedTarget = cyberTargets.find(({ enemy }) => enemy.id === cyberSelection.targetShipId) ?? null;
+                            const selectedTarget = cyberTargets.find(({ target }) => target.state.id === cyberSelection.targetShipId) ?? null;
 
                             if (cyberTargets.length === 0) {
                               return (
@@ -932,11 +933,11 @@ export default function ExecutionPanel() {
                                   <div>
                                     <div className="label" style={{ marginBottom: '6px', color: 'var(--color-hostile-red)' }}>1. Select Target Ship</div>
                                     <div style={{ display: 'grid', gap: '6px' }}>
-                                      {cyberTargets.map(({ enemy, sectors }) => {
-                                        const isSelectedTarget = cyberSelection.targetShipId === enemy.id;
+                                      {cyberTargets.map(({ target, sectors }) => {
+                                        const isSelectedTarget = cyberSelection.targetShipId === target.state.id;
                                         return (
                                           <button
-                                            key={enemy.id}
+                                            key={target.state.id}
                                             className="btn"
                                             style={{
                                               display: 'flex',
@@ -950,13 +951,13 @@ export default function ExecutionPanel() {
                                               setCyberSelections(prev => ({
                                                 ...prev,
                                                 [action.id]: {
-                                                  targetShipId: enemy.id,
-                                                  sector: prev[action.id]?.targetShipId === enemy.id ? prev[action.id]?.sector ?? null : null,
+                                                  targetShipId: target.state.id,
+                                                  sector: prev[action.id]?.targetShipId === target.state.id ? prev[action.id]?.sector ?? null : null,
                                                 },
                                               }));
                                             }}
                                           >
-                                            <span>{enemy.name}</span>
+                                            <span>{target.state.name}</span>
                                             <span className="mono" style={{ fontSize: '0.72rem', color: 'var(--color-text-dim)' }}>
                                               {sectors.map(sector => ARC_LABELS[sector]).join(' · ')}
                                             </span>
@@ -972,17 +973,21 @@ export default function ExecutionPanel() {
                                     </div>
                                     {selectedTarget ? (
                                       <CyberWarfareArcSelector
-                                        shipId={selectedTarget.enemy.id}
-                                        spriteId={selectedTarget.enemy.adversaryId}
-                                        shipName={selectedTarget.enemy.name}
-                                        shields={selectedTarget.enemy.shields}
+                                        shipId={selectedTarget.target.state.id}
+                                        spriteId={
+                                          selectedTarget.target.kind === 'station' ? selectedTarget.target.state.stationId :
+                                          selectedTarget.target.kind === 'enemy' ? selectedTarget.target.state.adversaryId :
+                                          selectedTarget.target.state.chassisId
+                                        }
+                                        shipName={selectedTarget.target.state.name}
+                                        shields={selectedTarget.target.state.shields}
                                         selectedSector={cyberSelection.sector}
                                         onSelectSector={(sector) => {
                                           if (!selectedTarget.sectors.includes(sector)) return;
                                           setCyberSelections(prev => ({
                                             ...prev,
                                             [action.id]: {
-                                              targetShipId: selectedTarget.enemy.id,
+                                              targetShipId: selectedTarget.target.state.id,
                                               sector,
                                             },
                                           }));
@@ -1006,7 +1011,7 @@ export default function ExecutionPanel() {
                                       onClick={() => {
                                         if (!selectedTarget || !cyberSelection.sector) return;
                                         resolveAction(owner!.id, ship.id, action.id, {
-                                          targetShipId: selectedTarget.enemy.id,
+                                          targetShipId: selectedTarget.target.state.id,
                                           sector: cyberSelection.sector,
                                         });
                                         setCyberSelections(prev => ({
@@ -1017,7 +1022,7 @@ export default function ExecutionPanel() {
                                       }}
                                     >
                                       {selectedTarget && cyberSelection.sector
-                                        ? `CONFIRM ${ARC_LABELS[cyberSelection.sector].toUpperCase()} ON ${selectedTarget.enemy.name.toUpperCase()}`
+                                        ? `CONFIRM ${ARC_LABELS[cyberSelection.sector].toUpperCase()} ON ${selectedTarget.target.state.name.toUpperCase()}`
                                         : 'SELECT TARGET AND ARC TO CONFIRM'}
                                     </button>
                                   </div>

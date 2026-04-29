@@ -3,7 +3,7 @@ import type {
   GamePhase, ExecutionStep, ShipState, EnemyShipState, PlayerState,
   RoECard, TacticCard, FumbleCard, CriticalDamageCard,
   HexCoord, TerrainType, LogEntry, QueuedAction, OfficerStation, FighterToken, TorpedoToken, ShieldState, HexFacing, ObjectiveMarkerState, DeploymentBounds, TacticHazardState,
-  PendingTargetingPackage, TargetingPackageMode, ShipArc, StationState,
+  PendingTargetingPackage, TargetingPackageMode, ShipArc, StationState, CombatTarget,
 } from '../types/game';
 import { ShipSize, isSmallCraftSize, isCapitalShipSize } from '../types/game';
 import { getNextPhase, checkGameOverConditions, createLogEntry, getShipSizeForStep, isInBreakoutZone } from '../engine/GameStateMachine';
@@ -460,6 +460,16 @@ function resolveFlakAgainstFighter(
 }
 
 const SHIELD_SECTORS: Array<keyof ShieldState> = ['fore', 'foreStarboard', 'aftStarboard', 'aft', 'aftPort', 'forePort'];
+
+export function getHostileTargets(state: { enemyShips: EnemyShipState[], stations: StationState[] }): CombatTarget[] {
+  const enemies: CombatTarget[] = state.enemyShips
+    .filter(s => !s.isDestroyed && !s.isAllied)
+    .map(s => ({ kind: 'enemy', state: s }));
+  const stations: CombatTarget[] = state.stations
+    .filter(s => !s.isDestroyed)
+    .map(s => ({ kind: 'station', state: s }));
+  return [...enemies, ...stations];
+}
 
 function canSpawnDebrisAtHex(
   state: {
@@ -2605,7 +2615,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
       case 'cyber-warfare': {
         const targetId = context?.targetShipId;
-        const target = state.enemyShips.find(s => s.id === targetId) || state.playerShips.find(s => s.id === targetId);
+        const target = state.enemyShips.find(s => s.id === targetId) || state.playerShips.find(s => s.id === targetId) || state.stations.find(s => s.id === targetId);
         const sector = context?.sector;
         if (!target || !sector) break;
 
@@ -2620,12 +2630,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
           break;
         }
 
-        const targetUpdates: Partial<ShipState & EnemyShipState> = {
+        const targetUpdates: Partial<ShipState & EnemyShipState & StationState> = {
           shields: { ...target.shields, [sector]: 0 }
         };
 
         if (state.enemyShips.some(s => s.id === target.id)) {
           get().updateEnemyShip(target.id, targetUpdates);
+        } else if (state.stations.some(s => s.id === target.id)) {
+          get().updateStation(target.id, targetUpdates);
         } else {
           get().updatePlayerShip(target.id, targetUpdates);
         }
@@ -2692,7 +2704,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
       case 'ecm': {
         const targetId = context?.targetShipId;
-        const target = state.enemyShips.find(s => s.id === targetId) || state.playerShips.find(s => s.id === targetId);
+        const target = state.enemyShips.find(s => s.id === targetId) || state.playerShips.find(s => s.id === targetId) || state.stations.find(s => s.id === targetId);
         if (target) {
           const dist = hexDistance(ship.position, target.position);
           if (dist < 1 || dist > 5) {
@@ -2700,6 +2712,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
           } else {
             if (state.enemyShips.some(s => s.id === target.id)) {
               get().updateEnemyShip(target.id, { isJammed: true });
+            } else if (state.stations.some(s => s.id === target.id)) {
+              get().updateStation(target.id, { isJammed: true });
             } else {
               get().updatePlayerShip(target.id, { isJammed: true });
             }
@@ -2712,7 +2726,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
       case 'black-market-targeting-suite': {
         const targetId = context?.targetShipId;
-        const target = state.playerShips.find(s => s.id === targetId) || state.enemyShips.find(s => s.id === targetId);
+        const target = state.playerShips.find(s => s.id === targetId) || state.enemyShips.find(s => s.id === targetId) || state.stations.find(s => s.id === targetId);
         if (target) {
           const dist = hexDistance(ship.position, target.position);
           if (dist > 4) {
@@ -2720,6 +2734,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
           } else {
             if (state.enemyShips.some(s => s.id === target.id)) {
               get().updateEnemyShip(target.id, { spoofedFireControlActive: true });
+            } else if (state.stations.some(s => s.id === target.id)) {
+              get().updateStation(target.id, { spoofedFireControlActive: true });
             } else {
               if (target.id === ship.id) {
                 updates.spoofedFireControlActive = true;
@@ -2943,7 +2959,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
       case 'salvaged-ai-coprocessor': {
         const targetId = context?.targetShipId;
-        const target = state.playerShips.find(s => s.id === targetId) || state.enemyShips.find(s => s.id === targetId);
+        const target = state.playerShips.find(s => s.id === targetId) || state.enemyShips.find(s => s.id === targetId) || state.stations.find(s => s.id === targetId);
         if (target) {
           const dist = hexDistance(ship.position, target.position);
           if (dist > 4) {
@@ -2951,6 +2967,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
           } else {
             if (state.enemyShips.some(s => s.id === target.id)) {
               get().updateEnemyShip(target.id, { predictiveVolleyActive: true });
+            } else if (state.stations.some(s => s.id === target.id)) {
+              get().updateStation(target.id, { predictiveVolleyActive: true });
             } else {
               if (target.id === ship.id) {
                 updates.predictiveVolleyActive = true;
@@ -3446,7 +3464,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     fighters.forEach(fighter => {
       // 1. Move
       const moveResult = resolveFighterMovement(
-        fighter, state.playerShips, state.enemyShips, allFighters, state.terrainMap, state.torpedoTokens
+        fighter, state.playerShips, state.enemyShips, allFighters, state.terrainMap, state.torpedoTokens, state.stations
       );
 
       const fIndex = updatedFighters.findIndex(f => f.id === fighter.id);
@@ -3507,7 +3525,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
       // 2. Attack (using updated position from move)
       const movedFighter = { ...fighter, position: moveResult.newPosition, facing: moveResult.newFacing, hasDrifted: true };
-      const attackResult = resolveFighterAttack(movedFighter, state.playerShips, state.enemyShips, allFighters, state.terrainMap);
+      const attackResult = resolveFighterAttack(movedFighter, state.playerShips, state.enemyShips, allFighters, state.terrainMap, state.stations);
 
       if (attackResult) {
         const targetName = get().getShipName(attackResult.targetId);
@@ -3539,7 +3557,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             }
           }
         } else if (allegiance === 'allied') {
-          // Capital Ship Target (Enemy)
+          // Capital Ship or Station Target (Enemy)
           const liveState = get();
           const enemyIdx = liveState.enemyShips.findIndex(e => e.id === attackResult.targetId);
           if (enemyIdx !== -1) {
@@ -3554,6 +3572,21 @@ export const useGameStore = create<GameStore>((set, get) => ({
               currentHull: newHull,
               isDestroyed: newHull === 0,
             });
+          } else {
+            // Station / Defense Platform Target
+            const station = liveState.stations.find(s => s.id === attackResult.targetId);
+            if (station) {
+              const newShields = { ...station.shields, [attackResult.sector]: Math.max(0, (station.shields[attackResult.sector as keyof typeof station.shields] ?? 0) - attackResult.shieldDamage) };
+              const newHull = Math.max(0, station.currentHull - attackResult.hullDamage);
+              get().updateStation(attackResult.targetId, {
+                shields: newShields,
+                currentHull: newHull,
+                isDestroyed: newHull === 0,
+              });
+              if (newHull === 0) {
+                get().addLog('system', `💥 ${station.name} destroyed by fighter strike!`);
+              }
+            }
           }
         } else {
           // Capital Ship Target (Player)

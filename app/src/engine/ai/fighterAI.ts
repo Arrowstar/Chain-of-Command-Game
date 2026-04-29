@@ -1,8 +1,8 @@
-import type { FighterToken, TorpedoToken, HexCoord, HexFacing, TerrainType, ShipState, EnemyShipState, DieType, VolleyResult } from '../../types/game';
+import type { FighterToken, TorpedoToken, HexCoord, HexFacing, TerrainType, ShipState, EnemyShipState, DieType, VolleyResult, StationState } from '../../types/game';
 import { hexDistance, hexNeighbors, hexKey, getHexFacing } from '../hexGrid';
 import { rollVolley } from '../../utils/diceRoller';
 import { determineStruckShieldSector } from '../hexGrid';
-import { getFighterClassById } from '../../data/fighters';
+import { getFighterClassById, pickEnemyFighterClass } from '../../data/fighters';
 
 // ═══════════════════════════════════════════════════════════════════
 // Fighter AI / Resolution Engine
@@ -132,7 +132,8 @@ export function resolveFighterMovement(
   enemyShips: EnemyShipState[],
   allFighters: FighterToken[],
   terrainMap: Map<string, TerrainType>,
-  torpedoTokens: TorpedoToken[]
+  torpedoTokens: TorpedoToken[],
+  stations: StationState[] = []
 ): FighterMoveResult {
   if (fighter.hasDrifted) return { newPosition: fighter.position, moved: false, traversedHexes: [], newFacing: fighter.facing };
 
@@ -181,9 +182,10 @@ export function resolveFighterMovement(
     }
   } else if (fighter.behavior === 'harass') {
     // Harass (Sticky State): Target assigned/nearest, maintain weaponRangeMax
-    let targetShip: ShipState | EnemyShipState | undefined;
+    let targetShip: ShipState | EnemyShipState | StationState | undefined;
     if (fighter.allegiance === 'allied' && fighter.assignedTargetId) {
-      targetShip = enemyShips.find(s => s.id === fighter.assignedTargetId && !s.isDestroyed);
+      targetShip = enemyShips.find(s => s.id === fighter.assignedTargetId && !s.isDestroyed)
+        || stations.find(s => s.id === fighter.assignedTargetId && !s.isDestroyed);
     } else if (fighter.allegiance === 'enemy') {
       const livingShips = playerShips.filter(s => !s.isDestroyed);
       if (livingShips.length > 0) {
@@ -208,9 +210,10 @@ export function resolveFighterMovement(
     }
   } else if (fighter.behavior === 'flanking') {
     // Flanking (Ghost Target): Target hex directly behind enemy
-    let targetShip: ShipState | EnemyShipState | undefined;
+    let targetShip: ShipState | EnemyShipState | StationState | undefined;
     if (fighter.allegiance === 'allied' && fighter.assignedTargetId) {
-      targetShip = enemyShips.find(s => s.id === fighter.assignedTargetId && !s.isDestroyed);
+      targetShip = enemyShips.find(s => s.id === fighter.assignedTargetId && !s.isDestroyed)
+        || stations.find(s => s.id === fighter.assignedTargetId && !s.isDestroyed);
     } else if (fighter.allegiance === 'enemy') {
       const livingShips = playerShips.filter(s => !s.isDestroyed);
       if (livingShips.length > 0) {
@@ -240,7 +243,8 @@ export function resolveFighterMovement(
       if (!fighter.assignedTargetId) return { newPosition: fighter.position, moved: false, traversedHexes: [], newFacing: fighter.facing };
       const target = enemyShips.find(s => s.id === fighter.assignedTargetId && !s.isDestroyed)
         || playerShips.find(s => s.id === fighter.assignedTargetId && !s.isDestroyed)
-        || allFighters.find(f => f.id === fighter.assignedTargetId && !f.isDestroyed);
+        || allFighters.find(f => f.id === fighter.assignedTargetId && !f.isDestroyed)
+        || stations.find(s => s.id === fighter.assignedTargetId && !s.isDestroyed);
       if (!target) return { newPosition: fighter.position, moved: false, traversedHexes: [], newFacing: fighter.facing };
       goalHex = target.position;
     } else {
@@ -288,17 +292,19 @@ export function resolveFighterAttack(
   enemyShips: EnemyShipState[],
   allFighters: FighterToken[],
   terrainMap?: Map<string, TerrainType>,
+  stations: StationState[] = []
 ): FighterAttackResult | null {
   if (fighter.hasActed) return null;
 
   // 1. Identify Target
-  let shipTarget: (ShipState | EnemyShipState) | undefined;
+  let shipTarget: (ShipState | EnemyShipState | StationState) | undefined;
   let fighterTarget: FighterToken | undefined;
 
   if (fighter.allegiance === 'allied') {
     if (fighter.assignedTargetId) {
       // Priority: Assigned Target
-      shipTarget = enemyShips.find(s => s.id === fighter.assignedTargetId && !s.isDestroyed);
+      shipTarget = enemyShips.find(s => s.id === fighter.assignedTargetId && !s.isDestroyed)
+        || stations.find(s => s.id === fighter.assignedTargetId && !s.isDestroyed);
       if (!shipTarget) {
         fighterTarget = allFighters.find(f => f.id === fighter.assignedTargetId && !f.isDestroyed && f.allegiance === 'enemy');
       }
@@ -415,6 +421,7 @@ export function resolveFighterAttack(
 
 /**
  * Builds two enemy FighterToken objects to be spawned adjacent to a Carrier.
+ * The fighter class is chosen randomly each call so waves vary in composition.
  * Caller is responsible for adding them to game state.
  */
 export function buildCarrierFighters(
@@ -433,7 +440,8 @@ export function buildCarrierFighters(
     return (occupiedFighterHexes.get(key) ?? 0) < MAX_FIGHTERS_PER_HEX;
   });
 
-  const fighterClass = getFighterClassById('strike-fighter')!;
+  // Pick a random class for this wave — all fighters in the wave share the same class
+  const { fighterClass, behavior } = pickEnemyFighterClass();
 
   const results: FighterToken[] = [];
   for (let i = 0; i < 2 && i < validHexes.length; i++) {
@@ -443,7 +451,7 @@ export function buildCarrierFighters(
 
     results.push({
       id: `${idPrefix}-${i}`,
-      name: `Strike Wing ${idPrefix.split('-').pop()?.toUpperCase() ?? ''}${i + 1}`,
+      name: `${fighterClass.name} ${idPrefix.split('-').pop()?.toUpperCase() ?? ''}${i + 1}`,
       classId: fighterClass.id,
       allegiance: 'enemy',
       sourceShipId: shipId,
@@ -455,7 +463,7 @@ export function buildCarrierFighters(
       baseEvasion: fighterClass.baseEvasion,
       volleyPool: fighterClass.volleyPool,
       weaponRangeMax: fighterClass.weaponRangeMax,
-      behavior: fighterClass.behavior,
+      behavior,
       isDestroyed: false,
       hasDrifted: false,
       hasActed: false,
