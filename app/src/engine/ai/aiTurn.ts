@@ -318,16 +318,19 @@ export function executeAITier(
         });
         actions.push({ shipId: aiShip.id, type: 'attack', details: {
           target: target.id, hits: volley.totalHits, hullDmg, shieldDmg, sector,
-          damageResult: {
-            tnBreakdown: tn,
-            volleyResult: volley,
-            shieldHits: shieldDmg,
-            struckSector: sector,
-            hullDamage: hullDmg,
-            overflowHits: overflow,
-            armorRoll: armorRoll,
-            criticalTriggered: piercingHits > 0
-          }
+            damageResult: {
+              tnBreakdown: tn,
+              volleyResult: volley,
+              shieldHits: shieldDmg,
+              struckSector: sector,
+              hullDamage: hullDmg,
+              overflowHits: overflow,
+              armorRoll: armorRoll,
+              criticalTriggered: piercingHits > 0,
+              shieldRemaining: targetInIonNebula ? shieldVal : shieldVal - shieldDmg,
+              armorDie: target.armorDie || 'd4',
+              ionNebulaActive: targetInIonNebula || undefined
+            }
         }});
       }
     }

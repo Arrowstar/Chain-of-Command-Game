@@ -174,6 +174,9 @@ export function executeStationTurn(
               overflowHits: overflow,
               armorRoll,
               criticalTriggered: piercingHits > 0,
+              shieldRemaining: targetInIonNebula ? shieldVal : shieldVal - shieldDmg,
+              armorDie: target.armorDie || 'd4',
+              ionNebulaActive: targetInIonNebula || undefined,
             },
           },
         });
@@ -248,6 +251,9 @@ export function executeStationTurn(
               overflowHits: overflow,
               armorRoll,
               criticalTriggered: piercingHits > 0,
+              shieldRemaining: targetInIonNebula ? shieldVal : shieldVal - shieldDmg,
+              armorDie: target.armorDie || 'd4',
+              ionNebulaActive: targetInIonNebula || undefined,
             },
           },
         });
