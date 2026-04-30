@@ -490,7 +490,7 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
           isDestroyed: false, hasDroppedBelow50: false, hasDrifted: false, targetLocks: [], isAllied: e.isAllied,
         } as EnemyShipState;
       });
-      config = { scenarioId: 'custom-scenario', maxRounds: 8, terrain: scenarioConfig.terrain, players: finalPlayers, playerShips: finalShips, enemyShips: mappedEnemies };
+      config = { scenarioId: 'custom-scenario', maxRounds: 8, terrain: scenarioConfig.terrain, players: finalPlayers, playerShips: finalShips, enemyShips: mappedEnemies, startingRoEId: scenarioConfig.startingRoEId };
     } else {
       const enemy = ADVERSARIES[0];
       const enemyShip: EnemyShipState = {

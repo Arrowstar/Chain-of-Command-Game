@@ -1,3 +1,8 @@
+import type { HexCoord, TerrainType, HexFacing, EnemyShipState, DeploymentBounds } from '../../types/game';
+import type { CombatModifiers } from '../../types/campaignTypes';
+import { hexKey, hexDistance, hexNeighbors } from '../hexGrid';
+import { ADVERSARIES } from '../../data/adversaries';
+import { getStationById } from '../../data/stations';
 import { SHIP_NAMES, STATION_NAMES, PLATFORM_NAMES, getUniqueName } from '../../utils/nameGenerator';
 
 export interface ProceduralScenarioConfig {
@@ -681,6 +686,8 @@ export function generateProceduralScenario(
 
   const stationSpawns: { stationId: string; position: HexCoord; facing?: number; name?: string }[] = [];
   const enemyRoster: string[] = [];
+  const usedStationNames = new Set<string>();
+  const usedPlatformNames = new Set<string>();
 
   const getOpenHexInZone = (minR: number, maxR: number): HexCoord => {
     let attempts = 0;
@@ -785,8 +792,6 @@ export function generateProceduralScenario(
 
   const usedNames = new Set<string>();
   const callsigns = enemyRoster.map(() => getUniqueName(SHIP_NAMES, usedNames));
-  const usedStationNames = new Set<string>();
-  const usedPlatformNames = new Set<string>();
   
   // Pass stationSpawns mapped to positions so generateEnemySpawnPlan respects them
   const objectiveMarkersWithStations = [

@@ -5,6 +5,7 @@ import { getTerrainColor, drawHexPolygon, drawShipTriangle, attachOrUpdateSprite
 import type { TerrainType, HexCoord } from '../../types/game';
 import { HexFacing } from '../../types/game';
 import { ADVERSARIES } from '../../data/adversaries';
+import { ROE_DECK } from '../../data/roeDeck';
 import { generateSkirmishConfig } from '../../utils/skirmishGeneratorUtils';
 
 export interface CustomScenarioConfig {
@@ -12,6 +13,7 @@ export interface CustomScenarioConfig {
   enemies: { id: string; coord: HexCoord; facing: HexFacing; adversaryId: string }[];
   allies: { id: string; coord: HexCoord; facing: HexFacing; adversaryId: string }[];
   playerSpawns: { id: string; coord: HexCoord; facing: HexFacing }[];
+  startingRoEId?: string;
 }
 
 interface ScenarioEditorProps {
@@ -35,6 +37,9 @@ export default function ScenarioEditor({ onConfirm, onCancel }: ScenarioEditorPr
   // Auto-Gen State
   const [autoGenThreatLevel, setAutoGenThreatLevel] = useState<number>(1);
   const [autoGenPlayerCount, setAutoGenPlayerCount] = useState<number>(1);
+
+  // Scenario Options
+  const [selectedRoEId, setSelectedRoEId] = useState<string>('');
 
   // Camera State
   const [cameraX, setCameraX] = useState(0);
@@ -332,6 +337,7 @@ export default function ScenarioEditor({ onConfirm, onCancel }: ScenarioEditorPr
         const [q, r] = s.hex.split(',').map(Number);
         return { id: s.id, coord: { q, r }, facing: s.facing as HexFacing };
       }),
+      startingRoEId: selectedRoEId || undefined,
     };
     onConfirm(config);
   };
@@ -379,6 +385,20 @@ export default function ScenarioEditor({ onConfirm, onCancel }: ScenarioEditorPr
             <button className="btn" style={{ width: '100%', fontSize: '0.8rem' }} onClick={handleAutoGenerate}>
               GENERATE MAP
             </button>
+          </div>
+
+          <div style={{ marginBottom: 'var(--space-md)', padding: 'var(--space-sm)', border: '1px solid var(--color-border)', borderRadius: '4px', background: 'rgba(0, 0, 0, 0.2)' }}>
+            <h3 style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem', marginBottom: '8px' }}>RULES OF ENGAGEMENT</h3>
+            <select 
+              value={selectedRoEId} 
+              onChange={(e) => setSelectedRoEId(e.target.value)}
+              style={{ width: '100%', padding: '8px', background: 'var(--color-bg-deep)', color: 'var(--color-text-main)', border: '1px solid var(--color-border)' }}
+            >
+              <option value="">Random (Draw from Deck)</option>
+              {ROE_DECK.map(roe => (
+                <option key={roe.id} value={roe.id}>{roe.name}</option>
+              ))}
+            </select>
           </div>
 
           <div style={{ marginBottom: 'var(--space-md)' }}>

@@ -1305,7 +1305,8 @@ export default function HexMap() {
                 }
 
                 // Validate if it's a primary fire attack
-                if (actionData.actionId.includes('fire-primary') && ctx.weaponId) {
+                const assignedAction = player?.assignedActions.find(a => a.id === actionData.actionId);
+                if (assignedAction?.actionId === 'fire-primary' && ctx.weaponId) {
                   const weapon = getWeaponById(ctx.weaponId as string);
                   const attackerShip = useGameStore.getState().playerShips.find(s => s.id === actionData.shipId);
                   if (weapon && attackerShip) {
@@ -1332,7 +1333,6 @@ export default function HexMap() {
                 }
 
                 // Validate subsystem range
-                const assignedAction = player?.assignedActions.find(a => a.id === actionData.actionId);
                 const subsystemId = assignedAction?.actionId;
                 const attackerShip = useGameStore.getState().playerShips.find(s => s.id === actionData.shipId);
                 const subsystem = (subsystemId && attackerShip?.equippedSubsystems.includes(subsystemId)) ? getSubsystemById(subsystemId) : null;
@@ -1373,22 +1373,18 @@ export default function HexMap() {
               const player = playersList.find(p => p.shipId === actionData2.shipId);
 
               // 1. AoE Weapon Firing
-              if (actionData2.actionId.includes('fire-primary')) {
-                // Find the actual assigned action to check its internal actionId
-                const assignedAction = player?.assignedActions.find(a => a.id === actionData2.actionId);
-                if (assignedAction?.actionId === 'fire-primary') {
-                  useGameStore.getState().resolveAction(player!.id, actionData2.shipId, actionData2.actionId, {
-                    ...ctx,
-                    targetHex: clickedHex,
-                  });
-                  useUIStore.getState().clearTargeting();
-                  return;
-                }
+              const assignedAction = player?.assignedActions.find(a => a.id === actionData2.actionId);
+              if (assignedAction?.actionId === 'fire-primary') {
+                useGameStore.getState().resolveAction(player!.id, actionData2.shipId, actionData2.actionId, {
+                  ...ctx,
+                  targetHex: clickedHex,
+                });
+                useUIStore.getState().clearTargeting();
+                return;
               }
 
               // 2. Fighter Hangar Deployment (Existing Logic)
               if (ship) {
-                const assignedAction = player?.assignedActions.find(a => a.id === actionData2.actionId);
                 if (assignedAction?.actionId === 'fighter-hangar') {
                   // Validate: must be adjacent
                   if (hexDistance(ship.position, clickedHex) !== 1) return;

@@ -79,6 +79,7 @@ export interface DieResult {
   total: number;         // sum of all rolls
   isHit: boolean;        // total >= TN
   isCritical: boolean;   // at least one max-face roll
+  isConverted?: boolean; // true if upgraded from standard by an ability
 }
 
 export type VolleyDieInput = DieType | { type: DieType; source: string };
@@ -717,6 +718,10 @@ export interface StationState {
   isJammed?: boolean;
   predictiveVolleyActive?: boolean;
   spoofedFireControlActive?: boolean;
+  /** TN modifiers from Target Locks applied to attacks against this station */
+  targetLocks?: number[];
+  targetLocksRerolls?: number;
+  targetLockArmorPiercingShots?: number;
 }
 
 // ─── Combat Targeting ─────────────────────────────────────────────

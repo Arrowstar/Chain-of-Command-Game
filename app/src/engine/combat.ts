@@ -260,6 +260,13 @@ export function resolveAttack(
       volleyResult.totalCrits += convertedCrits;
       volleyResult.totalCriticalHits += convertedCrits;
       volleyResult.totalStandardHits = Math.max(0, volleyResult.totalStandardHits - convertedCrits);
+      
+      // Also mark these dice as converted so the UI shows they were upgraded
+      for (const die of volleyResult.dice) {
+        if (die.isHit && die.isCritical && die.rolls[0] >= critThresholdOverride) {
+          die.isConverted = true;
+        }
+      }
     }
   }
   let totalHits = volleyResult.totalHits;
@@ -269,6 +276,13 @@ export function resolveAttack(
     volleyResult.totalCrits += 1;
     volleyResult.totalStandardHits -= 1;
     volleyResult.totalCriticalHits += 1;
+
+    // Visually update the die so the UI reflects the piercing nature
+    const stdHitDie = volleyResult.dice.find(d => d.isHit && !d.isCritical);
+    if (stdHitDie) {
+      stdHitDie.isCritical = true;
+      stdHitDie.isConverted = true;
+    }
   }
 
   // Option 2: Critical Hits Pierce
@@ -276,6 +290,12 @@ export function resolveAttack(
   // Standard Hits must go through shields, then remaining overflow is mitigated by armor.
   let piercingHits = volleyResult.totalCriticalHits;
   totalHits = volleyResult.totalStandardHits; // totalHits now represents only Standard Hits facing shields
+
+  // Ion Weapons do not pierce hull (they deal 0 hull damage). Their critical hits simply hit shields.
+  if (isIonWeapon) {
+    totalHits += piercingHits;
+    piercingHits = 0;
+  }
 
   // Determine struck shield sector
   const struckSector = determineStruckShieldSector(attackerPos, defenderPos, defenderFacing);

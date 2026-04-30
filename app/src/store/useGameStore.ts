@@ -233,7 +233,7 @@ export interface GameInitConfig {
   /** Delayed enemy spawns loaded from ScenarioData.enemySpawns where spawnRound is set. */
   pendingSpawns?: { adversaryId: string; position: HexCoord; spawnRound: number }[];
   /** Station spawns loaded from ScenarioData.stationSpawns. */
-  stationSpawns?: { stationId: string; position: HexCoord; facing?: HexFacing }[];
+  stationSpawns?: { stationId: string; position: HexCoord; facing?: HexFacing; name?: string }[];
 }
 
 function hasScar(ship: Pick<ShipState, 'scars'>, scarId: string): boolean {
@@ -2009,13 +2009,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
         const currentFired = ship.firedWeaponIndicesThisRound || [];
         updates.firedWeaponIndicesThisRound = [...currentFired, weaponIndex];
 
-        if (weapon.tags?.includes('torpedo') && initialTarget) {
+        if (weapon.tags?.includes('torpedo') && initialTarget && 'id' in initialTarget) {
           get().spawnTorpedo({
             id: `torpedo-${Date.now()}`,
             name: `${weapon.name}`,
             allegiance: 'allied',
             sourceShipId: shipId,
-            targetShipId: initialTarget.id,
+            targetShipId: (initialTarget as ShipState | EnemyShipState).id,
             position: ship.position,
             facing: ship.facing,
             currentHull: 1,
@@ -2097,8 +2097,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 targetsToEvaluate.push({ id: marker.name, target: marker as any, isEnemy: true, isMarker: true } as any);
             } else if (station) {
                 targetsToEvaluate.push({ id: station.id, target: station as any, isEnemy: true, isStation: true } as any);
-            } else if (initialTarget) {
-                targetsToEvaluate.push({ id: initialTarget.id, target: initialTarget, isEnemy });
+            } else if (initialTarget && 'id' in initialTarget) {
+                targetsToEvaluate.push({ id: (initialTarget as ShipState | EnemyShipState).id, target: initialTarget as ShipState | EnemyShipState | FighterToken, isEnemy });
             }
         }
 

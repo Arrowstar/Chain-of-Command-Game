@@ -136,6 +136,12 @@ describe('combat engine', () => {
     expect(dmg.volleyResult.totalCrits).toBe(1);
     expect(dmg.volleyResult.totalStandardHits).toBe(0);
     expect(dmg.hullDamage).toBe(1);
+    
+    // Check for the visual upgrade flag we added
+    const upgradedDie = dmg.volleyResult.dice.find(d => d.isConverted);
+    expect(upgradedDie).toBeDefined();
+    expect(upgradedDie?.isCritical).toBe(true);
+    expect(upgradedDie?.isConverted).toBe(true);
 
     vi.restoreAllMocks();
   });
@@ -200,6 +206,31 @@ describe('combat engine', () => {
     expect(dmg.tnBreakdown.total).toBe(7);
   });
 
+  it('resolveAttack sets isConverted for hits meeting a critThresholdOverride', () => {
+    const shields: ShieldState = { fore: 0, foreStarboard: 0, aftStarboard: 0, aft: 0, aftPort: 0, forePort: 0 };
+    const weapon: WeaponModule = {
+      id: 'w1', name: 'W1', arcs: ['fore'], rangeMin: 1, rangeMax: 3,
+      volleyPool: ['d8'], rpCost: 10, dpCost: 10, effect: '', tags: []
+    };
+
+    vi.spyOn(Math, 'random').mockReturnValue(0.5); // d8 => 5
+
+    const dmg = resolveAttack(
+      { q: 0, r: 0 }, HexFacing.Fore,
+      { q: 1, r: -1 }, HexFacing.Aft,
+      3, shields, 'd4', 10, 10, false, weapon, [
+        { type: 'd8', source: 'weapon' },
+      ], undefined, 0, 0, false, false, false, false, undefined, false, false, false, 0, false, false, 5 // critThresholdOverride = 5
+    );
+
+    expect(dmg.volleyResult.totalCrits).toBe(1);
+    const die = dmg.volleyResult.dice[0];
+    expect(die.isCritical).toBe(true);
+    expect(die.isConverted).toBe(true);
+
+    vi.restoreAllMocks();
+  });
+
   it('Ion Emitter Array critical hits deal 0 hull damage (shield breaker property)', () => {
     const shields: ShieldState = { fore: 3, foreStarboard: 3, aftStarboard: 3, aft: 3, aftPort: 3, forePort: 3 };
     const ionWeapon: WeaponModule = {
@@ -238,10 +269,14 @@ describe('combat engine', () => {
       struckSector: dmg.struckSector
     });
 
-    // Should deal shield damage from standard hits (2 points each for ion) but 0 hull damage from critical hits
-    expect(dmg.hullDamage).toBe(0);
-    expect(dmg.shieldHits).toBeGreaterThan(0); // Should still hit shields from standard hits
-    expect(dmg.volleyResult.totalCrits).toBeGreaterThan(0); // Should have critical hits
+    // Should deal shield damage from ALL hits (ion strips 2 shields per hit, including crits now)
+    // 3 hits * 2 = 6 shield damage. Initial shields 3.
+    expect(dmg.shieldHits).toBe(3); // capped at initial shield? No, shieldHits records total potential before capping? 
+    // Actually combat.ts does: shieldHits = Math.min(totalHits * 2, currentShield)
+    expect(dmg.shieldHits).toBe(3); // 3 hits * 2 = 6, but shields only had 3. So 3.
+    expect(dmg.shieldRemaining).toBe(0);
+    expect(dmg.hullDamage).toBe(0); // Ion deals 0 hull damage even on crits
+    expect(dmg.volleyResult.totalCrits).toBe(1); 
 
     vi.restoreAllMocks();
   });

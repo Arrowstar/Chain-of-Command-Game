@@ -215,15 +215,30 @@ export default function VolleyBreakdown({ results, damageResult, outOfArc, weapo
                           isCriticalHit={isHit && dieResult.isCritical}
                         />
                         {isHit && (
-                          <span className="mono" style={{ 
-                            fontSize: '0.55rem', 
-                            marginTop: '4px',
-                            fontWeight: 'bold',
-                            letterSpacing: '0.5px',
-                            color: dieResult.isCritical ? 'var(--color-alert-amber)' : 'var(--color-holo-cyan)' 
-                          }}>
-                            {dieResult.isCritical ? 'PIERCING' : 'STANDARD'}
-                          </span>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                            <span className="mono" style={{ 
+                              fontSize: '0.55rem', 
+                              marginTop: '4px',
+                              fontWeight: 'bold',
+                              letterSpacing: '0.5px',
+                              color: dieResult.isCritical ? 'var(--color-alert-amber)' : 'var(--color-holo-cyan)' 
+                            }}>
+                              {dieResult.isCritical ? 'PIERCING' : 'STANDARD'}
+                            </span>
+                            {dieResult.isConverted && (
+                              <span className="mono" style={{ 
+                                fontSize: '0.5rem', 
+                                background: 'var(--color-alert-amber)',
+                                color: 'var(--color-bg-deep)',
+                                padding: '1px 3px',
+                                borderRadius: '2px',
+                                marginTop: '2px',
+                                fontWeight: 'bold'
+                              }}>
+                                ⚡ UPGRADED
+                              </span>
+                            )}
+                          </div>
                         )}
                       </div>
                     </React.Fragment>
