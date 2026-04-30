@@ -10,10 +10,12 @@ import ExecuteButton from './ExecuteButton';
 import FleetAssetsPanel from './FleetAssetsPanel';
 import BriefingOverlay from './BriefingOverlay';
 import EnemyTacticPanel from './EnemyTacticPanel';
+import RoEPanel from './RoEPanel';
 import CombatScenarioProgressTracker from '../combat/CombatScenarioProgressTracker';
 import TechBadge from '../campaign/TechBadge';
 import TutorialOverlay from '../tutorial/TutorialOverlay';
 import { useGameStore } from '../../store/useGameStore';
+import { useCampaignStore } from '../../store/useCampaignStore';
 import { useTutorialStore } from '../../store/useTutorialStore';
 import { getOfficerById } from '../../data/officers';
 import type { QueuedAction, OfficerStation } from '../../types/game';
@@ -33,9 +35,11 @@ export default function GameScreen() {
   const currentTactic = useGameStore(s => s.currentTactic);
   const experimentalTech = useGameStore(s => s.experimentalTech);
   const tutorialActive = useTutorialStore(s => s.isActive);
+  const isCampaign = useCampaignStore(s => !!s.campaign);
 
   const [pendingActionDrop, setPendingActionDrop] = React.useState<{ actionDef: any; ctCost: number; stressCost: number } | null>(null);
   const [showScenarioTracker, setShowScenarioTracker] = React.useState(false);
+  const [showRoE, setShowRoE] = React.useState(false);
   const [showEnemyTactic, setShowEnemyTactic] = React.useState(false);
   const [hasUnreadEnemyTactic, setHasUnreadEnemyTactic] = React.useState(false);
   const previousTacticIdRef = useRef<string | null>(currentTactic?.id ?? null);
@@ -160,7 +164,21 @@ export default function GameScreen() {
             pointerEvents: 'none',
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: (showScenarioTracker || showEnemyTactic) ? '8px' : 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: (showScenarioTracker || showEnemyTactic || showRoE) ? '8px' : 0 }}>
+            <button
+              className="btn"
+              style={{
+                pointerEvents: 'auto',
+                padding: '6px 14px',
+                fontSize: '0.75rem',
+                borderColor: 'rgba(0, 204, 255, 0.35)',
+                background: 'rgba(12, 18, 28, 0.92)',
+                color: 'var(--color-holo-cyan)',
+              }}
+              onClick={() => setShowRoE(open => !open)}
+            >
+              {showRoE ? 'HIDE ROE' : 'SHOW ROE'}
+            </button>
             <button
               className="btn"
               style={{
@@ -222,6 +240,22 @@ export default function GameScreen() {
               gap: '8px',
             }}
           >
+            <div
+              style={{
+                pointerEvents: showRoE ? 'auto' : 'none',
+                opacity: showRoE ? 1 : 0,
+                maxHeight: showRoE ? '320px' : '0px',
+                overflow: 'hidden',
+                transform: showRoE ? 'translateY(0)' : 'translateY(-18px)',
+                transition: 'opacity 180ms ease, transform 180ms ease, max-height 180ms ease',
+              }}
+            >
+              {showRoE && (
+                <div style={{ width: 'min(540px, 100%)', margin: '0 auto' }}>
+                  <RoEPanel showOverrideAction={isCampaign} />
+                </div>
+              )}
+            </div>
             <div
               style={{
                 pointerEvents: showScenarioTracker ? 'auto' : 'none',

@@ -1,9 +1,10 @@
 import React from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useTutorialStore } from '../../store/useTutorialStore';
+import { useCampaignStore } from '../../store/useCampaignStore';
 import CombatScenarioProgressTracker from '../combat/CombatScenarioProgressTracker';
 import EnemyTacticPanel from './EnemyTacticPanel';
-
+import RoEPanel from './RoEPanel';
 export default function BriefingOverlay() {
   const round = useGameStore(s => s.round);
   const activeRoE = useGameStore(s => s.activeRoE);
@@ -11,6 +12,7 @@ export default function BriefingOverlay() {
   const overrideRoE = useGameStore(s => s.overrideRoE);
   const advancePhase = useGameStore(s => s.advancePhase);
   const tutorialActive = useTutorialStore(s => s.isActive);
+  const isCampaign = useCampaignStore(s => !!s.campaign);
 
   return (
     <div style={{
@@ -36,40 +38,7 @@ export default function BriefingOverlay() {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-lg)', marginBottom: 'var(--space-lg)' }}>
-          {/* Rules of Engagement */}
-          <div className="panel panel--raised">
-            <div className="label" style={{ color: 'var(--color-text-secondary)', marginBottom: 'var(--space-sm)' }}>
-               {roeOverridden ? 'OVERRIDDEN' : 'ACTIVE RULES OF ENGAGEMENT'}
-            </div>
-            {roeOverridden ? (
-              <div style={{ color: 'var(--color-alert-amber)', fontStyle: 'italic', padding: 'var(--space-md) 0' }}>
-                 "The War Council has rejected High Command's directives. We are operating on our own parameters now."
-              </div>
-            ) : activeRoE ? (
-              <>
-                <div style={{ color: 'var(--color-text-dim)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  DOCTRINE: {activeRoE.doctrine.replace(/([A-Z])/g, ' $1').trim()}
-                </div>
-                <h3 style={{ color: 'var(--color-text-bright)', marginBottom: 'var(--space-xs)' }}>{activeRoE.name}</h3>
-                <div style={{ fontStyle: 'italic', fontSize: '0.85rem', marginBottom: 'var(--space-sm)', color: 'var(--color-text-dim)' }}>
-                  "{activeRoE.flavorText}"
-                </div>
-                <div style={{ fontSize: '0.9rem', marginBottom: 'var(--space-md)' }}>
-                  <strong>{activeRoE.rule}</strong>
-                </div>
-
-                <button
-                  className="btn btn--danger"
-                  style={{ width: '100%', fontSize: '0.8rem', padding: 'var(--space-sm)' }}
-                  onClick={overrideRoE}
-                >
-                  INSUBORDINATION: OVERRIDE RoE (-3 Fleet Favor)
-                </button>
-              </>
-            ) : (
-              <div>No RoE generated for this scenario.</div>
-            )}
-          </div>
+          <RoEPanel showOverrideAction={isCampaign} />
 
           <EnemyTacticPanel showGhostMakerAction />
         </div>
