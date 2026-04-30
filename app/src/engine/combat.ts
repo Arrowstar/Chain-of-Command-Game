@@ -314,7 +314,13 @@ export function resolveAttack(
     if (!armorDisabled && !weapon.tags.includes('armorPiercing') && !armorPiercingAttack) {
       armorRoll = rollDie(defenderArmorDie);
     }
-    hullDamage = Math.max(1, overflowHits - armorRoll); // minimum 1 if any reached hull
+    
+    // If there are piercing hits, we don't enforce the minimum 1 hull damage rule for overflow.
+    if (piercingHits > 0) {
+      hullDamage = Math.max(0, overflowHits - armorRoll);
+    } else {
+      hullDamage = Math.max(1, overflowHits - armorRoll); // minimum 1 if any reached hull
+    }
   }
 
   // Add the piercing hits directly to hull damage (bypassing shields and armor)

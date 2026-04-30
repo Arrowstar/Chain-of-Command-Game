@@ -30,6 +30,9 @@ vi.mock('./useUIStore', () => ({
       queueModal: vi.fn(),
       incrementUnread: vi.fn(),
       showModal: vi.fn(),
+      cancelAllFireAnimations: vi.fn(),
+      queueFireAnimation: vi.fn(),
+      consumeFireAnimation: vi.fn(),
     })),
   },
 }));

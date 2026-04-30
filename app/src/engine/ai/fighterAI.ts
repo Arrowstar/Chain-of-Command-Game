@@ -3,6 +3,7 @@ import { hexDistance, hexNeighbors, hexKey, getHexFacing } from '../hexGrid';
 import { rollVolley } from '../../utils/diceRoller';
 import { determineStruckShieldSector } from '../hexGrid';
 import { getFighterClassById, pickEnemyFighterClass } from '../../data/fighters';
+import { generateSquadronName } from '../../utils/nameGenerator';
 
 // ═══════════════════════════════════════════════════════════════════
 // Fighter AI / Resolution Engine
@@ -473,6 +474,7 @@ export function buildCarrierFighters(
   occupiedFighterHexes: Map<string, number>, // hex key → current fighter count
   terrainMap: Map<string, TerrainType>,
   idPrefix: string,
+  usedNames?: Set<string>,
 ): FighterToken[] {
   const neighbors = hexNeighbors(shipPosition);
   const validHexes = neighbors.filter(h => {
@@ -491,9 +493,12 @@ export function buildCarrierFighters(
     const key = hexKey(hex);
     occupiedFighterHexes.set(key, (occupiedFighterHexes.get(key) ?? 0) + 1);
 
+    const flavorName = generateSquadronName(usedNames ?? new Set());
+    const squadronName = `${fighterClass.name} «${flavorName}»`;
+
     results.push({
       id: `${idPrefix}-${i}`,
-      name: `${fighterClass.name} ${idPrefix.split('-').pop()?.toUpperCase() ?? ''}${i + 1}`,
+      name: squadronName,
       classId: fighterClass.id,
       allegiance: 'enemy',
       sourceShipId: shipId,

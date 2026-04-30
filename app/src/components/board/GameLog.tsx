@@ -41,24 +41,60 @@ interface DiceDetailProps {
   details: Record<string, unknown>;
 }
 
+/** Human-readable labels for known log detail keys */
+const DETAIL_LABELS: Record<string, string> = {
+  from:            'Departed',
+  to:              'Arrived',
+  speedBefore:     'Speed Before',
+  speedAfter:      'Speed After',
+  collisionDamage: 'Collision Damage',
+  terrainDamage:   'Terrain Damage',
+};
+
+/** Convert a camelCase/kebab-case key to Sentence Case as a last-resort fallback */
+function toSentenceCase(key: string): string {
+  return key
+    .replace(/-/g, ' ')
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/^./, c => c.toUpperCase())
+    .trim();
+}
+
+function formatDetailValue(key: string, v: unknown, details: Record<string, unknown>): string {
+  if (v === null || v === undefined) return '—';
+  if (typeof v === 'object' && 'q' in (v as object) && 'r' in (v as object)) {
+    const coord = v as { q: number; r: number };
+    return `(${coord.q}, ${coord.r})`;
+  }
+  // Show speed as a change arrow when we have both before and after
+  if (key === 'speedBefore' && details.speedAfter !== undefined) {
+    return `${v} → ${details.speedAfter}`;
+  }
+  if (key === 'speedAfter') return null as unknown as string; // rolled into speedBefore row
+  // Damage values: append " hull" for clarity
+  if ((key === 'collisionDamage' || key === 'terrainDamage') && typeof v === 'number') {
+    return v === 0 ? 'None' : `${v} hull`;
+  }
+  if (typeof v === 'object') return JSON.stringify(v);
+  return String(v);
+}
+
 function DiceDetail({ details }: DiceDetailProps) {
   const damageResult = details.damageResult as any;
   const tn = damageResult?.tnBreakdown;
   const volley = damageResult?.volleyResult;
 
   if (!tn && !volley) {
-    // Generic detail display
+    // Human-readable generic detail display
     return (
       <div className="game-log-details">
         {Object.entries(details).map(([k, v]) => {
-          let displayValue = String(v);
-          if (v && typeof v === 'object') {
-            if ('q' in v && 'r' in v) displayValue = `(${v.q}, ${v.r})`;
-            else displayValue = JSON.stringify(v);
-          }
+          const displayValue = formatDetailValue(k, v, details);
+          if (displayValue === null) return null; // suppress merged rows
+          const label = DETAIL_LABELS[k] ?? toSentenceCase(k);
           return (
             <div key={k} className="game-log-details-row">
-              <span>{k}</span>
+              <span>{label}</span>
               <span>{displayValue}</span>
             </div>
           );

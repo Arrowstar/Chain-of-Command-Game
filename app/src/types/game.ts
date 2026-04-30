@@ -753,7 +753,7 @@ export interface ScenarioData {
   terrain: { coord: HexCoord; type: TerrainType }[];
   playerDeployZone: HexCoord[];
   enemySpawns: { adversaryId: string; position: HexCoord; spawnRound?: number }[];
-  stationSpawns?: { stationId: string; position: HexCoord; facing?: HexFacing }[];
+  stationSpawns?: { stationId: string; position: HexCoord; facing?: HexFacing; name?: string }[];
   objectiveMarkers?: ObjectiveMarkerState[];
   victoryCondition: string;
   defeatCondition: string;
@@ -793,4 +793,23 @@ export interface LogEntry {
   type: 'movement' | 'combat' | 'damage' | 'critical' | 'fumble' | 'roe' | 'tactic' | 'repair' | 'system' | 'stress' | 'phase';
   message: string;
   details?: Record<string, unknown>;
+}
+
+// ─── Weapon Fire Animation Events ────────────────────────────────
+
+/**
+ * A one-shot visual event emitted by useGameStore whenever an attack resolves.
+ * Consumed by HexMap's PixiJS animation layer — carries no game state.
+ */
+export interface WeaponFireEvent {
+  /** Unique ID for tracking in-flight animations */
+  id: string;
+  /** Hex position of the attacker */
+  attackerPos: HexCoord;
+  /** Hex position of the primary target */
+  targetPos: HexCoord;
+  /** Weapon tags drive the visual style (use [] for generic AI weapons) */
+  weaponTags: WeaponTag[];
+  /** true = attacker is enemy/station; false = player-allied */
+  isEnemy: boolean;
 }

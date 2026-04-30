@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import DiceVisual from './DiceVisual';
 import type { VolleyResult } from '../../types/game';
 import type { DamageResult } from '../../engine/combat';
+import { useGameStore } from '../../store/useGameStore';
 
 export interface VolleyResultItem {
   damageResult: DamageResult;
@@ -27,6 +28,16 @@ interface VolleyBreakdownProps {
 export default function VolleyBreakdown({ results, damageResult, outOfArc, weaponName, attackerId, defenderId, onClose }: VolleyBreakdownProps) {
   const [showDamage, setShowDamage] = useState(false);
   const [activeTabIndex, setActiveTabIndex] = useState(0);
+  const { playerShips, enemyShips, stations, fighterTokens, getShipName } = useGameStore();
+
+  const getAllegianceColor = (id: string) => {
+    if (playerShips.some(s => s.id === id)) return 'var(--color-holo-cyan)';
+    if (fighterTokens.some(f => f.id === id && f.allegiance === 'allied')) return 'var(--color-holo-cyan)';
+    if (enemyShips.some(s => s.id === id)) return 'var(--color-hostile-red)';
+    if (stations.some(s => s.id === id)) return 'var(--color-hostile-red)';
+    if (fighterTokens.some(f => f.id === id && f.allegiance === 'enemy')) return 'var(--color-hostile-red)';
+    return 'var(--color-text-secondary)';
+  };
 
   // Normalize single/legacy props into results array
   const items: VolleyResultItem[] = results || (damageResult ? [{
@@ -50,6 +61,10 @@ export default function VolleyBreakdown({ results, damageResult, outOfArc, weapo
   const currentItem = items[activeTabIndex];
   const volley = currentItem.damageResult.volleyResult;
 
+  const attackerName = attackerId ? getShipName(attackerId) : 'Unknown Attacker';
+  const attackerColor = attackerId ? getAllegianceColor(attackerId) : 'var(--color-text-secondary)';
+  const defColor = currentItem.defenderId ? getAllegianceColor(currentItem.defenderId) : 'var(--color-text-secondary)';
+
   return (
     <AnimatePresence>
       <motion.div
@@ -66,9 +81,17 @@ export default function VolleyBreakdown({ results, damageResult, outOfArc, weapo
           boxShadow: '0 0 50px rgba(0,0,0,0.8)'
         }}
       >
-        <h2 style={{ color: 'var(--color-holo-cyan)', textAlign: 'center', marginBottom: 'var(--space-sm)' }}>
-          Volley Resolution{weaponName ? ` — ${weaponName}` : ''}
+        <h2 style={{ color: 'var(--color-holo-cyan)', textAlign: 'center', marginBottom: '4px', textTransform: 'uppercase' }}>
+          Volley Resolution
         </h2>
+        <div style={{ textAlign: 'center', marginBottom: 'var(--space-md)' }}>
+          <div className="mono" style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>
+            Attacker: <span style={{ color: attackerColor }}>{attackerName} {weaponName ? `(${weaponName})` : ''}</span>
+          </div>
+          <div className="mono" style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>
+            Defender: <span style={{ color: defColor }}>{currentItem.defenderName}</span>
+          </div>
+        </div>
 
         {items.length > 1 && (
           <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', marginBottom: '16px', paddingBottom: '4px', borderBottom: '1px solid var(--color-border)' }}>
@@ -234,29 +257,100 @@ export default function VolleyBreakdown({ results, damageResult, outOfArc, weapo
                 {volley.totalHits > 0 ? (
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-sm)' }}>
                     <div className="panel panel--raised" style={{ padding: 'var(--space-xs)' }}>
-                      <span className="label">Shield Damage</span>
-                      <div className="mono" style={{ color: 'var(--color-holo-cyan)' }}>{currentItem.damageResult.shieldHits ?? 0}</div>
+                      <span className="label">Shield Breakdown</span>
+                      {(() => {
+                        const { shieldHits, struckSector, shieldRemaining, ionNebulaActive } = currentItem.damageResult;
+                        
+                        const formatSector = (sector: string) => {
+                          const spaced = sector.replace(/([A-Z])/g, ' $1').trim();
+                          return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+                        };
+                        
+                        const sectorLabel = formatSector(struckSector);
+                        const initialShield = ionNebulaActive ? shieldRemaining : shieldRemaining + shieldHits;
+
+                        return (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', textAlign: 'left', marginTop: '6px' }}>
+                            {ionNebulaActive ? (
+                                <div className="flex-between" style={{ fontSize: '0.75rem', marginBottom: '4px' }} title="Ion Nebula completely disables shields.">
+                                  <span className="label" style={{ color: 'var(--color-text-secondary)', cursor: 'help' }}>Shields Bypassed</span>
+                                  <span className="mono" style={{ color: 'var(--color-alert-amber)' }}>(Ion Nebula)</span>
+                                </div>
+                            ) : (
+                              <>
+                                <div className="flex-between" style={{ fontSize: '0.75rem' }} title="The shield arc that intercepted the attack.">
+                                  <span className="label" style={{ color: 'var(--color-text-secondary)', cursor: 'help' }}>Struck Arc</span>
+                                  <span className="mono" style={{ color: 'var(--color-holo-cyan)' }}>{sectorLabel}</span>
+                                </div>
+                                <div className="flex-between" style={{ fontSize: '0.75rem' }} title="The initial shield strength before the attack.">
+                                  <span className="label" style={{ color: 'var(--color-text-secondary)', cursor: 'help' }}>Initial Shields</span>
+                                  <span className="mono">{initialShield}</span>
+                                </div>
+                                <div className="flex-between" style={{ fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '4px' }} title="The amount of shield energy depleted by the attack.">
+                                  <span className="label" style={{ color: 'var(--color-text-secondary)', cursor: 'help' }}>Shield Damage</span>
+                                  <span className="mono" style={{ color: 'var(--color-alert-amber)' }}>-{shieldHits}</span>
+                                </div>
+                                <div className="flex-between" style={{ fontSize: '0.9rem', borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '6px', marginTop: '2px' }} title="The remaining shield energy in this arc.">
+                                  <span className="label" style={{ color: 'var(--color-text-primary)', cursor: 'help' }}>Remaining</span>
+                                  <span className="mono" style={{ color: 'var(--color-holo-cyan)', fontWeight: 'bold' }}>{shieldRemaining}</span>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                     <div className="panel panel--raised" style={{ padding: 'var(--space-xs)' }}>
-                      <span className="label">Hull Damage</span>
-                      {currentItem.damageResult.overflowHits > 0 ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-xs)' }}>
-                          <div className="mono" style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>
-                            {currentItem.damageResult.overflowHits} (Overflow)
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
-                            <span className="mono" style={{ color: 'var(--color-text-primary)' }}>-</span>
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                              <DiceVisual dieType={currentItem.damageResult.armorDie} finalResult={currentItem.damageResult.armorRoll} isHit={false} />
-                              <span className="mono" style={{ fontSize: '0.6rem', color: 'var(--color-text-secondary)', marginTop: '2px' }}>ARMOR</span>
+                      <span className="label">Hull Damage Breakdown</span>
+                      {(() => {
+                        const overflowHits = currentItem.damageResult.overflowHits;
+                        const armorRoll = currentItem.damageResult.armorRoll;
+                        const hullDamage = currentItem.damageResult.hullDamage;
+                        
+                        let mitigatedOverflow = 0;
+                        if (overflowHits > 0 && hullDamage > 0) {
+                          mitigatedOverflow = Math.max(1, overflowHits - armorRoll);
+                        }
+                        const piercingHits = Math.max(0, hullDamage - mitigatedOverflow);
+                        const min1RuleApplied = mitigatedOverflow === 1 && (overflowHits - armorRoll) <= 0;
+
+                        if (hullDamage === 0) {
+                          return <div className="mono" style={{ color: 'var(--color-hostile-red)', marginTop: '4px' }}>0</div>;
+                        }
+
+                        return (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', textAlign: 'left', marginTop: '6px' }}>
+                            {overflowHits > 0 && (
+                              <>
+                                <div className="flex-between" style={{ fontSize: '0.75rem' }} title="Standard hits that bypassed shields and struck the hull directly.">
+                                  <span className="label" style={{ color: 'var(--color-text-secondary)', cursor: 'help' }}>Overflow Hits</span>
+                                  <span className="mono">+{overflowHits}</span>
+                                </div>
+                                <div className="flex-between" style={{ fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '4px' }} title="The defender's armor die roll, mitigating Overflow Hits.">
+                                  <span className="label" style={{ color: 'var(--color-text-secondary)', cursor: 'help' }}>Armor Roll ({currentItem.damageResult.armorDie})</span>
+                                  <span className="mono" style={{ color: 'var(--color-text-dim)' }}>-{armorRoll}</span>
+                                </div>
+                                <div className="flex-between" style={{ fontSize: '0.75rem' }} title={min1RuleApplied ? "Armor cannot reduce Overflow Hits below 1 unless there are piercing hits." : "The remaining Overflow Hits after armor mitigation."}>
+                                  <span className="label" style={{ color: 'var(--color-text-secondary)', cursor: 'help' }}>Mitigated Damage{min1RuleApplied ? ' (Min 1)' : ''}</span>
+                                  <span className="mono">{mitigatedOverflow}</span>
+                                </div>
+                              </>
+                            )}
+                            
+                            {piercingHits > 0 && (
+                              <div className="flex-between" style={{ fontSize: '0.75rem' }} title="Critical hits that completely bypass shields and armor.">
+                                <span className="label" style={{ color: 'var(--color-text-secondary)', cursor: 'help' }}>Piercing Hits</span>
+                                <span className="mono" style={{ color: 'var(--color-alert-amber)' }}>+{piercingHits}</span>
+                              </div>
+                            )}
+
+                            <div className="flex-between" style={{ fontSize: '0.9rem', borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '6px', marginTop: '2px' }} title="The final amount of Hull Damage dealt to the defender.">
+                              <span className="label" style={{ color: 'var(--color-text-primary)', cursor: 'help' }}>Total Damage</span>
+                              <span className="mono" style={{ color: 'var(--color-hostile-red)', fontWeight: 'bold' }}>{hullDamage}</span>
                             </div>
-                            <span className="mono" style={{ color: 'var(--color-text-primary)' }}>=</span>
-                            <div className="mono" style={{ color: 'var(--color-hostile-red)', fontSize: '1.2rem' }}>{currentItem.damageResult.hullDamage}</div>
                           </div>
-                        </div>
-                      ) : (
-                        <div className="mono" style={{ color: 'var(--color-hostile-red)' }}>{currentItem.damageResult.hullDamage ?? 0}</div>
-                      )}
+                        );
+                      })()}
                     </div>
                   </div>
                 ) : (

@@ -46,6 +46,7 @@ import {
   getStimInjectorBonus,
 } from '../engine/techEffects';
 import { getRoundStartCtState } from '../engine/commandTokens';
+import { generateSquadronName } from '../utils/nameGenerator';
 
 // ─── Shared label map (mirrors ExecutionPanel's ARC_LABELS) ────────────────────
 const ARC_LABELS_STORE: Record<ShipArc, string> = {
@@ -307,6 +308,7 @@ function buildReserveSquadron(
   const carrier = enemyShips.find(ship => !ship.isDestroyed && !ship.isAllied && getAdversaryById(ship.adversaryId)?.id === 'carrier');
   if (!carrier) return [];
 
+  const usedNames = new Set(fighterTokens.map(f => f.name));
   const occupiedFighterHexes = new Map<string, number>();
   fighterTokens.filter(fighter => !fighter.isDestroyed).forEach(fighter => {
     const key = hexKey(fighter.position);
@@ -319,7 +321,8 @@ function buildReserveSquadron(
     carrier.facing,
     occupiedFighterHexes,
     terrainMap,
-    `reserve-squadron-${carrier.id}-r${round}-${Date.now()}`
+    `reserve-squadron-${carrier.id}-r${round}-${Date.now()}`,
+    usedNames
   );
 }
 
@@ -731,7 +734,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         if (!stationData) return;
         initialStations.push({
           id: `station-${spawn.stationId}-${idx}`,
-          name: stationData.name,
+          name: spawn.name || stationData.name,
           stationId: stationData.id,
           position: spawn.position,
           facing: spawn.facing ?? 0,
@@ -1626,6 +1629,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
   
   resolveAction: (playerId, shipId, assignedActionId, context) => {
+    // Cancel any in-flight weapon animations before resolving the next action
+    useUIStore.getState().cancelAllFireAnimations();
+
     const state = get();
     const playerIndex = state.players.findIndex(p => p.id === playerId);
     if (playerIndex === -1) return;
@@ -1809,7 +1815,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       case 'target-lock': {
         const targetId = action.targetShipId || context?.targetShipId;
         if (!targetId) break;
-        const allTargets = [...state.enemyShips, ...state.playerShips];
+        const allTargets = [...state.enemyShips, ...state.playerShips, ...state.stations];
         const target = allTargets.find(s => s.id === targetId);
         if (!target) break;
 
@@ -1848,6 +1854,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
         if (state.enemyShips.some(s => s.id === target.id)) {
           get().updateEnemyShip(target.id, targetUpdates);
+        } else if (state.stations.some(s => s.id === target.id)) {
+          get().updateStation(target.id, targetUpdates);
         } else {
           get().updatePlayerShip(target.id, targetUpdates);
         }
@@ -1931,7 +1939,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       case 'fire-primary': {
         const targetId = context?.targetShipId;
         const targetHex = context?.targetHex;
-        let initialTarget = targetId ? (state.enemyShips.find(s => s.id === targetId) || state.playerShips.find(s => s.id === targetId)) : null;
+        let initialTarget = targetId ? (state.enemyShips.find(s => s.id === targetId) || state.playerShips.find(s => s.id === targetId) || state.stations.find(s => s.id === targetId) || state.objectiveMarkers.find(m => m.name === targetId)) : null;
         let tacticalOverrideConsumed = false;
 
         // Read weapon from context or fallback to first equipped
@@ -2030,7 +2038,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         const fireRoE = state.activeRoE;
         const canTacticalOverride = state.tacticalOverrideShipIds.includes(ship.id);
         if (fireRoE?.mechanicalEffect.shieldTargetBanRounds !== undefined && initialTarget && state.round <= fireRoE.mechanicalEffect.shieldTargetBanRounds) {
-          const hasShields = Object.values(initialTarget.shields).some(v => v > 0);
+          const hasShields = (initialTarget as any).shields ? Object.values((initialTarget as any).shields).some(v => (v as number) > 0) : ((initialTarget as any).shieldsPerSector ?? 0) > 0;
           if (hasShields) {
             if (canTacticalOverride) {
               tacticalOverrideConsumed = true;
@@ -2278,6 +2286,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
             );
             if (targetingPackageIndex !== -1) {
               targetingPackages.splice(targetingPackageIndex, 1);
+            }
+
+            // ─── Weapon fire animation event (visual only, no game state) ─────
+            if (!weapon.tags?.includes('torpedo')) {
+              useUIStore.getState().queueFireAnimation({
+                id: `fire-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                attackerPos: ship.position,
+                targetPos: target.position,
+                weaponTags: weapon.tags ?? [],
+                isEnemy: false,
+              });
             }
 
             if (tachyonStrike && damageResult.volleyResult.totalStandardHits > 0) {
@@ -2889,9 +2908,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
         const chosenBehavior = ((context?.behavior as string) ?? 'attack') as import('../types/game').FighterBehavior;
         const fighterClass = getFighterClassById(chosenClassId) ?? getFighterClassById('strike-fighter')!;
 
+        const usedFighterNames = new Set(state.fighterTokens.map(f => f.name));
+        const flavorName = generateSquadronName(usedFighterNames);
+        const squadronName = `${fighterClass.name} «${flavorName}»`;
+
         const newFighter: FighterToken = {
           id: `allied-fighter-${ship.id}-${Date.now()}`,
-          name: `${fighterClass.name} ${state.fighterTokens.filter(f => f.sourceShipId === ship.id).length + 1}`,
+          name: squadronName,
           classId: fighterClass.id,
           allegiance: 'allied',
           sourceShipId: ship.id,
@@ -3047,8 +3070,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
         break;
       }
-      default:
-        get().addLog('system', `Resolved action: ${action.actionId}`);
+      default: {
+        const actionDef = getActionById(action.actionId) || getSubsystemById(action.actionId);
+        const displayName = actionDef?.name
+          ?? action.actionId.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        get().addLog('system', `${displayName} resolved.`);
+      }
     }
 
 
@@ -3190,6 +3217,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
           if ((det.shieldDmg ?? 0) > 0) atkMsg += ` | -${det.shieldDmg} ${String(det.sector ?? '').toUpperCase()} shield`;
           if ((det.hullDmg ?? 0) > 0)   atkMsg += ` | -${det.hullDmg} hull`;
           get().addLog('combat', atkMsg, { damageResult: det.damageResult });
+
+          // ─── Enemy weapon fire animation event ─────────────────────────────
+          const defenderState = [...get().playerShips, ...get().enemyShips].find(s => s.id === det.target);
+          if (attackingShip && defenderState) {
+            useUIStore.getState().queueFireAnimation({
+              id: `fire-enemy-${a.shipId}-${Date.now()}`,
+              attackerPos: attackingShip.position,
+              targetPos: defenderState.position,
+              weaponTags: [], // AI ships have no weapon tag metadata; default to beam
+              isEnemy: !attackingShip.isAllied,
+            });
+          }
 
           // Queue volley modal — sequential per attack (same as player attacks)
           useUIStore.getState().queueModal('volley', {
@@ -3353,6 +3392,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
             if ((det.shieldDmg ?? 0) > 0) atkMsg += ` | -${det.shieldDmg} ${String(det.sector ?? '').toUpperCase()} shield`;
             if ((det.hullDmg ?? 0) > 0)   atkMsg += ` | -${det.hullDmg} hull`;
             get().addLog('combat', atkMsg, { damageResult: det.damageResult });
+
+            // ─── Station weapon fire animation event ───────────────────────────
+            const stationDefender = [...get().playerShips, ...get().enemyShips].find(s => s.id === det.target);
+            if (station && stationDefender) {
+              useUIStore.getState().queueFireAnimation({
+                id: `fire-station-${a.stationId}-${Date.now()}`,
+                attackerPos: station.position,
+                targetPos: stationDefender.position,
+                weaponTags: [], // Stations use generic beam; isHeavy could refine this later
+                isEnemy: true,
+              });
+            }
           } else if (a.type === 'launch') {
             const station = liveState.stations.find(s => s.id === a.stationId);
             const count = (a.details as any).count ?? 0;
@@ -3397,13 +3448,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
         const newFighters: import('../types/game').FighterToken[] = [];
         carrierEnemies.forEach(carrier => {
+          const usedNames = new Set(liveState.fighterTokens.map(f => f.name));
           const spawned = buildCarrierFighters(
             carrier.id,
             carrier.position,
             carrier.facing,
             occupiedFighterHexes,
             liveState.terrainMap,
-            `enemy-fighter-${carrier.id}-r${liveState.round}-${Date.now()}`
+            `enemy-fighter-${carrier.id}-r${liveState.round}-${Date.now()}`,
+            usedNames
           );
           spawned.forEach(f => newFighters.push(f));
           if (spawned.length > 0) {

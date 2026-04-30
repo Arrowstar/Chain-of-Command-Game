@@ -1,14 +1,11 @@
-import type { CombatModifiers } from '../../types/campaignTypes';
-import type { DeploymentBounds, EnemyShipState, HexCoord, TerrainType, HexFacing } from '../../types/game';
-import { ADVERSARIES } from '../../data/adversaries';
-import { hexDistance, hexNeighbors, hexKey } from '../hexGrid';
+import { SHIP_NAMES, STATION_NAMES, PLATFORM_NAMES, getUniqueName } from '../../utils/nameGenerator';
 
 export interface ProceduralScenarioConfig {
   objectiveType: string;
   terrain: { coord: HexCoord; type: TerrainType }[];
   enemyShips: EnemyShipState[];
   objectiveMarkers: { name: string; position: HexCoord; hull: number; maxHull: number; shieldsPerSector: number }[];
-  stationSpawns?: { stationId: string; position: HexCoord; facing?: HexFacing }[];
+  stationSpawns?: { stationId: string; position: HexCoord; facing?: HexFacing; name?: string }[];
   scenarioRules: string[];
   generationReport: string[];
   deploymentBounds: DeploymentBounds;
@@ -41,43 +38,7 @@ function describeTerrainType(type: TerrainType): string {
   }
 }
 
-const ENEMY_CALLSIGNS = [
-  'Iron Decree', 'Solar Inquisitor', 'Hand of the Hegemon', 'Obsidian Arbiter',
-  'Silent Sovereign', 'Unyielding Will', 'Grasp of Tyranny', 'Vengeance of Sol',
-  'Eternal Vigil', 'Dread Bastion', 'Absolute Authority', 'Steel Apostle',
-  'Crown of Obsidian', 'Grim Sanction', 'Apex Sentinel', 'Void Hammer',
-  'Imperial Scourge', 'Final Verdict', 'Hallowed Spear', "Zenith's Wrath",
-  'Cold Justice', 'Resolute Command', "Titan's Decree", 'Obsidian Throne',
-  'Solar Apex', 'Silent Enforcer', "Hegemony's Reach", 'Dark Constellation',
-  'Sovereign Guard', 'Iron Gospel', 'Vindicator Prime', 'Eclipse of Mercy',
-  'Lawbringer IX', 'Abyssal Warden', 'Purity of Flame', 'Dread Herald',
-  'Unspoken Law', 'Iron Sanctity', 'Hammer of Penance', "Sol's Retribution",
-  'Obsidian Shield', 'Silent Crusader', "Dominion's Edge", 'Righteous Fury',
-  'Grave Authority', 'Starlight Inquisitor', 'Eternal Sanction', 'Iron Crown',
-  "Hegemon's Fist", 'Void Arbiter', 'Pillar of Orthodoxy', 'The Golden Mandate',
-  "Sol's Unblinking Eye", 'Scepter of the Hegemon', 'Obsidian Vanguard',
-  "Zenith's Hammer", 'The Law of Iron', 'Arbitrator Prime', 'Cold Solace',
-  'Steel Sacrament', 'The Silent Verdict', 'Radiant Oppression', 'Bastion of Purity',
-  'Flare of Judgment', 'The Inflexible Will', 'Obsidian Monolith', "Sol's Harsh Dawn",
-  'Eternal Gavel', 'Scepter of Dust', 'Iron Orthodoxy', "Zenith's Sentinel",
-  'The Final Amen', 'Stellar Inquisitor', 'The Unmaking Force', 'Penance of the Void',
-  'Obsidian Sentry', "The Hegemon's Breath", "Sol's Silent Wrath", 'Indomitable Spires',
-  'Verdict of the Stars', 'Steel Covenant', 'The Iron Sentinel', 'Corona of Authority',
-  'The Obsidian Shard', "Zenith's Requiem", 'Scepter of the Sun', 'Immutable Sanction',
-  "Sol's Iron Halo", 'Silent Watcher', 'Obsidian Fortress', 'Unyielding Pillar',
-  "Zenith's Fury", 'Law of the Stars', 'Steel Resolve', 'Mandate of the Iron Heavens',
-  "Sol's Blinding Grace", 'Obsidian Anchor', "Zenith's Clarion", 'Final Proclamation',
-  "Hegemon's Eternity",
-];
-
-function assignCallsigns(roster: string[]): string[] {
-  const pool = [...ENEMY_CALLSIGNS].sort(() => Math.random() - 0.5);
-  const classCounts: Record<string, number> = {};
-  return roster.map(advId => {
-    classCounts[advId] = (classCounts[advId] ?? 0) + 1;
-    return pool.pop() ?? `Unit-${classCounts[advId]}`;
-  });
-}
+// Removed local callsign logic in favor of nameGenerator utility
 
 function getRandomHexes(count: number, avoidRadius: number = 2, maxRadius: number = 8): HexCoord[] {
   const result: HexCoord[] = [];
@@ -718,7 +679,7 @@ export function generateProceduralScenario(
   generationReport.push(`[PROCGEN] Step 3 - Threat Budget: sector ${sector} => ${threatPerPlayer} threat/player x ${playerCount} = ${baseBudget}; modifiers ${modifierBudgetBonus >= 0 ? '+' : ''}${modifierBudgetBonus}; starting budget ${startingBudget}.`);
   generationReport.push(`[PROCGEN] Combat Modifiers: ${modifierNotes.length > 0 ? modifierNotes.join(', ') : 'none'}.`);
 
-  const stationSpawns: { stationId: string; position: HexCoord; facing?: number }[] = [];
+  const stationSpawns: { stationId: string; position: HexCoord; facing?: number; name?: string }[] = [];
   const enemyRoster: string[] = [];
 
   const getOpenHexInZone = (minR: number, maxR: number): HexCoord => {
@@ -747,8 +708,11 @@ export function generateProceduralScenario(
         break;
       }
     }
-    stationSpawns.push({ stationId: selected, position: getOpenHexInZone(-6, -6), facing: 3 });
-    generationReport.push(`[PROCGEN] Objective Constraint: spawned ${selected} as primary target. Remaining budget ${budget}.`);
+    const flavorName = getUniqueName(STATION_NAMES, usedStationNames);
+    const stationData = getStationById(selected);
+    const stationName = stationData ? `${stationData.name} «${flavorName}»` : flavorName;
+    stationSpawns.push({ stationId: selected, position: getOpenHexInZone(-6, -6), facing: 3, name: stationName });
+    generationReport.push(`[PROCGEN] Objective Constraint: spawned ${selected} ("${stationName}") as primary target. Remaining budget ${budget}.`);
   } else if (spawnTurretBreach) {
     const turretTypes = ['heavy-turret', 'missile-turret', 'pdc-turret'];
     let numTurrets = Math.min(5, Math.max(3, Math.floor(budget / 3)));
@@ -756,8 +720,11 @@ export function generateProceduralScenario(
     for(let i=0; i<numTurrets; i++) {
         const type = pickRandom(turretTypes);
         const cost = stationTable.find(s => s.id === type)?.cost ?? 3;
+        const flavorName = getUniqueName(PLATFORM_NAMES, usedPlatformNames);
+        const stationData = getStationById(type);
+        const stationName = stationData ? `${stationData.name} «${flavorName}»` : flavorName;
         budget -= cost;
-        stationSpawns.push({ stationId: type, position: getOpenHexInZone(-5, -4), facing: 3 });
+        stationSpawns.push({ stationId: type, position: getOpenHexInZone(-5, -4), facing: 3, name: stationName });
     }
     generationReport.push(`[PROCGEN] Objective Constraint: spawned ${numTurrets} turrets for picket line. Remaining budget ${budget}.`);
   } else {
@@ -770,8 +737,11 @@ export function generateProceduralScenario(
         const type = pickRandom(turretTypes);
         const cost = stationTable.find(s => s.id === type)?.cost ?? 3;
         if (budget >= cost) {
+          const flavorName = getUniqueName(PLATFORM_NAMES, usedPlatformNames);
+          const stationData = getStationById(type);
+          const stationName = stationData ? `${stationData.name} «${flavorName}»` : flavorName;
           budget -= cost;
-          stationSpawns.push({ stationId: type, position: getOpenHexInZone(-5, -3), facing: 3 });
+          stationSpawns.push({ stationId: type, position: getOpenHexInZone(-5, -3), facing: 3, name: stationName });
           spawnedCount++;
         }
       }
@@ -813,8 +783,10 @@ export function generateProceduralScenario(
     generationReport.push(`[PROCGEN] Fleet Roll: d6 = ${roll} -> ${selectionReason}. Remaining budget ${budget}.`);
   }
 
-  const callsigns = assignCallsigns(enemyRoster);
-  generationReport.push(`[PROCGEN] Enemy Roster Selected: ${enemyRoster.length > 0 ? enemyRoster.map((id, index) => `${id} as "${callsigns[index]}"`).join(' | ') : 'none'}.`);
+  const usedNames = new Set<string>();
+  const callsigns = enemyRoster.map(() => getUniqueName(SHIP_NAMES, usedNames));
+  const usedStationNames = new Set<string>();
+  const usedPlatformNames = new Set<string>();
   
   // Pass stationSpawns mapped to positions so generateEnemySpawnPlan respects them
   const objectiveMarkersWithStations = [
@@ -916,7 +888,7 @@ export function generateProceduralScenario(
     terrain,
     enemyShips,
     objectiveMarkers,
-    stationSpawns: stationSpawns as { stationId: string; position: HexCoord; facing?: HexFacing | undefined; }[],
+    stationSpawns: stationSpawns as { stationId: string; position: HexCoord; facing?: HexFacing | undefined; name?: string }[],
     scenarioRules: rules,
     generationReport,
     deploymentBounds,

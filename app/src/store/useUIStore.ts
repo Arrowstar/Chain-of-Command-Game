@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { HexCoord } from '../types/game';
+import type { HexCoord, WeaponFireEvent } from '../types/game';
 
 // ═══════════════════════════════════════════════════════════════════
 // UI Store — Visual/interaction state only (no game logic)
@@ -38,6 +38,9 @@ interface UIStore {
   // Red Alert
   isRedAlert: boolean;
 
+  // Weapon Fire Animations
+  pendingFireAnimations: WeaponFireEvent[];
+
   // Targeting Mode
   targetingMode: 'ship' | 'hex' | 'weapon' | null;
   activeTargetingAction: { shipId: string; actionId: string } | null;
@@ -69,7 +72,12 @@ interface UIStore {
   startTargeting: (mode: 'ship' | 'hex' | 'weapon', action: { shipId: string; actionId: string }, context?: Record<string, any>) => void;
   updateTargetingContext: (context: Record<string, any>) => void;
   clearTargeting: () => void;
-  
+
+  // Fire Animations
+  queueFireAnimation: (event: WeaponFireEvent) => void;
+  consumeFireAnimation: (id: string) => void;
+  cancelAllFireAnimations: () => void;
+
   // Reset
   resetUI: () => void;
 }
@@ -93,6 +101,7 @@ export const useUIStore = create<UIStore>((set) => ({
   isRedAlert: false,
   gameLogOpen: false,
   unreadLogCount: 0,
+  pendingFireAnimations: [],
   targetingMode: null,
   activeTargetingAction: null,
   activeTargetingContext: null,
@@ -130,7 +139,11 @@ export const useUIStore = create<UIStore>((set) => ({
   startTargeting: (mode, action, context = {}) => set({ targetingMode: mode, activeTargetingAction: action, activeTargetingContext: context }),
   updateTargetingContext: (context) => set(s => ({ activeTargetingContext: { ...s.activeTargetingContext, ...context } })),
   clearTargeting: () => set({ targetingMode: null, activeTargetingAction: null, activeTargetingContext: null }),
-  
+
+  queueFireAnimation: (event) => set(s => ({ pendingFireAnimations: [...s.pendingFireAnimations, event] })),
+  consumeFireAnimation: (id) => set(s => ({ pendingFireAnimations: s.pendingFireAnimations.filter(e => e.id !== id) })),
+  cancelAllFireAnimations: () => set({ pendingFireAnimations: [] }),
+
   resetUI: () => set({
     selectedShipId: null,
     hoveredHex: null,
@@ -150,6 +163,7 @@ export const useUIStore = create<UIStore>((set) => ({
     isRedAlert: false,
     gameLogOpen: false,
     unreadLogCount: 0,
+    pendingFireAnimations: [],
     targetingMode: null,
     activeTargetingAction: null,
     activeTargetingContext: null,

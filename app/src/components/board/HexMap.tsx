@@ -13,6 +13,7 @@ import { TerrainLegend } from './TerrainLegend';
 import { getTerrainColor, drawHexPolygon, drawShipTriangle, drawShipShields, attachOrUpdateSprite, drawFacingIndicator, drawShipHull } from '../../engine/pixiGraphics';
 import { getFighterClassById } from '../../data/fighters';
 import { getValidTargetsForWeapon } from '../../engine/combat';
+import { createWeaponFireAnimation, type ActiveFireAnimation } from '../../engine/weaponFireAnimations';
 
 import { getSubsystemById } from '../../data/subsystems';
 import { projectDriftPreview } from '../../engine/movement';
@@ -40,7 +41,8 @@ export default function HexMap() {
     terrain: PIXI.Container | null;
     entities: PIXI.Container | null;
     overlays: PIXI.Container | null;
-  }>({ terrain: null, entities: null, overlays: null });
+    animations: PIXI.Container | null;
+  }>({ terrain: null, entities: null, overlays: null, animations: null });
 
   const entitiesRef = useRef<{
     ships: Map<string, TrackedEntity>;
@@ -55,6 +57,9 @@ export default function HexMap() {
     torpedoes: new Map(),
     stations: new Map(),
   });
+
+  // Tracks animations currently being driven by the PixiJS ticker
+  const activeAnimationsRef = useRef<Map<string, ActiveFireAnimation>>(new Map());
 
   const terrainMap = useGameStore(s => s.terrainMap);
   const playerShips = useGameStore(s => s.playerShips);
@@ -86,6 +91,9 @@ export default function HexMap() {
   const [pointerDown, setPointerDown] = useState({ x: 0, y: 0 });
   const [hoverTooltip, setHoverTooltip] = useState<{ target: MapHoverTarget; position: { x: number; y: number } } | null>(null);
 
+  // Subscribe to pending fire animation queue
+  const pendingFireAnimations = useUIStore(s => s.pendingFireAnimations);
+
   // ─── Init Pixi app ───────────────────────────────────
   useEffect(() => {
     if (!containerRef.current) return;
@@ -106,10 +114,12 @@ export default function HexMap() {
     layersRef.current.terrain = new PIXI.Container();
     layersRef.current.entities = new PIXI.Container();
     layersRef.current.overlays = new PIXI.Container();
+    layersRef.current.animations = new PIXI.Container();
 
     world.addChild(layersRef.current.terrain);
     world.addChild(layersRef.current.entities);
     world.addChild(layersRef.current.overlays);
+    world.addChild(layersRef.current.animations);
 
     appRef.current = app;
     worldRef.current = world;
@@ -143,6 +153,21 @@ export default function HexMap() {
       animateMap(entitiesRef.current.torpedoes, true);
       animateMap(entitiesRef.current.fighters, true);
       animateMap(entitiesRef.current.stations, false);
+
+      // ─── Drive weapon fire animations ────────────────────────────────────
+      // delta is in ticker units (~1 per frame at 60fps); *16.7 ≈ ms
+      const dtMs = delta * (1000 / 60);
+      activeAnimationsRef.current.forEach((anim, id) => {
+        anim.elapsed += dtMs;
+        const progress = Math.min(1, anim.elapsed / anim.duration);
+        anim.gfx.clear();
+        anim.update(anim.gfx, progress);
+        if (progress >= 1) {
+          layersRef.current.animations?.removeChild(anim.gfx);
+          anim.gfx.destroy();
+          activeAnimationsRef.current.delete(id);
+        }
+      });
     });
 
     // Center the camera on hex (0,0) which is the player's starting position
@@ -152,10 +177,27 @@ export default function HexMap() {
       app.destroy(true, { children: true });
       appRef.current = null;
       worldRef.current = null;
-      layersRef.current = { terrain: null, entities: null, overlays: null };
+      layersRef.current = { terrain: null, entities: null, overlays: null, animations: null };
       entitiesRef.current = { ships: new Map(), enemies: new Map(), fighters: new Map(), torpedoes: new Map(), stations: new Map() };
+      activeAnimationsRef.current.clear();
     };
   }, []);
+
+  // ─── Spawn new fire animations from the UIStore queue ──────────────────────
+  useEffect(() => {
+    if (!layersRef.current.animations) return;
+    pendingFireAnimations.forEach(event => {
+      if (event.weaponTags.includes('torpedo')) return;
+      if (activeAnimationsRef.current.has(event.id)) return; // don't double-spawn
+      const fromPx = hexToPixel(event.attackerPos);
+      const toPx   = hexToPixel(event.targetPos);
+      const anim   = createWeaponFireAnimation(event, fromPx, toPx);
+      layersRef.current.animations!.addChild(anim.gfx);
+      activeAnimationsRef.current.set(event.id, anim);
+      // Remove from queue so we don't re-spawn on the next render cycle
+      useUIStore.getState().consumeFireAnimation(event.id);
+    });
+  }, [pendingFireAnimations]);
 
   // ─── Redraw on state change ──────────────────────────
   useEffect(() => {

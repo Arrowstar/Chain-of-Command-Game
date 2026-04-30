@@ -6,6 +6,7 @@ import { getAdversaryById } from '../../data/adversaries';
 import { getStationById } from '../../data/stations';
 import { getTerrainData } from '../../data/terrain';
 import { ASSET_MAP } from '../../engine/pixiGraphics';
+import { useGameStore } from '../../store/useGameStore';
 
 export function describeScarImpact(fromCriticalId: string): string {
   switch (fromCriticalId) {
@@ -495,6 +496,9 @@ function StationTooltipContent({ station }: { station: StationState }) {
 }
 
 function FighterTooltipContent({ fighter, stackCount }: { fighter: FighterToken; stackCount: number }) {
+  const getShipName = useGameStore(state => state.getShipName);
+  const targetName = fighter.assignedTargetId ? getShipName(fighter.assignedTargetId) : 'None';
+
   return (
     <>
       <div style={{ marginBottom: 'var(--space-sm)' }}>
@@ -514,6 +518,12 @@ function FighterTooltipContent({ fighter, stackCount }: { fighter: FighterToken;
         <StatCard label="Speed" value={String(fighter.speed)} />
         <StatCard label="Evasion" value={String(fighter.baseEvasion)} />
         <StatCard label="Stack in Hex" value={String(stackCount)} />
+        {fighter.allegiance === 'allied' && (
+          <>
+            <StatCard label="Behavior" value={fighter.behavior.replace('_', ' ').toUpperCase()} />
+            <StatCard label="Target" value={targetName} />
+          </>
+        )}
       </div>
     </>
   );
