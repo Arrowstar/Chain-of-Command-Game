@@ -9,7 +9,7 @@ describe('FleetBuilder', () => {
     render(<FleetBuilder />);
     const user = userEvent.setup();
 
-    expect(screen.getByText(/1\.\s*CHASSIS/)).toBeInTheDocument();
+    expect(screen.getByText('CHASSIS')).toBeInTheDocument();
     
     // Select Vanguard
     const card = screen.getByTestId('chassis-card-vanguard');
@@ -21,7 +21,7 @@ describe('FleetBuilder', () => {
     await user.click(nextBtn);
 
     // Should go to step 2
-    expect(screen.getByText(/2\.\s*OFFICERS/)).toBeInTheDocument();
+    expect(screen.getByText('OFFICERS')).toBeInTheDocument();
   });
 
   it('completes the wizard and advances phase', async () => {
