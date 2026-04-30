@@ -1,18 +1,25 @@
 import type { FighterClassData } from '../types/game';
 
-// ─── Fighter Class Definitions ────────────────────────────────────────────────
+// ─── Player Fighter Class Definitions ────────────────────────────────────────
 //
 // Each entry's `imageKey` maps to a key in ASSET_MAP (pixiGraphics.ts).
 // Set imageKey to the matching key once artwork is placed in:
 //   app/art/ships/player/fighters/
 // Leave imageKey undefined (or comment it out) to show the placeholder icon.
 //
-// KEY REFERENCE:
+// KEY REFERENCE (Player):
 //   'fighter-strike'         → art/ships/player/player_fighters.png  (DONE)
 //   'fighter-heavy-bomber'   → art/ships/player/fighters/heavy_bomber.png
 //   'fighter-ew'             → art/ships/player/fighters/ew_fighter.png
 //   'fighter-intercept'      → art/ships/player/fighters/intercept_screen.png
 //   'fighter-gunship'        → art/ships/player/fighters/armored_gunship.png
+//
+// KEY REFERENCE (Enemy / Hegemony):
+//   'enemy-fighter-strike'   → art/ships/hegemony/fighters/heg_strike.png
+//   'enemy-fighter-bomber'   → art/ships/hegemony/fighters/heg_bomber.png
+//   'enemy-fighter-ew'       → art/ships/hegemony/fighters/heg_ew.png
+//   'enemy-fighter-intercept'→ art/ships/hegemony/fighters/heg_intercept.png
+//   'enemy-fighter-gunship'  → art/ships/hegemony/fighters/heg_gunship.png
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const FIGHTER_CLASSES: Record<string, FighterClassData> = {
@@ -53,17 +60,17 @@ export const FIGHTER_CLASSES: Record<string, FighterClassData> = {
     specialRules: 'Applies a temporary -1 TN to all friendly volleys against the target it is engaging.',
     imageKey: 'fighter-ew',           // 📁 Place art at: art/ships/player/fighters/ew_fighter.png
   },
-  'intercept-screen': {
-    id: 'intercept-screen',
-    name: 'Intercept Screen Fighter',
+  'interceptor': {
+    id: 'interceptor',
+    name: 'Interceptor',
     role: 'Extremely fast anti-torpedo and anti-fighter defense.',
     hull: 1,
     speed: 5,
-    baseEvasion: 6,
+    baseEvasion: 8,
     weaponRangeMax: 1,
-    volleyPool: ['d4'],
+    volleyPool: ['d4', 'd4', 'd4'],
     behavior: 'screen',
-    imageKey: 'fighter-intercept',    // 📁 Place art at: art/ships/player/fighters/intercept_screen.png
+    imageKey: 'fighter-interceptor',    // 📁 Place art at: art/ships/player/fighters/interceptor.png
   },
   'armored-gunship': {
     id: 'armored-gunship',
@@ -80,31 +87,86 @@ export const FIGHTER_CLASSES: Record<string, FighterClassData> = {
 };
 
 export function getFighterClassById(id: string): FighterClassData | undefined {
-  return FIGHTER_CLASSES[id];
+  return FIGHTER_CLASSES[id] ?? ENEMY_FIGHTER_CLASSES[id];
 }
 
-// ─── Enemy Fighter Randomisation ─────────────────────────────────────────────
+// ─── Hegemony (Enemy) Fighter Class Definitions ───────────────────────────────
 //
-// Maps each fighter class to the behavior the enemy AI should use when
-// deploying that type.  These deliberately differ from the player defaults in
-// a couple of cases:
+// These are deliberately separate from the player classes so that:
+//   1. They can have distinct imageKeys pointing to Hegemony-specific artwork.
+//   2. pickEnemyFighterClass() only ever draws from this pool.
 //
-//   ew-fighter      → 'flanking'  (close to a flank position to apply debuff)
-//   intercept-screen→ 'attack'    (no allied ships to screen, so target nearest)
-//
+// Stats mirror their player counterparts by design — the visual distinction
+// is purely cosmetic (tint colour + sprite).
 // ─────────────────────────────────────────────────────────────────────────────
 
-const ENEMY_BEHAVIOR_OVERRIDES: Record<string, FighterClassData['behavior']> = {
-  'strike-fighter':   'attack',
-  'heavy-bomber':     'harass',
-  'ew-fighter':       'flanking',
-  'intercept-screen': 'attack',
-  'armored-gunship':  'attack',
+export const ENEMY_FIGHTER_CLASSES: Record<string, FighterClassData> = {
+  'enemy-strike-fighter': {
+    id: 'enemy-strike-fighter',
+    name: 'Hegemony Strike Fighter',
+    role: 'Standard Hegemony close-range combatant.',
+    hull: 1,
+    speed: 4,
+    baseEvasion: 6,
+    weaponRangeMax: 1,
+    volleyPool: ['d4', 'd4', 'd4'],
+    behavior: 'attack',
+    imageKey: 'enemy-fighter-strike', // 📁 art/ships/hegemony/fighters/heg_strike.png (uses HegInterceptorWing.png as fallback)
+  },
+  'enemy-heavy-bomber': {
+    id: 'enemy-heavy-bomber',
+    name: 'Hegemony Heavy Bomber',
+    role: 'Long-range bombardment. High damage, but slow and vulnerable.',
+    hull: 2,
+    speed: 2,
+    baseEvasion: 4,
+    weaponRangeMax: 3,
+    volleyPool: ['d8', 'd8'],
+    behavior: 'harass',
+    imageKey: 'enemy-fighter-bomber', // 📁 art/ships/hegemony/fighters/heg_bomber.png
+  },
+  'enemy-ew-fighter': {
+    id: 'enemy-ew-fighter',
+    name: 'Hegemony Electronic Warfare Fighter',
+    role: 'Support and debuffing via proximity.',
+    hull: 1,
+    speed: 3,
+    baseEvasion: 7,
+    weaponRangeMax: 2,
+    volleyPool: ['d4', 'd4'],
+    behavior: 'flanking',
+    specialRules: 'Applies a temporary -1 TN to all friendly volleys against the target it is engaging.',
+    imageKey: 'enemy-fighter-ew',     // 📁 art/ships/hegemony/fighters/heg_ew.png
+  },
+  'enemy-interceptor': {
+    id: 'enemy-interceptor',
+    name: 'Hegemony Interceptor',
+    role: 'Extremely fast anti-torpedo and anti-fighter defense.',
+    hull: 1,
+    speed: 5,
+    baseEvasion: 8,
+    weaponRangeMax: 1,
+    volleyPool: ['d4', 'd4', 'd4'],
+    behavior: 'attack',
+    imageKey: 'enemy-fighter-interceptor', // 📁 art/ships/hegemony/fighters/heg_intercept.png
+  },
+  'enemy-armored-gunship': {
+    id: 'enemy-armored-gunship',
+    name: 'Hegemony Armored Gunship',
+    role: 'Durable close-range combatant.',
+    hull: 2,
+    speed: 3,
+    baseEvasion: 3,
+    weaponRangeMax: 1,
+    volleyPool: ['d6', 'd6', 'd6'],
+    behavior: 'attack',
+    imageKey: 'enemy-fighter-gunship', // 📁 art/ships/hegemony/fighters/heg_gunship.png
+  },
 };
 
 /**
- * Pick a random fighter class for an enemy spawn and return it alongside
- * the enemy-appropriate behavior override for that class.
+ * Pick a random Hegemony fighter class for an enemy spawn and return it
+ * alongside the appropriate AI behavior for that type.
  *
  * @param excludeIds  Optional list of class IDs to exclude from the pool
  *                    (e.g. to avoid spawning the same type twice in one wave).
@@ -113,12 +175,12 @@ export function pickEnemyFighterClass(excludeIds: string[] = []): {
   fighterClass: FighterClassData;
   behavior: FighterClassData['behavior'];
 } {
-  const pool = Object.values(FIGHTER_CLASSES).filter(
+  const pool = Object.values(ENEMY_FIGHTER_CLASSES).filter(
     fc => !excludeIds.includes(fc.id),
   );
-  // Fallback to full pool if exclusions empty it
-  const source = pool.length > 0 ? pool : Object.values(FIGHTER_CLASSES);
+  // Fallback to full enemy pool if exclusions empty it
+  const source = pool.length > 0 ? pool : Object.values(ENEMY_FIGHTER_CLASSES);
   const fighterClass = source[Math.floor(Math.random() * source.length)];
-  const behavior = ENEMY_BEHAVIOR_OVERRIDES[fighterClass.id] ?? 'attack';
-  return { fighterClass, behavior };
+  // Each enemy class already has the correct behavior baked into its definition
+  return { fighterClass, behavior: fighterClass.behavior };
 }

@@ -58,7 +58,7 @@ export const STANDARD_ACTIONS: ActionDefinition[] = [
     name: 'Vector Orders',
     ctCost: 1,
     stressCost: 0,
-    effect: 'Assign all of your Strike Fighter tokens to a single target. They will move toward and attack that target each round until reassigned or destroyed.',
+    effect: 'Assign ONE of your Fighter squadrons to a new behavior and target. They will execute that behavior until reassigned or destroyed.',
     requiresTarget: true,
   },
   {

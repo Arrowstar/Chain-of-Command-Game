@@ -14,9 +14,8 @@ export const TACTIC_DECK: TacticCard[] = [
   {
     id: 'overwhelming-firepower',
     name: 'Overwhelming Firepower',
-    effect: 'AI ships do not move this round. All AI weapons gain +1 Skill Die (add 1x D6 to all enemy Volley Pools).',
+    effect: 'All AI weapons gain +1 Skill Die (add 1x D6 to all enemy Volley Pools).',
     mechanicalEffect: {
-      extraMovement: -99,
       extraDice: ['d6'],
     },
   },
@@ -74,9 +73,8 @@ export const TACTIC_DECK: TacticCard[] = [
   {
     id: 'suppressive-barrage',
     name: 'Suppressive Barrage',
-    effect: 'AI ships do not move this round. All AI weapons gain +1 Skill Die, and enemy Critical Hits inflict +1 Stress to all officers aboard the target ship this round.',
+    effect: 'All AI weapons gain +1 Skill Die, and enemy Critical Hits inflict +1 Stress to all officers aboard the target ship this round.',
     mechanicalEffect: {
-      extraMovement: -99,
       extraDice: ['d6'],
       criticalStressBonus: 1,
     },

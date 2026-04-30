@@ -172,11 +172,13 @@ export default function VolleyBreakdown({ results, damageResult, outOfArc, weapo
                 return (
                 <div key={`die-group-${activeTabIndex}-${i}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'rgba(0,0,0,0.15)', padding: '6px', borderRadius: '4px' }}>
                   <div className="mono" style={{ fontSize: '0.65rem', color: 'var(--color-text-dim)', marginBottom: '6px' }}>{label}</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  {dieResult.rolls.map((rollValue: number, rollIdx: number) => (
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '4px' }}>
+                  {dieResult.rolls.map((rollValue: number, rollIdx: number) => {
+                    const isHit = rollValue >= volley.targetNumber;
+                    return (
                     <React.Fragment key={`roll-${activeTabIndex}-${i}-${rollIdx}`}>
                       {rollIdx > 0 && (
-                        <span className="mono" style={{ color: 'var(--color-alert-amber)', fontSize: '1rem', lineHeight: 1 }}>+</span>
+                        <span className="mono" style={{ color: 'var(--color-alert-amber)', fontSize: '1rem', lineHeight: 1, alignSelf: 'center', marginTop: '-15px' }}>+</span>
                       )}
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
                         {rollIdx > 0 && (
@@ -186,11 +188,23 @@ export default function VolleyBreakdown({ results, damageResult, outOfArc, weapo
                           dieType={dieResult.dieType}
                           finalResult={rollValue}
                           isExploded={rollIdx < dieResult.rolls.length - 1}
-                          isHit={rollValue >= volley.targetNumber}
+                          isHit={isHit}
+                          isCriticalHit={isHit && dieResult.isCritical}
                         />
+                        {isHit && (
+                          <span className="mono" style={{ 
+                            fontSize: '0.55rem', 
+                            marginTop: '4px',
+                            fontWeight: 'bold',
+                            letterSpacing: '0.5px',
+                            color: dieResult.isCritical ? 'var(--color-alert-amber)' : 'var(--color-holo-cyan)' 
+                          }}>
+                            {dieResult.isCritical ? 'PIERCING' : 'STANDARD'}
+                          </span>
+                        )}
                       </div>
                     </React.Fragment>
-                  ))}
+                  )})}
                   </div>
                 </div>
               )})}
@@ -247,6 +261,13 @@ export default function VolleyBreakdown({ results, damageResult, outOfArc, weapo
                   </div>
                 ) : (
                   <div className="mono" style={{ color: 'var(--color-holo-cyan)' }}>ATTACK MISSED / MITIGATED</div>
+                )}
+                
+                {volley.totalHits > 0 && (
+                  <div style={{ marginTop: 'var(--space-md)', padding: 'var(--space-xs)', background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--radius-sm)', fontSize: '0.7rem', color: 'var(--color-text-dim)', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div><span className="mono" style={{ color: 'var(--color-alert-amber)' }}>PIERCING:</span> Bypasses shields completely.</div>
+                    <div><span className="mono" style={{ color: 'var(--color-holo-cyan)' }}>STANDARD:</span> Strikes shields before overflowing to hull.</div>
+                  </div>
                 )}
               </motion.div>
             )}

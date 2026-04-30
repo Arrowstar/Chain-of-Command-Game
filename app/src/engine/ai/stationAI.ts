@@ -103,158 +103,160 @@ export function executeStationTurn(
     const stationData = getStationById(station.stationId);
     if (!stationData) continue;
 
+    // ── Weapon Attacks (only if a valid target exists in range) ──
     const possibleTargets = [...allPlayerShips, ...allEnemyShips.filter(e => e.isAllied && !e.isDestroyed)];
     const aggroEntries = calculateStationAggroScores(station, possibleTargets);
-    if (aggroEntries.length === 0) continue;
-
     const primaryTarget = aggroEntries[0];
-    const target = possibleTargets.find(p => p.id === primaryTarget.targetId);
-    if (!target) continue;
+    const target = primaryTarget ? possibleTargets.find(p => p.id === primaryTarget.targetId) : undefined;
 
-    const dist = hexDistance(station.position, target.position);
+    if (target) {
+      const dist = hexDistance(station.position, target.position);
 
-    // ── Primary Weapons (all arcs) ──────────────────────────────
-    if (dist >= stationData.weaponRangeMin && dist <= stationData.weaponRangeMax) {
-      const pool: import('../../types/game').VolleyDieInput[] = stationData.volleyPool.map(dt => ({ type: dt, source: 'weapon' }));
-      // Tactic card extra dice
-      if (tacticCard?.mechanicalEffect.extraDice) {
-        pool.push(...tacticCard.mechanicalEffect.extraDice.map(dt => ({ type: dt, source: 'tactic' })));
-      }
-
-      const defTerrain = terrainMap.get(hexKey(target.position));
-      const targetEvasion = target.baseEvasion + (target.evasionModifiers ?? 0);
-
-      const tn = calculateTN(targetEvasion, dist, defTerrain, 0, 0, 0, 0, false, false);
-      const volley = rollVolley(pool, tn.total);
-      const sector = determineStruckShieldSector(station.position, target.position, target.facing);
-
-      const piercingHits = volley.totalCriticalHits;
-      const standardHits = volley.totalStandardHits;
-
-      const targetInIonNebula = defTerrain === 'ionNebula';
-      const shieldVal = targetInIonNebula ? 0 : target.shields[sector];
-
-      const shieldDmg = Math.min(standardHits, shieldVal);
-      const overflow = standardHits - shieldDmg;
-
-      let armorRoll = 0;
-      let hullDmg = 0;
-      if (overflow > 0) {
-        const armorDisabled = target.criticalDamage?.some(c => c.id === 'armor-compromised');
-        if (!armorDisabled) {
-          armorRoll = rollDie(target.armorDie);
+      // ── Primary Weapons (all arcs) ────────────────────────────
+      if (dist >= stationData.weaponRangeMin && dist <= stationData.weaponRangeMax) {
+        const pool: import('../../types/game').VolleyDieInput[] = stationData.volleyPool.map(dt => ({ type: dt, source: 'weapon' }));
+        // Tactic card extra dice
+        if (tacticCard?.mechanicalEffect.extraDice) {
+          pool.push(...tacticCard.mechanicalEffect.extraDice.map(dt => ({ type: dt, source: 'tactic' })));
         }
-        hullDmg = Math.max(1, overflow - armorRoll);
+
+        const defTerrain = terrainMap.get(hexKey(target.position));
+        const targetEvasion = target.baseEvasion + (target.evasionModifiers ?? 0);
+
+        const tn = calculateTN(targetEvasion, dist, defTerrain, 0, 0, 0, 0, false, false);
+        const volley = rollVolley(pool, tn.total);
+        const sector = determineStruckShieldSector(station.position, target.position, target.facing);
+
+        const piercingHits = volley.totalCriticalHits;
+        const standardHits = volley.totalStandardHits;
+
+        const targetInIonNebula = defTerrain === 'ionNebula';
+        const shieldVal = targetInIonNebula ? 0 : target.shields[sector];
+
+        const shieldDmg = Math.min(standardHits, shieldVal);
+        const overflow = standardHits - shieldDmg;
+
+        let armorRoll = 0;
+        let hullDmg = 0;
+        if (overflow > 0) {
+          const armorDisabled = target.criticalDamage?.some(c => c.id === 'armor-compromised');
+          if (!armorDisabled) {
+            armorRoll = rollDie(target.armorDie);
+          }
+          hullDmg = Math.max(1, overflow - armorRoll);
+        }
+
+        hullDmg += piercingHits;
+
+        playerDamage.push({
+          targetId: target.id,
+          hullDamage: hullDmg,
+          shieldDamage: shieldDmg,
+          sector,
+        });
+
+        actions.push({
+          stationId: station.id,
+          type: 'attack',
+          details: {
+            target: target.id,
+            hits: volley.totalHits,
+            hullDmg,
+            shieldDmg,
+            sector,
+            isHeavy: false,
+            damageResult: {
+              tnBreakdown: tn,
+              volleyResult: volley,
+              shieldHits: shieldDmg,
+              struckSector: sector,
+              hullDamage: hullDmg,
+              overflowHits: overflow,
+              armorRoll,
+              criticalTriggered: piercingHits > 0,
+            },
+          },
+        });
       }
 
-      hullDmg += piercingHits;
+      // ── Heavy Weapons (forward arc only) ──────────────────────
+      if (
+        stationData.heavyVolleyPool &&
+        stationData.heavyVolleyPool.length > 0 &&
+        stationData.heavyWeaponRangeMin !== undefined &&
+        stationData.heavyWeaponRangeMax !== undefined &&
+        dist >= stationData.heavyWeaponRangeMin &&
+        dist <= stationData.heavyWeaponRangeMax &&
+        isInFiringArc(station.position, station.facing, target.position, FORWARD_ARCS)
+      ) {
+        const pool: import('../../types/game').VolleyDieInput[] = stationData.heavyVolleyPool.map(dt => ({ type: dt, source: 'weapon' }));
+        if (tacticCard?.mechanicalEffect.extraDice) {
+          pool.push(...tacticCard.mechanicalEffect.extraDice.map(dt => ({ type: dt, source: 'tactic' })));
+        }
 
-      playerDamage.push({
-        targetId: target.id,
-        hullDamage: hullDmg,
-        shieldDamage: shieldDmg,
-        sector,
-      });
+        const defTerrain2 = terrainMap.get(hexKey(target.position));
+        const targetEvasion2 = target.baseEvasion + (target.evasionModifiers ?? 0);
 
-      actions.push({
-        stationId: station.id,
-        type: 'attack',
-        details: {
-          target: target.id,
-          hits: volley.totalHits,
-          hullDmg,
-          shieldDmg,
+        const tn = calculateTN(targetEvasion2, dist, defTerrain2, 0, 0, 0, 0, false, false);
+        const volley = rollVolley(pool, tn.total);
+        const sector = determineStruckShieldSector(station.position, target.position, target.facing);
+
+        const piercingHits = volley.totalCriticalHits;
+        const standardHits = volley.totalStandardHits;
+
+        const targetInIonNebula = defTerrain2 === 'ionNebula';
+        const shieldVal = targetInIonNebula ? 0 : target.shields[sector];
+
+        const shieldDmg = Math.min(standardHits, shieldVal);
+        const overflow = standardHits - shieldDmg;
+
+        let armorRoll = 0;
+        let hullDmg = 0;
+        if (overflow > 0) {
+          const armorDisabled = target.criticalDamage?.some(c => c.id === 'armor-compromised');
+          if (!armorDisabled) {
+            armorRoll = rollDie(target.armorDie);
+          }
+          hullDmg = Math.max(1, overflow - armorRoll);
+        }
+
+        hullDmg += piercingHits;
+
+        playerDamage.push({
+          targetId: target.id,
+          hullDamage: hullDmg,
+          shieldDamage: shieldDmg,
           sector,
-          isHeavy: false,
-          damageResult: {
-            tnBreakdown: tn,
-            volleyResult: volley,
-            shieldHits: shieldDmg,
-            struckSector: sector,
-            hullDamage: hullDmg,
-            overflowHits: overflow,
-            armorRoll,
-            criticalTriggered: piercingHits > 0,
+        });
+
+        actions.push({
+          stationId: station.id,
+          type: 'attack',
+          details: {
+            target: target.id,
+            hits: volley.totalHits,
+            hullDmg,
+            shieldDmg,
+            sector,
+            isHeavy: true,
+            damageResult: {
+              tnBreakdown: tn,
+              volleyResult: volley,
+              shieldHits: shieldDmg,
+              struckSector: sector,
+              hullDamage: hullDmg,
+              overflowHits: overflow,
+              armorRoll,
+              criticalTriggered: piercingHits > 0,
+            },
           },
-        },
-      });
+        });
+      }
     }
 
-    // ── Heavy Weapons (forward arc only) ────────────────────────
-    if (
-      stationData.heavyVolleyPool &&
-      stationData.heavyVolleyPool.length > 0 &&
-      stationData.heavyWeaponRangeMin !== undefined &&
-      stationData.heavyWeaponRangeMax !== undefined &&
-      dist >= stationData.heavyWeaponRangeMin &&
-      dist <= stationData.heavyWeaponRangeMax &&
-      isInFiringArc(station.position, station.facing, target.position, FORWARD_ARCS)
-    ) {
-      const pool: import('../../types/game').VolleyDieInput[] = stationData.heavyVolleyPool.map(dt => ({ type: dt, source: 'weapon' }));
-      if (tacticCard?.mechanicalEffect.extraDice) {
-        pool.push(...tacticCard.mechanicalEffect.extraDice.map(dt => ({ type: dt, source: 'tactic' })));
-      }
-
-      const defTerrain2 = terrainMap.get(hexKey(target.position));
-      const targetEvasion2 = target.baseEvasion + (target.evasionModifiers ?? 0);
-
-      const tn = calculateTN(targetEvasion2, dist, defTerrain2, 0, 0, 0, 0, false, false);
-      const volley = rollVolley(pool, tn.total);
-      const sector = determineStruckShieldSector(station.position, target.position, target.facing);
-
-      const piercingHits = volley.totalCriticalHits;
-      const standardHits = volley.totalStandardHits;
-
-      const targetInIonNebula = defTerrain2 === 'ionNebula';
-      const shieldVal = targetInIonNebula ? 0 : target.shields[sector];
-
-      const shieldDmg = Math.min(standardHits, shieldVal);
-      const overflow = standardHits - shieldDmg;
-
-      let armorRoll = 0;
-      let hullDmg = 0;
-      if (overflow > 0) {
-        const armorDisabled = target.criticalDamage?.some(c => c.id === 'armor-compromised');
-        if (!armorDisabled) {
-          armorRoll = rollDie(target.armorDie);
-        }
-        hullDmg = Math.max(1, overflow - armorRoll);
-      }
-
-      hullDmg += piercingHits;
-
-      playerDamage.push({
-        targetId: target.id,
-        hullDamage: hullDmg,
-        shieldDamage: shieldDmg,
-        sector,
-      });
-
-      actions.push({
-        stationId: station.id,
-        type: 'attack',
-        details: {
-          target: target.id,
-          hits: volley.totalHits,
-          hullDmg,
-          shieldDmg,
-          sector,
-          isHeavy: true,
-          damageResult: {
-            tnBreakdown: tn,
-            volleyResult: volley,
-            shieldHits: shieldDmg,
-            struckSector: sector,
-            hullDamage: hullDmg,
-            overflowHits: overflow,
-            armorRoll,
-            criticalTriggered: piercingHits > 0,
-          },
-        },
-      });
-    }
-
-    // ── Fighter Launch ──────────────────────────────────────────
+    // ── Fighter Launch (independent of weapon attack target) ────
+    // Stations with a fighter hangar launch every round regardless of
+    // whether they could fire their weapons at a target this step.
     if (
       stationData.fighterHangar &&
       station.remainingFighters > 0

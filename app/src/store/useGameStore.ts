@@ -359,16 +359,16 @@ function buildMinefieldHazards(
       const key = hexKey(hex);
       return !occupiedKeys.has(key) && (terrainMap.get(key) || 'open') === 'open';
     })
-    .filter((hex, index, array) => array.findIndex(other => hexEquals(other, hex)) === index)
-    .sort((a, b) => {
-      const distanceA = Math.min(...capitalShips.map(ship => hexDistance(ship.position, a)));
-      const distanceB = Math.min(...capitalShips.map(ship => hexDistance(ship.position, b)));
-      if (distanceA !== distanceB) return distanceA - distanceB;
-      if (a.q !== b.q) return b.q - a.q;
-      return a.r - b.r;
-    });
+    .filter((hex, index, array) => array.findIndex(other => hexEquals(other, hex)) === index);
 
-  return candidates.slice(0, count).map((position, index) => ({
+  const weightedCandidates = candidates.map(hex => {
+    const minDistance = Math.min(...capitalShips.map(ship => hexDistance(ship.position, hex)));
+    const weight = Math.max(1, radius + 1 - minDistance);
+    const score = Math.pow(Math.random(), 1 / weight);
+    return { hex, score };
+  }).sort((a, b) => b.score - a.score);
+
+  return weightedCandidates.slice(0, count).map(({ hex: position }, index) => ({
     id: `minefield-${round}-${index}-${position.q}-${position.r}`,
     name: 'Calibrated Mine',
     position,
@@ -696,7 +696,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const currentSpeed = combatModifiers?.playerStartSpeed3
         ? Math.min(3, finalSpeedCap)
         : Math.min(ship.currentSpeed, finalSpeedCap);
-      return { ...ship, currentSpeed };
+      return { 
+        ...ship, 
+        currentSpeed,
+        fighterLaunchCounts: {} // Reset fighter hangar capacity for the new combat
+      };
     });
 
     const deployedPlayerShips = deploymentMode && deploymentBounds
@@ -2984,22 +2988,24 @@ export const useGameStore = create<GameStore>((set, get) => ({
         break;
       }
       case 'vector-orders': {
-        // context.targetShipId set by HexMap ship-targeting click handler
         const targetId = context?.targetShipId;
-        if (!targetId) {
+        const fighterId = context?.fighterId;
+        const behavior = context?.behavior as import('../types/game').FighterBehavior | undefined;
+        if (!targetId || !fighterId || !behavior) {
           get().addLog('system', `Vector Orders issued from ${ship.name}   awaiting target designation.`);
-          break;
+          return;
         }
-        // Assign all allied fighters sourced from this ship to the target
+
         set(s => ({
           fighterTokens: s.fighterTokens.map(f =>
-            f.allegiance === 'allied' && f.sourceShipId === ship.id
-              ? { ...f, assignedTargetId: targetId }
+            f.id === fighterId
+              ? { ...f, assignedTargetId: targetId, behavior: behavior }
               : f
           ),
         }));
+        
         const targetName = get().getShipName(targetId);
-        get().addLog('system', `⬡ Vector Orders from ${ship.name}: fighters vectored to ${targetName}.`);
+        get().addLog('system', `⬡ Vector Orders from ${ship.name}: fighter vectored to ${targetName} with ${behavior} behavior.`);
         break;
       }
       case 'jump-to-warp': {
@@ -4689,9 +4695,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   debugAutoWin: () => {
-    get().addLog('system', '⚡ [DEBUG] Auto-Win triggered — all enemy ships destroyed.');
+    get().addLog('system', '⚡ [DEBUG] Auto-Win triggered — forcing victory conditions.');
     set(state => ({
       enemyShips: state.enemyShips.map(e => ({ ...e, isDestroyed: true, currentHull: 0 })),
+      stations: (state.stations || []).map(s => ({ ...s, isDestroyed: true, currentHull: 0 })),
+      fighterTokens: state.fighterTokens.map(f => ({ ...f, isDestroyed: true, currentHull: 0 })),
+      dataSiphonedRelayNames: ['Comm Relay Alpha', 'Comm Relay Beta', 'Comm Relay Gamma'],
+      salvageCratesCollected: 3,
+      warpedOutShipIds: [...state.warpedOutShipIds, ...state.playerShips.map(s => s.id)],
+      successfulEscapes: state.playerShips.length,
+      objectiveMarkers: state.objectiveMarkers.map(m => m.name === 'Hegemony Comms Array' ? { ...m, isDestroyed: true } : m),
+      round: Math.max(state.round, 7),
     }));
     get().checkGameOver();
   },

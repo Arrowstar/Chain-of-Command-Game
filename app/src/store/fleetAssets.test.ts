@@ -213,8 +213,8 @@ describe('Fleet Assets', () => {
     const tactic: TacticCard = {
       id: 'overwhelming-firepower',
       name: 'Overwhelming Firepower',
-      effect: 'AI ships do not move this round. All AI weapons gain +1 Skill Die.',
-      mechanicalEffect: { extraMovement: -99, extraDice: ['d6'] },
+      effect: 'All AI weapons gain +1 Skill Die.',
+      mechanicalEffect: { extraDice: ['d6'] },
     };
     useGameStore.setState({ currentTactic: tactic });
 

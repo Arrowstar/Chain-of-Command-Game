@@ -157,6 +157,21 @@ import hegDreadnoughtImg from '../../art/ships/hegemony/HegDreadnought.png';
 import hegFrigateImg from '../../art/ships/hegemony/HegFrigate.png';
 import hegHeavyCruiserImg from '../../art/ships/hegemony/HegHeaveyCruiser.png';
 import hegInterceptorWingImg from '../../art/ships/hegemony/HegInterceptorWing.png';
+import hegCarrierImg from '../../art/ships/hegemony/heg_carrier.png';
+
+// Hegemony Fighters
+import hegBomberImg from '../../art/ships/hegemony/fighters/heg_bomber.png';
+import hegEwFighterImg from '../../art/ships/hegemony/fighters/heg_ew_fighter.png';
+import hegGunboatImg from '../../art/ships/hegemony/fighters/heg_gunboat.png';
+import hegInterceptorImg from '../../art/ships/hegemony/fighters/heg_interceptor.png';
+
+// Hegemony Stations & Platforms
+import hegStationOutpostImg from '../../art/ships/hegemony/stations/heg_station_outpost.png';
+import hegStationForwardBaseImg from '../../art/ships/hegemony/stations/heg_station_forwardbase.png';
+import hegStationStationImg from '../../art/ships/hegemony/stations/heg_station_station.png';
+import hegPlatformHeavyDefenseImg from '../../art/ships/hegemony/platforms/heg_platform_heavyDefense.png';
+import hegPlatformMissileImg from '../../art/ships/hegemony/platforms/heg_platform_missile.png';
+import hegPlatformPlanetDefenseImg from '../../art/ships/hegemony/platforms/heg_platform_planetdefense.png';
 
 // Player / Allied Ships
 import aegisCarrierImg from '../../art/ships/player/AegisCarrier.png';
@@ -167,28 +182,61 @@ import paladinCruiserImg from '../../art/ships/player/PaladinCruiser.png';
 import vanguardCruiserImg from '../../art/ships/player/VanguardCruiser.png';
 import wraithCorvetteImg from '../../art/ships/player/WraithCorvette.png';
 import zephyrFrigateImg from '../../art/ships/player/ZephyrFriger.png';
-import playerFightersImg from '../../art/ships/player/player_fighters.png';
+
+// Player Fighters
+import playerFightersImg from '../../art/ships/player/fighters/player_fighters.png';
+import playerBombersImg from '../../art/ships/player/fighters/player_bombers.png';
+import playerEwFightersImg from '../../art/ships/player/fighters/player_ewFighters.png';
+import playerGunshipImg from '../../art/ships/player/fighters/player_gunship.png';
+import playerInterceptorFighterImg from '../../art/ships/player/fighters/player_interceptorFighter.png';
 
 export const ASSET_MAP: Record<string, string> = {
-  // Hegemony (Enemies)
+  // Hegemony Capital Ships
   'hegemony-corvette': hegCorvetteImg,
   'hegemony-dreadnought': hegDreadnoughtImg,
   'hunter-killer': hegFrigateImg,
   'monitor': hegHeavyCruiserImg,
-  'carrier': hegDreadnoughtImg, 
-  'strike-fighter': hegInterceptorWingImg,
-  'enemy-fighter': hegInterceptorWingImg,
+  'carrier': hegCarrierImg,
 
-  // Player / Allied Fighters
-  // ── Strike Fighter uses the existing image ──
+  // ── Hegemony (Enemy) Fighters ──────────────────────────────────────────────
+  // All currently share HegInterceptorWing art (red-tinted via allegiance).
+  // Swap each entry individually once dedicated art is placed in:
+  //   art/ships/hegemony/fighters/
+  'enemy-fighter-strike':    hegInterceptorWingImg, // 📁 replace: heg_strike.png
+  'enemy-fighter-bomber':    hegBomberImg,
+  'enemy-fighter-ew':        hegEwFighterImg,
+  'enemy-fighter-interceptor': hegInterceptorImg,
+  'enemy-fighter-gunship':   hegGunboatImg,
+
+  // Legacy / fallback enemy fighter keys (kept for safety)
+  'strike-fighter':  hegInterceptorWingImg,
+  'enemy-fighter':   hegInterceptorWingImg,
+
+  // ── Player / Allied Fighters ───────────────────────────────────────────────
   'allied-fighter': playerFightersImg,   // legacy key (generic fallback)
   'fighter-strike': playerFightersImg,   // ✅ Strike Fighter — existing art
 
-  // ── New fighter classes — wire up once artwork is in art/ships/player/fighters/ ──
-  // 'fighter-heavy-bomber': heavyBomberImg,     // uncomment + add import when ready
-  // 'fighter-ew':           ewFighterImg,        // uncomment + add import when ready
-  // 'fighter-intercept':    interceptScreenImg,  // uncomment + add import when ready
-  // 'fighter-gunship':      armoredGunshipImg,   // uncomment + add import when ready
+  // ── New player fighter classes — wire up once artwork is in art/ships/player/fighters/ ──
+  'fighter-heavy-bomber': playerBombersImg,
+  'fighter-ew':           playerEwFightersImg,
+  'fighter-interceptor':    playerInterceptorFighterImg,
+  'fighter-gunship':      playerGunshipImg,
+
+  // Hegemony Stations & Platforms
+  'hegemony-station-outpost': hegStationOutpostImg,
+  'hegemony-station-forwardbase': hegStationForwardBaseImg,
+  'hegemony-station-station': hegStationStationImg,
+  'hegemony-platform-heavyDefense': hegPlatformHeavyDefenseImg,
+  'hegemony-platform-missile': hegPlatformMissileImg,
+  'hegemony-platform-planetdefense': hegPlatformPlanetDefenseImg,
+
+  // Fallbacks for station mapping
+  'heg_station_outpost': hegStationOutpostImg,
+  'heg_station_forwardbase': hegStationForwardBaseImg,
+  'heg_station_station': hegStationStationImg,
+  'heg_platform_heavyDefense': hegPlatformHeavyDefenseImg,
+  'heg_platform_missile': hegPlatformMissileImg,
+  'heg_platform_planetdefense': hegPlatformPlanetDefenseImg,
 
   // Player Chassis IDs
   'vanguard': vanguardCruiserImg,

@@ -692,6 +692,7 @@ export interface StationData {
     fighterAllegiance: 'enemy';
   };
   special?: string;
+  imageKey?: string;
 }
 
 export interface StationState {

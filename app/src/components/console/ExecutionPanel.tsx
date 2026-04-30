@@ -7,6 +7,7 @@ import { getActionById } from '../../data/actions';
 import { getSubsystemById } from '../../data/subsystems';
 import { getWeaponById } from '../../data/weapons';
 import { getAdversaryById } from '../../data/adversaries';
+import { getStationById } from '../../data/stations';
 import { getValidTargetsForWeapon } from '../../engine/combat';
 import { applyPlasmaAccelerators } from '../../engine/techEffects';
 import type { ShieldState, ShipArc } from '../../types/game';
@@ -82,6 +83,7 @@ export default function ExecutionPanel() {
   const [rotateShieldsSelections, setRotateShieldsSelections] = useState<Record<string, { donorSector: import('../../types/game').ShipArc | null; receiverSector: import('../../types/game').ShipArc | null }>>({});
   const [reinforceShieldsSelections, setReinforceShieldsSelections] = useState<Record<string, import('../../types/game').ShipArc | null>>({});
   const [fighterLaunchSelections, setFighterLaunchSelections] = useState<Record<string, FighterLaunchSelection>>({});
+  const [vectorOrdersSelections, setVectorOrdersSelections] = useState<Record<string, { fighterId: string; behavior: string }>>({});
 
   const shipsInStep = isAllied ? playerShips.filter(s => !s.isDestroyed && getChassisById(s.chassisId)?.size === size) : [];
 
@@ -96,6 +98,13 @@ export default function ExecutionPanel() {
     const adversary = getAdversaryById(s.adversaryId);
     if (size === 'small' && adversary?.size === 'fighter') return true;
     return adversary?.size === size;
+  }) : [];
+
+  // Stations that will act during this enemy step (matched by their data size)
+  const activeStations = !isAllied ? stations.filter(s => {
+    if (s.isDestroyed || s.hasActed) return false;
+    const stationData = getStationById(s.stationId);
+    return stationData?.size === size;
   }) : [];
 
   const handleNextStep = () => {
@@ -124,10 +133,10 @@ export default function ExecutionPanel() {
       }) && alliedFighters.every(f => f.hasDrifted) && activeTorpedoes.every(t => t.hasMoved)
     : resolvedSteps.includes(executionStep);
 
-  // If no ships are in this step, it is effectively resolved
+  // If no ships (or stations) are in this step, it is effectively resolved
   const isEmptyStep = isAllied 
     ? activeAllied.length === 0 && alliedFighters.length === 0 && activeTorpedoes.length === 0 
-    : activeEnemy.length === 0 && enemyFighters.length === 0 && enemyTorpedoes.length === 0;
+    : activeEnemy.length === 0 && enemyFighters.length === 0 && enemyTorpedoes.length === 0 && activeStations.length === 0;
 
   let noValidTargets = false;
   if (targetingMode && activeTargetingAction?.actionId === 'fire-primary' && activeTargetingContext?.weaponId) {
@@ -172,6 +181,11 @@ export default function ExecutionPanel() {
                   const isDefensive = beh === 'escort' || beh === 'screen';
                   if (isDefensive) return `🛡 SQUADRON DEPLOYED. SELECT FRIENDLY SHIP TO ${beh === 'escort' ? 'ESCORT' : 'SCREEN'}...`;
                   return '🎯 SQUADRON DEPLOYED. SELECT ENEMY ENGAGEMENT TARGET...';
+                } else if (activeTargetingAction?.actionId === 'vector-orders') {
+                  const beh = ctx?.behavior as string | undefined;
+                  const isDefensive = beh === 'escort' || beh === 'screen';
+                  if (isDefensive) return `🛡 SELECT FRIENDLY SHIP TO ${beh === 'escort' ? 'ESCORT' : 'SCREEN'}...`;
+                  return '🎯 SELECT ENEMY ENGAGEMENT TARGET...';
                 }
                 return 'AWAITING TARGET COORDINATES...';
               })()}
@@ -241,15 +255,12 @@ export default function ExecutionPanel() {
                   const needsExpansion = [
                     'rotate', 'fire-primary', 'adjust-speed',
                     'reinforce-shields', 'rotate-shields', 'damage-control', 'cyber-warfare',
-                    'load-ordinance', 'steady-nerves', 'fighter-hangar',
+                    'load-ordinance', 'steady-nerves', 'fighter-hangar', 'vector-orders'
                   ].includes(def?.id || '');
 
                   const handleResolveAction = () => {
                     if (driftRequired) return;
-                    if (def?.id === 'vector-orders') {
-                      // Enter ship-targeting mode — player clicks an enemy to vector fighters
-                      startTargeting('ship', { shipId: ship.id, actionId: action.id });
-                    } else if (needsExpansion) {
+                    if (needsExpansion) {
                       setExpandedActionId(isExpanded ? null : action.id);
                     } else if (def?.requiresHexTarget) {
                       startTargeting('hex', { shipId: ship.id, actionId: action.id });
@@ -419,6 +430,114 @@ export default function ExecutionPanel() {
                                   }}
                                 >
                                   ⟶ BEGIN LAUNCH — SELECT DEPLOYMENT HEX
+                                </button>
+                              </>
+                            );
+                          })()}
+
+                          {/* Vector Orders — Fighter + Behavior Selector */}
+                          {def?.id === 'vector-orders' && (() => {
+                            const selection = vectorOrdersSelections[action.id] ?? { fighterId: '', behavior: 'attack' };
+                            const availableFighters = fighterTokens.filter(f => f.allegiance === 'allied' && f.sourceShipId === ship.id && !f.isDestroyed);
+                            const selectedFighter = availableFighters.find(f => f.id === selection.fighterId) || availableFighters[0];
+                            const selectedBehavior = BEHAVIOR_INFO[selection.behavior];
+                            const isEscortOrScreen = selection.behavior === 'escort' || selection.behavior === 'screen';
+
+                            if (availableFighters.length === 0) {
+                              return (
+                                <div style={{ padding: '8px', border: '1px dashed var(--color-text-dim)', borderRadius: '4px', textAlign: 'center' }}>
+                                  <div className="mono" style={{ color: 'var(--color-text-dim)', fontSize: '0.8rem', marginBottom: '8px' }}>
+                                    No active fighters to vector.
+                                  </div>
+                                  <button
+                                    className="btn btn--execute"
+                                    onClick={() => {
+                                      resolveAction(owner!.id, ship.id, action.id, { wasted: true, reason: 'No active fighters' });
+                                      setExpandedActionId(null);
+                                    }}
+                                  >
+                                    WASTE ACTION
+                                  </button>
+                                </div>
+                              );
+                            }
+
+                            // Auto-select first fighter if none is explicitly selected
+                            const currentFighterId = selection.fighterId || selectedFighter.id;
+
+                            return (
+                              <>
+                                {/* Step 1: Pick Fighter */}
+                                <div>
+                                  <div className="label" style={{ marginBottom: '6px', color: 'var(--color-holo-cyan)' }}>1. Select Fighter Squadron</div>
+                                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+                                    {availableFighters.map(f => {
+                                      const isSelected = currentFighterId === f.id;
+                                      return (
+                                        <button
+                                          key={f.id}
+                                          className="btn"
+                                          style={{
+                                            textAlign: 'left',
+                                            padding: '6px 8px',
+                                            fontSize: '0.72rem',
+                                            borderColor: isSelected ? 'var(--color-holo-cyan)' : 'var(--color-border)',
+                                            background: isSelected ? 'rgba(79,209,197,0.12)' : undefined,
+                                          }}
+                                          onClick={() => setVectorOrdersSelections(prev => ({ ...prev, [action.id]: { ...selection, fighterId: f.id } }))}
+                                        >
+                                          <div style={{ fontWeight: 'bold' }}>{f.name}</div>
+                                          <div style={{ color: 'var(--color-text-dim)', fontSize: '0.65rem' }}>Current: {f.behavior.toUpperCase()}</div>
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+
+                                {/* Step 2: Pick Behavior */}
+                                <div>
+                                  <div className="label" style={{ marginBottom: '6px', color: 'var(--color-holo-cyan)' }}>2. Select New Behavior</div>
+                                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+                                    {Object.entries(BEHAVIOR_INFO).map(([key, bInfo]) => (
+                                      <button
+                                        key={key}
+                                        className="btn"
+                                        style={{
+                                          textAlign: 'left',
+                                          padding: '6px 8px',
+                                          fontSize: '0.72rem',
+                                          borderColor: selection.behavior === key ? 'var(--color-holo-green)' : 'var(--color-border)',
+                                          background: selection.behavior === key ? 'rgba(72,199,142,0.12)' : undefined,
+                                        }}
+                                        onClick={() => setVectorOrdersSelections(prev => ({ ...prev, [action.id]: { ...selection, behavior: key } }))}
+                                      >
+                                        <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>{bInfo.label}</div>
+                                        <div style={{ color: 'var(--color-text-dim)', fontSize: '0.65rem' }}>{bInfo.description}</div>
+                                      </button>
+                                    ))}
+                                  </div>
+                                  {selectedBehavior && (
+                                    <div style={{ marginTop: '6px', fontSize: '0.72rem', color: 'var(--color-text-dim)', padding: '4px 8px', background: 'var(--color-bg-deep)', borderRadius: '4px' }}>
+                                      Target prompt: <strong style={{ color: isEscortOrScreen ? 'var(--color-holo-cyan)' : 'var(--color-hostile-red)' }}>
+                                        {isEscortOrScreen ? '🛡 Select friendly ship to protect' : '🎯 Select enemy target'}
+                                      </strong>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Step 3: Begin Vector */}
+                                <button
+                                  className="btn btn--execute"
+                                  style={{ width: '100%', padding: '8px', fontWeight: 'bold' }}
+                                  onClick={() => {
+                                    startTargeting('ship', { shipId: ship.id, actionId: action.id }, {
+                                      fighterId: currentFighterId,
+                                      behavior: selection.behavior,
+                                    });
+                                    setExpandedActionId(null);
+                                  }}
+                                >
+                                  ⟶ BEGIN VECTOR — SELECT TARGET
                                 </button>
                               </>
                             );
@@ -1048,10 +1167,10 @@ export default function ExecutionPanel() {
               <div className="mono" style={{ color: 'var(--color-text-dim)', textAlign: 'center', padding: '16px' }}>Enemy operations concluded.</div>
             ) : (
               <button
-                className={`btn ${(activeEnemy.length === 0 && enemyFighters.length === 0 && enemyTorpedoes.length === 0) ? 'btn--disabled' : ''}`}
-                style={{ width: '100%', opacity: (activeEnemy.length === 0 && enemyFighters.length === 0 && enemyTorpedoes.length === 0) ? 0.5 : 1 }}
+                className={`btn ${(activeEnemy.length === 0 && enemyFighters.length === 0 && enemyTorpedoes.length === 0 && activeStations.length === 0) ? 'btn--disabled' : ''}`}
+                style={{ width: '100%', opacity: (activeEnemy.length === 0 && enemyFighters.length === 0 && enemyTorpedoes.length === 0 && activeStations.length === 0) ? 0.5 : 1 }}
                 onClick={resolveEnemyTurn}
-                disabled={activeEnemy.length === 0 && enemyFighters.length === 0 && enemyTorpedoes.length === 0}
+                disabled={activeEnemy.length === 0 && enemyFighters.length === 0 && enemyTorpedoes.length === 0 && activeStations.length === 0}
               >
                 Automate Enemy Turn
               </button>
@@ -1060,6 +1179,11 @@ export default function ExecutionPanel() {
             {(enemyFighters.length > 0 || enemyTorpedoes.length > 0) && (
               <div className="mono" style={{ marginTop: 'var(--space-sm)', fontSize: '0.75rem', color: 'var(--color-text-dim)' }}>
                 ⧡ {enemyFighters.length} enemy fighter{enemyFighters.length !== 1 ? 's' : ''} and {enemyTorpedoes.length} torpedo{enemyTorpedoes.length !== 1 ? 'es' : ''} will auto-resolve with enemy turn.
+              </div>
+            )}
+            {activeStations.length > 0 && (
+              <div className="mono" style={{ marginTop: 'var(--space-sm)', fontSize: '0.75rem', color: 'var(--color-hostile-red)' }}>
+                ⬡ {activeStations.length} station{activeStations.length !== 1 ? 's' : ''} / platform{activeStations.length !== 1 ? 's' : ''} will fire with enemy turn.
               </div>
             )}
           </div>

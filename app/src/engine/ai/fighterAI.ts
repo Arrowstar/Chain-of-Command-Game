@@ -15,6 +15,7 @@ export interface FighterMoveResult {
   moved: boolean;
   traversedHexes: HexCoord[];
   newFacing: HexFacing;
+  intentionalHold?: boolean;
 }
 
 export interface FighterAttackResult {
@@ -157,14 +158,25 @@ export function resolveFighterMovement(
       goalHex = { q: fighter.position.q + dx * 5, r: fighter.position.r + dr * 5 };
     }
   } else if (fighter.behavior === 'escort') {
-    // Escort: Stay near source ship
+    // Escort: Stay near source ship, but actively chase nearby enemy fighters
     if (sourceShip) {
       const dist = hexDistance(fighter.position, sourceShip.position);
-      if (dist > 1) {
-        goalHex = sourceShip.position; // Move toward source ship
+      // Look for enemy fighters/torpedoes close to the escort target
+      const threats = [
+        ...torpedoTokens.filter(t => t.allegiance !== fighter.allegiance),
+        ...allFighters.filter(f => f.allegiance !== fighter.allegiance && !f.isDestroyed),
+      ].filter(t => hexDistance(t.position, sourceShip.position) <= 3)
+        .sort((a, b) => hexDistance(fighter.position, a.position) - hexDistance(fighter.position, b.position));
+
+      if (threats.length > 0) {
+        // Chase the nearest threat to the escort target
+        goalHex = threats[0].position;
+      } else if (dist > 1) {
+        // No immediate threats — close up to the source ship
+        goalHex = sourceShip.position;
       } else {
-        // If adjacent, hold position unless enemy is in range
-        return { newPosition: fighter.position, moved: false, traversedHexes: [], newFacing: fighter.facing };
+        // Adjacent and no threats — hold position
+        return { newPosition: fighter.position, moved: false, traversedHexes: [], newFacing: fighter.facing, intentionalHold: true };
       }
     }
   } else if (fighter.behavior === 'screen') {
@@ -178,6 +190,12 @@ export function resolveFighterMovement(
       if (threats.length > 0) {
         threats.sort((a, b) => hexDistance(fighter.position, a.position) - hexDistance(fighter.position, b.position));
         goalHex = threats[0].position;
+      } else if (hexDistance(fighter.position, sourceShip.position) > 1) {
+        // No threats? Close up to the source ship just like escort!
+        goalHex = sourceShip.position;
+      } else {
+        // Adjacent and no threats — hold position
+        return { newPosition: fighter.position, moved: false, traversedHexes: [], newFacing: fighter.facing, intentionalHold: true };
       }
     }
   } else if (fighter.behavior === 'harass') {
@@ -205,7 +223,7 @@ export function resolveFighterMovement(
         goalHex = { q: fighter.position.q + dx * 5, r: fighter.position.r + dr * 5 };
       } else {
         // Hold position (sticky state)
-        return { newPosition: fighter.position, moved: false, traversedHexes: [], newFacing: fighter.facing };
+        return { newPosition: fighter.position, moved: false, traversedHexes: [], newFacing: fighter.facing, intentionalHold: true };
       }
     }
   } else if (fighter.behavior === 'flanking') {
@@ -265,7 +283,7 @@ export function resolveFighterMovement(
 
   const path = bfsPath(fighter.position, goalHex, fighter.speed, fighter, allFighters, terrainMap);
 
-  if (path.length === 0) return { newPosition: fighter.position, moved: false, traversedHexes: [], newFacing: fighter.facing };
+  if (path.length === 0) return { newPosition: fighter.position, moved: false, traversedHexes: [], newFacing: fighter.facing, intentionalHold: true };
 
   const newPosition = path[path.length - 1];
   const prevHex = path.length > 1 ? path[path.length - 2] : fighter.position;
@@ -302,11 +320,35 @@ export function resolveFighterAttack(
 
   if (fighter.allegiance === 'allied') {
     if (fighter.assignedTargetId) {
-      // Priority: Assigned Target
+      // Priority: Assigned Target (enemy ship or station)
       shipTarget = enemyShips.find(s => s.id === fighter.assignedTargetId && !s.isDestroyed)
         || stations.find(s => s.id === fighter.assignedTargetId && !s.isDestroyed);
       if (!shipTarget) {
         fighterTarget = allFighters.find(f => f.id === fighter.assignedTargetId && !f.isDestroyed && f.allegiance === 'enemy');
+      }
+    }
+    // Escort / Screen fallback: if no assigned enemy target, attack the nearest in-range enemy
+    // (fighter > ship > station, all sorted by distance so the closest threat is always picked)
+    if (!shipTarget && !fighterTarget) {
+      const range = fighter.weaponRangeMax;
+
+      // Collect all in-range enemies with a type tag so we can pick the single closest one
+      const candidates: { dist: number; kind: 'fighter' | 'ship'; target: FighterToken | EnemyShipState | StationState }[] = [
+        ...allFighters
+          .filter(f => f.allegiance === 'enemy' && !f.isDestroyed && hexDistance(fighter.position, f.position) <= range)
+          .map(f => ({ dist: hexDistance(fighter.position, f.position), kind: 'fighter' as const, target: f })),
+        ...enemyShips
+          .filter(s => !s.isDestroyed && hexDistance(fighter.position, s.position) <= range)
+          .map(s => ({ dist: hexDistance(fighter.position, s.position), kind: 'ship' as const, target: s })),
+        ...stations
+          .filter(s => !s.isDestroyed && hexDistance(fighter.position, s.position) <= range)
+          .map(s => ({ dist: hexDistance(fighter.position, s.position), kind: 'ship' as const, target: s })),
+      ].sort((a, b) => a.dist - b.dist);
+
+      if (candidates.length > 0) {
+        const best = candidates[0];
+        if (best.kind === 'fighter') fighterTarget = best.target as FighterToken;
+        else shipTarget = best.target as EnemyShipState | StationState;
       }
     }
   } else {

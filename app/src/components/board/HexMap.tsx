@@ -354,38 +354,44 @@ export default function HexMap() {
     syncEntities(activeStations, entitiesRef.current.stations, (station, g, getParams, isNew) => {
       g.clear();
       const stationData = getStationById(station.stationId);
-      const isTurret = stationData?.type === 'turret';
-      const color = 0xFF6633; // orange-red for stations
-      const fillColor = 0xAA3311;
+      
+      const spriteKey = stationData?.imageKey;
+      const hasSprite = attachOrUpdateSprite(g, spriteKey, isNew, 'enemy');
 
-      if (isTurret) {
-        // Turret: smaller square-ish shape
-        g.lineStyle(2, color, 1);
-        g.beginFill(fillColor, 0.7);
-        g.drawRect(-10, -10, 20, 20);
-        g.endFill();
-        // Turret barrel pointing in facing direction
-        const barrelLen = 14;
-        const rot = ((station.facing * 60) - 30) * (Math.PI / 180);
-        g.lineStyle(2.5, 0xFFAA44, 1);
-        g.moveTo(0, 0);
-        g.lineTo(Math.cos(rot) * barrelLen, Math.sin(rot) * barrelLen);
-      } else {
-        // Station: larger hexagonal shape
-        g.lineStyle(2.5, color, 1);
-        g.beginFill(fillColor, 0.6);
-        const corners = hexCorners({ x: 0, y: 0 }, 16);
-        g.moveTo(corners[0].x, corners[0].y);
-        for (let i = 1; i < 6; i++) {
-          g.lineTo(corners[i].x, corners[i].y);
+      if (!hasSprite) {
+        const isTurret = stationData?.type === 'turret';
+        const color = 0xFF6633; // orange-red for stations
+        const fillColor = 0xAA3311;
+
+        if (isTurret) {
+          // Turret: smaller square-ish shape
+          g.lineStyle(2, color, 1);
+          g.beginFill(fillColor, 0.7);
+          g.drawRect(-10, -10, 20, 20);
+          g.endFill();
+          // Turret barrel pointing in facing direction
+          const barrelLen = 14;
+          const rot = ((station.facing * 60) - 30) * (Math.PI / 180);
+          g.lineStyle(2.5, 0xFFAA44, 1);
+          g.moveTo(0, 0);
+          g.lineTo(Math.cos(rot) * barrelLen, Math.sin(rot) * barrelLen);
+        } else {
+          // Station: larger hexagonal shape
+          g.lineStyle(2.5, color, 1);
+          g.beginFill(fillColor, 0.6);
+          const corners = hexCorners({ x: 0, y: 0 }, 16);
+          g.moveTo(corners[0].x, corners[0].y);
+          for (let i = 1; i < 6; i++) {
+            g.lineTo(corners[i].x, corners[i].y);
+          }
+          g.closePath();
+          g.endFill();
+          // Forward arc indicator
+          const rot = ((station.facing * 60) - 30) * (Math.PI / 180);
+          g.lineStyle(2, 0xFFAA44, 0.8);
+          g.moveTo(0, 0);
+          g.lineTo(Math.cos(rot) * 18, Math.sin(rot) * 18);
         }
-        g.closePath();
-        g.endFill();
-        // Forward arc indicator
-        const rot = ((station.facing * 60) - 30) * (Math.PI / 180);
-        g.lineStyle(2, 0xFFAA44, 0.8);
-        g.moveTo(0, 0);
-        g.lineTo(Math.cos(rot) * 18, Math.sin(rot) * 18);
       }
 
       // Draw shields at facing 0 — the container is rotated, same as ships.
@@ -630,7 +636,25 @@ export default function HexMap() {
           stations,
         );
 
-        if (!moveResult.moved || moveResult.traversedHexes.length === 0) return;
+        if (!moveResult.moved || moveResult.traversedHexes.length === 0) {
+          if (moveResult.intentionalHold) {
+            const isAllied = fighter.allegiance === 'allied';
+            const lineColor = isAllied ? 0x7CFFB2 : 0xFF6B6B;
+            const markerRadius = 10;
+            const startPx = hexToPixel(fighter.position);
+            
+            fighterPreviewGfx.lineStyle(1.5, lineColor, 0.65);
+            fighterPreviewGfx.beginFill(lineColor, 0.1);
+            const corners = hexCorners({ x: startPx.x, y: startPx.y }, markerRadius);
+            fighterPreviewGfx.moveTo(corners[0].x, corners[0].y);
+            for (let i = 1; i < 6; i++) {
+              fighterPreviewGfx.lineTo(corners[i].x, corners[i].y);
+            }
+            fighterPreviewGfx.closePath();
+            fighterPreviewGfx.endFill();
+          }
+          return;
+        }
 
         const isAllied = fighter.allegiance === 'allied';
         const lineColor = isAllied ? 0x7CFFB2 : 0xFF6B6B;
@@ -710,16 +734,19 @@ export default function HexMap() {
     if (objectiveType === 'Breakout') {
       zoneGfx.lineStyle(1, 0x00FF88, 0.4);
       zoneGfx.beginFill(0x00FF88, 0.1);
-      for (const [key, _] of terrainMap.entries()) {
-        const [q, r] = key.split(',').map(Number);
-        if (isInBreakoutZone({ q, r })) {
-          const center = hexToPixel({ q, r });
-          const corners = hexCorners({ x: 0, y: 0 });
-          zoneGfx.moveTo(center.x + corners[0].x, center.y + corners[0].y);
-          for (let ci = 1; ci < 6; ci++) {
-            zoneGfx.lineTo(center.x + corners[ci].x, center.y + corners[ci].y);
+      for (let q = -8; q <= 8; q++) {
+        for (let r = -8; r <= 8; r++) {
+          if (Math.abs(q) + Math.abs(q + r) + Math.abs(r) <= 16) {
+            if (isInBreakoutZone({ q, r })) {
+              const center = hexToPixel({ q, r });
+              const corners = hexCorners({ x: 0, y: 0 });
+              zoneGfx.moveTo(center.x + corners[0].x, center.y + corners[0].y);
+              for (let ci = 1; ci < 6; ci++) {
+                zoneGfx.lineTo(center.x + corners[ci].x, center.y + corners[ci].y);
+              }
+              zoneGfx.closePath();
+            }
           }
-          zoneGfx.closePath();
         }
       }
       zoneGfx.endFill();
@@ -766,15 +793,20 @@ export default function HexMap() {
     if (deploymentMode && deploymentBounds) {
       const deploymentHexes = deploymentBounds.hexes && deploymentBounds.hexes.length > 0
         ? deploymentBounds.hexes
-        : [...terrainMap.entries()]
-            .filter(([, type]) => type === 'open')
-            .map(([key]) => {
-              const [q, r] = key.split(',').map(Number);
-              return { q, r };
-            })
-            .filter(({ q, r }) =>
-              q >= deploymentBounds.minQ && q <= deploymentBounds.maxQ && r >= deploymentBounds.minR && r <= deploymentBounds.maxR,
-            );
+        : (() => {
+            const hexes = [];
+            for (let q = deploymentBounds.minQ; q <= deploymentBounds.maxQ; q++) {
+              for (let r = deploymentBounds.minR; r <= deploymentBounds.maxR; r++) {
+                if (Math.abs(q) + Math.abs(q + r) + Math.abs(r) <= 16) {
+                  const type = terrainMap.get(hexKey({ q, r })) ?? 'open';
+                  if (type === 'open') {
+                    hexes.push({ q, r });
+                  }
+                }
+              }
+            }
+            return hexes;
+          })();
 
       zoneGfx.lineStyle(2, 0xFFB547, 0.75);
       zoneGfx.beginFill(0xFFB547, 0.16);

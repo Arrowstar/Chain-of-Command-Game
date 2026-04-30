@@ -138,9 +138,8 @@ describe('GameScreen', () => {
         currentTactic: {
           id: 'overwhelming-firepower',
           name: 'Overwhelming Firepower',
-          effect: 'AI ships do not move this round.',
+          effect: 'All AI weapons gain +1 Skill Die.',
           mechanicalEffect: {
-            extraMovement: -99,
             extraDice: ['d6'],
           },
         },

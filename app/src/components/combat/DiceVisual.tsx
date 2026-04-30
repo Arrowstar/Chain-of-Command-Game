@@ -6,10 +6,11 @@ export interface DiceVisualProps {
   finalResult: number;
   isExploded?: boolean;
   isHit?: boolean;
+  isCriticalHit?: boolean;
   onAnimationComplete?: () => void;
 }
 
-export default function DiceVisual({ dieType, finalResult, isExploded, isHit, onAnimationComplete }: DiceVisualProps) {
+export default function DiceVisual({ dieType, finalResult, isExploded, isHit, isCriticalHit, onAnimationComplete }: DiceVisualProps) {
   const [displayValue, setDisplayValue] = useState<number | string>('?');
   const [isRolling, setIsRolling] = useState(true);
 
@@ -63,12 +64,16 @@ export default function DiceVisual({ dieType, finalResult, isExploded, isHit, on
         background: bg,
         color: '#fff',
         borderRadius: 'var(--radius-sm)',
-        boxShadow: isHit
+        boxShadow: isCriticalHit
+          ? `0 0 12px rgba(221, 107, 32, 0.8)`
+          : isHit
           ? `0 0 12px rgba(72,230,130,0.8)`
           : isExploded
           ? `0 0 15px ${bg}`
           : 'none',
-        border: isHit
+        border: isCriticalHit
+          ? '2px solid #DD6B20'
+          : isHit
           ? '2px solid #48E682'
           : isExploded
           ? '2px solid white'

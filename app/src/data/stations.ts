@@ -14,6 +14,7 @@ export const STATIONS: StationData[] = [
     weaponRangeMin: 1,
     weaponRangeMax: 3,
     special: 'Small defensive installation. All-around primary battery.',
+    imageKey: 'heg_station_outpost',
   },
   {
     id: 'forward-base',
@@ -36,6 +37,7 @@ export const STATIONS: StationData[] = [
       fighterAllegiance: 'enemy',
     },
     special: 'Medium base with hangar and heavy forward battery.',
+    imageKey: 'heg_station_forwardbase',
   },
   {
     id: 'orbital-station',
@@ -58,6 +60,7 @@ export const STATIONS: StationData[] = [
       fighterAllegiance: 'enemy',
     },
     special: 'Massive orbital fortress. Devastating heavy forward battery and large fighter complement.',
+    imageKey: 'heg_station_station',
   },
   {
     id: 'pdc-turret',
@@ -72,6 +75,7 @@ export const STATIONS: StationData[] = [
     weaponRangeMin: 1,
     weaponRangeMax: 2,
     special: 'Rapid-fire point defense battery. Exceptional anti-fighter capability.',
+    imageKey: 'heg_platform_planetdefense',
   },
   {
     id: 'heavy-turret',
@@ -89,6 +93,7 @@ export const STATIONS: StationData[] = [
     heavyWeaponRangeMin: 2,
     heavyWeaponRangeMax: 5,
     special: 'Long-range defensive platform with heavy forward cannon.',
+    imageKey: 'heg_platform_heavyDefense',
   },
   {
     id: 'missile-turret',
@@ -106,6 +111,7 @@ export const STATIONS: StationData[] = [
     heavyWeaponRangeMin: 1,
     heavyWeaponRangeMax: 4,
     special: 'Ordnance platform. Heavy missiles fire forward; light missiles in all arcs.',
+    imageKey: 'heg_platform_missile',
   },
 ];
 
