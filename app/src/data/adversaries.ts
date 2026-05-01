@@ -17,6 +17,10 @@ export const ADVERSARIES: AdversaryData[] = [
     weaponRangeMax: 3,
     aiTag: 'aggressive',
     special: 'Closes distance rapidly. Attempts to enter the target\'s weakest shield arc.',
+    traits: [
+      // Exploitative Fire: +d6 when striking rear 180° arcs
+      { type: 'flankingConditional', requiredArcs: ['aft', 'aftPort', 'aftStarboard'], extraVolley: ['d6'] },
+    ],
   },
   {
     id: 'monitor',
@@ -33,6 +37,10 @@ export const ADVERSARIES: AdversaryData[] = [
     weaponRangeMax: 8,
     aiTag: 'artillery',
     special: 'Moves away from the player to maintain maximum firing range. Will hide behind asteroids if closer than Range 4.',
+    traits: [
+      // Cover Tactics: +2 Evasion when sitting in asteroid terrain
+      { type: 'terrainConditional', terrain: 'asteroids', evasionBonus: 2 },
+    ],
   },
   {
     id: 'carrier',
@@ -49,6 +57,10 @@ export const ADVERSARIES: AdversaryData[] = [
     weaponRangeMax: 4,
     aiTag: 'support',
     special: 'Moves away from combat. Spawns 2 Strike Fighter tokens every round during Step 3.',
+    traits: [
+      // Hangar Bay: spawns fighters each round
+      { type: 'spawner', tokenClass: 'enemy-fighter-strike', count: 2 },
+    ],
   },
   {
     id: 'strike-fighter',
@@ -65,6 +77,7 @@ export const ADVERSARIES: AdversaryData[] = [
     weaponRangeMax: 1,
     aiTag: 'swarm',
     special: 'Stacks with other fighters. Moves directly into the target\'s hex to fire.',
+    traits: [],
   },
   {
     id: 'hegemony-corvette',
@@ -82,6 +95,10 @@ export const ADVERSARIES: AdversaryData[] = [
     weaponRangeMax: 3,
     aiTag: 'hunter',
     special: 'Fast flanking unit. Attempts to stay on the flanks or rear of player ships.',
+    traits: [
+      // Hit and Run: +1 Evasion if moved 3+ hexes this round
+      { type: 'movementConditional', minHexesMoved: 3, evasionBonus: 1 },
+    ],
   },
   {
     id: 'hegemony-dreadnought',
@@ -98,6 +115,10 @@ export const ADVERSARIES: AdversaryData[] = [
     weaponRangeMax: 6,
     aiTag: 'aggressive',
     special: 'Massive Boss-tier ship. Highly resilient, brings devastating firepower to bear.',
+    traits: [
+      // Enrage Protocol: +d12 volley when below 50% hull
+      { type: 'hullThresholdConditional', threshold: 0.5, extraVolley: ['d12'] },
+    ],
   },
   {
     id: 'ai-minotaur',
@@ -114,6 +135,7 @@ export const ADVERSARIES: AdversaryData[] = [
     weaponRangeMax: 4,
     aiTag: 'aggressive',
     special: 'AI Archetype: Brawler. Moves toward the enemy to soak damage and fire heavy close-range broadsides.',
+    traits: [],
   },
   {
     id: 'ai-wraith',
@@ -131,6 +153,7 @@ export const ADVERSARIES: AdversaryData[] = [
     weaponRangeMax: 3,
     aiTag: 'hunter',
     special: 'AI Archetype: Hit-and-Run. Uses high evasion and speed to dart in and out of combat.',
+    traits: [],
   },
   {
     id: 'ai-paladin',
@@ -147,6 +170,7 @@ export const ADVERSARIES: AdversaryData[] = [
     weaponRangeMax: 5,
     aiTag: 'support',
     special: 'AI Archetype: Escort. Maintains formation and draws fire using high shields.',
+    traits: [],
   },
   {
     id: 'ai-aegis',
@@ -163,6 +187,107 @@ export const ADVERSARIES: AdversaryData[] = [
     weaponRangeMax: 8,
     aiTag: 'artillery',
     special: 'AI Archetype: Fleet Support. Hangs back at long range to provide fire support.',
+    traits: [],
+  },
+  {
+    id: 'hegemony-interdictor',
+    name: 'Hegemony Interdictor',
+    size: 'medium',
+    hull: 10,
+    shieldsPerSector: 3,
+    shieldsAllSectors: true,
+    armorDie: 'd4',
+    speed: 3,
+    baseEvasion: 6,
+    volleyPool: ['d8', 'd6', 'd6'],
+    weaponRangeMin: 3,
+    weaponRangeMax: 6,
+    aiTag: 'support',
+    special: 'Advanced sensors and jamming equipment. High evasion but fragile.',
+    traits: [
+      // Electronic Jamming: +1 TN on player attacks against targets within radius 3
+      { type: 'aura', effect: 'tnPenalty', radius: 3, amount: 1 },
+    ],
+  },
+  {
+    id: 'hegemony-ravager',
+    name: 'Hegemony Ravager',
+    size: 'large',
+    hull: 24,
+    shieldsPerSector: 5,
+    shieldsAllSectors: true,
+    armorDie: 'd6',
+    speed: 2,
+    baseEvasion: 3,
+    volleyPool: ['d12', 'd10', 'd10'],
+    weaponRangeMin: 1,
+    weaponRangeMax: 3,
+    aiTag: 'aggressive',
+    special: 'Heavy brawler equipped with devastating short-range batteries.',
+    traits: [
+      // Overload Batteries: +d8 volley at Range 1-2
+      { type: 'rangeConditional', minRange: 1, maxRange: 2, extraVolley: ['d8'] },
+    ],
+  },
+  {
+    id: 'hegemony-escort',
+    name: 'Hegemony Escort Frigate',
+    size: 'small',
+    hull: 8,
+    shieldsPerSector: 4,
+    shieldsAllSectors: true,
+    armorDie: 'd4',
+    speed: 3,
+    baseEvasion: 5,
+    volleyPool: ['d6', 'd6'],
+    weaponRangeMin: 1,
+    weaponRangeMax: 3,
+    aiTag: 'support',
+    special: 'Heavy shielding for its size. Often deployed to absorb fire meant for larger vessels.',
+    traits: [
+      // Bulwark: adjacent allied enemies gain +1 Evasion
+      { type: 'aura', effect: 'evasionBonus', radius: 1, amount: 1 },
+    ],
+  },
+  {
+    id: 'hegemony-stealth-corvette',
+    name: 'Hegemony Stealth Corvette',
+    size: 'small',
+    hull: 4,
+    shieldsPerSector: 2,
+    shieldsAllSectors: true,
+    armorDie: 'd4',
+    speed: 5,
+    baseEvasion: 8,
+    volleyPool: ['d8', 'd6'],
+    weaponRangeMin: 1,
+    weaponRangeMax: 2,
+    aiTag: 'hunter',
+    special: 'Extremely fast and hard to hit, but completely vulnerable if cornered.',
+    traits: [
+      // Stealth Coating: +2 Evasion when no player ships within radius 3
+      { type: 'isolationConditional', radius: 3, evasionBonus: 2 },
+    ],
+  },
+  {
+    id: 'hegemony-railgun',
+    name: 'Hegemony Railgun Monitor',
+    size: 'medium',
+    hull: 14,
+    shieldsPerSector: 4,
+    shieldsAllSectors: true,
+    armorDie: 'd4',
+    speed: 1,
+    baseEvasion: 3,
+    volleyPool: ['d12', 'd12'],
+    weaponRangeMin: 5,
+    weaponRangeMax: 10,
+    aiTag: 'artillery',
+    special: 'Sniper vessel armed with twin heavy railguns. Lethal at extreme range but very slow.',
+    traits: [
+      // Siege Mode: Armor Piercing when did not move this round
+      { type: 'stationaryConditional', grantsArmorPiercing: true },
+    ],
   },
 ];
 

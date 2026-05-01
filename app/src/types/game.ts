@@ -516,6 +516,30 @@ export interface FumbleMechanicalEffect {
 
 export type AIBehaviorTag = 'aggressive' | 'artillery' | 'hunter' | 'swarm' | 'support';
 
+/**
+ * A parameterised, data-driven special ability attached to an adversary.
+ * The engine reads these instead of hardcoding adversary-specific logic.
+ */
+export type ShipTrait =
+  /** Aura around this ship that affects enemies within radius. */
+  | { type: 'aura'; effect: 'tnPenalty' | 'evasionBonus'; radius: number; amount: number }
+  /** Bonus dice (or evasion) when attacking within a distance band. */
+  | { type: 'rangeConditional'; minRange: number; maxRange: number; extraVolley?: DieType[]; evasionBonus?: number }
+  /** Bonus dice when the struck sector is in the ship's rear arcs. */
+  | { type: 'flankingConditional'; requiredArcs: ShipArc[]; extraVolley: DieType[] }
+  /** Bonus evasion when this ship occupies a specific terrain type. */
+  | { type: 'terrainConditional'; terrain: TerrainType; evasionBonus: number }
+  /** Spawn fighters each round (replaces hardcoded carrier logic). */
+  | { type: 'spawner'; tokenClass: string; count: number }
+  /** Bonus evasion when this ship moved at least N hexes this round. */
+  | { type: 'movementConditional'; minHexesMoved: number; evasionBonus: number }
+  /** Bonus dice when hull is at or below a fractional threshold (e.g. 0.5 = 50%). */
+  | { type: 'hullThresholdConditional'; threshold: number; extraVolley: DieType[] }
+  /** Grants Armor Piercing on attacks when this ship did not move this round. */
+  | { type: 'stationaryConditional'; grantsArmorPiercing: boolean }
+  /** Bonus evasion when no player ship is within radius. */
+  | { type: 'isolationConditional'; radius: number; evasionBonus: number };
+
 export interface AdversaryData {
   id: string;
   name: string;
@@ -532,6 +556,8 @@ export interface AdversaryData {
   weaponRangeMax: number;
   aiTag: AIBehaviorTag;
   special?: string;
+  /** Data-driven special abilities. Processed by the engine at runtime. */
+  traits?: ShipTrait[];
 }
 
 export interface EnemyShipState {
@@ -560,6 +586,10 @@ export interface EnemyShipState {
   predictiveVolleyActive?: boolean;
   spoofedFireControlActive?: boolean;
   firedWeaponIndicesThisRound?: number[];
+  /** True if this ship moved at least one hex this round (used by stationaryConditional trait). */
+  hasMovedThisRound?: boolean;
+  /** Number of hexes moved this round (used by movementConditional trait). */
+  hexesMovedThisRound?: number;
 }
 
 // ─── Fighter / Small Craft Tokens ────────────────────────────────

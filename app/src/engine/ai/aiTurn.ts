@@ -8,6 +8,7 @@ import { planAIMovement } from './behaviors';
 import { hexDistance, hexKey, determineStruckShieldSector } from '../hexGrid';
 import { rollVolley, rollDie } from '../../utils/diceRoller';
 import { calculateTN } from '../combat';
+import { applyAttackTraits } from './traitEffects';
 
 // ═══════════════════════════════════════════════════════════════════
 // AI Turn Orchestration
@@ -204,6 +205,8 @@ export function executeAITier(
         facing: movePlan.newFacing,
         currentHull: Math.max(0, (existingUpdates.currentHull ?? aiShip.currentHull) - mineDamage),
         isDestroyed: Math.max(0, (existingUpdates.currentHull ?? aiShip.currentHull) - mineDamage) === 0,
+        hasMovedThisRound: movePlan.path.length > 0,
+        hexesMovedThisRound: movePlan.path.length,
       });
 
       actions.push({ shipId: aiShip.id, type: 'move', details: { to: movePlan.targetHex, path: movePlan.path, triggeredHazardIds: triggeredHazards.map(hazard => hazard.id) } });
@@ -226,20 +229,6 @@ export function executeAITier(
       // Check for weapons disabled crit
       const weaponsDisabled = aiShip.criticalDamage?.some(c => c.id === 'enemy-weapons-disabled');
       if (!weaponsDisabled) {
-        const pool: VolleyDieInput[] = adversary.volleyPool.map(dt => ({ type: dt, source: 'weapon' }));
-        // Tactic card extra dice
-        if (tacticCard?.mechanicalEffect.extraDice) {
-          pool.push(...tacticCard.mechanicalEffect.extraDice.map(dt => ({ type: dt, source: 'tactic' })));
-        }
-        if (
-          tacticCard?.mechanicalEffect.longRangeExtraDice &&
-          tacticCard.mechanicalEffect.longRangeMin !== undefined &&
-          dist >= tacticCard.mechanicalEffect.longRangeMin &&
-          (adversary.aiTag === 'artillery' || adversary.aiTag === 'support')
-        ) {
-          pool.push(...tacticCard.mechanicalEffect.longRangeExtraDice.map(dt => ({ type: dt, source: 'tactic' })));
-        }
-
         const defTerrain = terrainMap.get(hexKey(target.position));
         let targetEvasion = target.baseEvasion + (target.evasionModifiers ?? 0);
         
@@ -263,9 +252,35 @@ export function executeAITier(
         });
         if (isFleetComms) targetEvasion += 1;
 
-        const tn = calculateTN(targetEvasion, dist, defTerrain, 0, 0, 0, 0, false, aiShip.isJammed || false);
-        const volley = rollVolley(pool, tn.total);
+        // Build volley pool and apply attack-time traits
+        const hullRatio = aiShip.currentHull / (adversary.hull || 1);
+        const hasMovedThisRound = (shipUpdates.get(aiShip.id)?.hasMovedThisRound) ?? aiShip.hasMovedThisRound ?? false;
         const sector = determineStruckShieldSector(aiShip.position, target.position, target.facing);
+        
+        const { pool, armorPiercing: traitArmorPiercing } = applyAttackTraits(
+          adversary,
+          adversary.volleyPool.map(dt => ({ type: dt, source: 'weapon' } as VolleyDieInput)),
+          dist,
+          sector,
+          hullRatio,
+          hasMovedThisRound,
+        );
+
+        const tn = calculateTN(targetEvasion, dist, defTerrain, 0, 0, 0, 0, false, aiShip.isJammed || false);
+        // Tactic card extra dice
+        if (tacticCard?.mechanicalEffect.extraDice) {
+          pool.push(...tacticCard.mechanicalEffect.extraDice.map(dt => ({ type: dt, source: 'tactic' })));
+        }
+        if (
+          tacticCard?.mechanicalEffect.longRangeExtraDice &&
+          tacticCard.mechanicalEffect.longRangeMin !== undefined &&
+          dist >= tacticCard.mechanicalEffect.longRangeMin &&
+          (adversary.aiTag === 'artillery' || adversary.aiTag === 'support')
+        ) {
+          pool.push(...tacticCard.mechanicalEffect.longRangeExtraDice.map(dt => ({ type: dt, source: 'tactic' })));
+        }
+
+        const volley = rollVolley(pool, tn.total);
         if (
           tacticCard?.mechanicalEffect.flankRearExtraDice &&
           (sector === 'aft' || sector === 'aftPort' || sector === 'aftStarboard')
@@ -298,13 +313,14 @@ export function executeAITier(
         let armorRoll = 0;
         let hullDmg = 0;
         if (overflow > 0) {
-          // Check for armor disabled crit (e.g. 'armor-compromised') if applicable
+          // Check for armor disabled crit (e.g. 'armor-compromised') or trait armor piercing
           const armorDisabled = target.criticalDamage?.some(c => c.id === 'armor-compromised');
-          if (!armorDisabled) {
+          if (!armorDisabled && !traitArmorPiercing) {
             armorRoll = rollDie(target.armorDie);
           }
           hullDmg = Math.max(1, overflow - armorRoll);
         }
+
 
         // Add piercing hits directly to hull damage
         hullDmg += piercingHits;

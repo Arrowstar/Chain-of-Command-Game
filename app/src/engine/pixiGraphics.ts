@@ -159,6 +159,13 @@ import hegHeavyCruiserImg from '../../art/ships/hegemony/HegHeaveyCruiser.png';
 import hegInterceptorWingImg from '../../art/ships/hegemony/HegInterceptorWing.png';
 import hegCarrierImg from '../../art/ships/hegemony/heg_carrier.png';
 
+// New Hegemony Ships
+import hegEscortFrigateImg from '../../art/ships/hegemony/heg_escort_frigate.png';
+import hegInterdictorImg from '../../art/ships/hegemony/heg_interdictor.png';
+import hegRailgunMonitorImg from '../../art/ships/hegemony/heg_railgun_monitor.png';
+import hegRavengerImg from '../../art/ships/hegemony/heg_ravenger.png';
+import hegStealthCorvetteImg from '../../art/ships/hegemony/heg_stealth_corvette.png';
+
 // Hegemony Fighters
 import hegBomberImg from '../../art/ships/hegemony/fighters/heg_bomber.png';
 import hegEwFighterImg from '../../art/ships/hegemony/fighters/heg_ew_fighter.png';
@@ -197,6 +204,11 @@ export const ASSET_MAP: Record<string, string> = {
   'hunter-killer': hegFrigateImg,
   'monitor': hegHeavyCruiserImg,
   'carrier': hegCarrierImg,
+  'hegemony-interdictor': hegInterdictorImg,
+  'hegemony-ravager': hegRavengerImg,
+  'hegemony-escort': hegEscortFrigateImg,
+  'hegemony-stealth-corvette': hegStealthCorvetteImg,
+  'hegemony-railgun': hegRailgunMonitorImg,
 
   // ── Hegemony (Enemy) Fighters ──────────────────────────────────────────────
   // All currently share HegInterceptorWing art (red-tinted via allegiance).

@@ -245,9 +245,10 @@ describe('combat engine', () => {
     // Second die: critical hit on d8 (rolls 8, TN=5, max for d8) - (8-1)/8 = 0.875
     // Third die: standard hit on d6 (rolls 5, TN=5, not critical since 5 < 6) - (5-1)/6 = 0.666...
     vi.spyOn(Math, 'random')
-      .mockReturnValueOnce(0.5)   // d8 => 5 (hit, not critical since not max)
-      .mockReturnValueOnce(0.875) // d8 => 8 (hit, critical since max)
-      .mockReturnValueOnce(0.666); // d6 => 5 (hit, not critical since not max)
+      .mockReturnValueOnce(0.5)   // d8 => 5 (hit, not critical)
+      .mockReturnValueOnce(0.875) // d8 => 8 (hit, critical)
+      .mockReturnValueOnce(0.666) // d6 => 5 (hit, not critical)
+      .mockReturnValue(0.1);      // any explosions => 1 (hit, but not critical)
 
     const dmg = resolveAttack(
       { q: 0, r: 0 }, HexFacing.Fore,

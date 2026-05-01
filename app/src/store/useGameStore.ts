@@ -25,6 +25,7 @@ import { getStationById } from '../data/stations';
 import { getFighterClassById } from '../data/fighters';
 import { executeAITier } from '../engine/ai/aiTurn';
 import { executeStationTurn } from '../engine/ai/stationAI';
+import { applyDefensiveTraits, applyAuraTNPenalty } from '../engine/ai/traitEffects';
 import { getOfficerById } from '../data/officers';
 import { getActionById, calculateActionCosts } from '../data/actions';
 import { getSubsystemById } from '../data/subsystems';
@@ -2206,6 +2207,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 if (isFleetComms) targetEvasion += 1;
             }
 
+            // Apply data-driven defensive traits when targeting an enemy ship
+            if (isEnemy && !isMarker && adversaryData) {
+              const traitEvasionBonus = applyDefensiveTraits(
+                target as EnemyShipState,
+                adversaryData,
+                state.enemyShips,
+                state.playerShips,
+                targetTerrain,
+              );
+              targetEvasion += traitEvasionBonus;
+            }
+
             const targetArmorDie = isMarker ? 'd4' : isStation
                 ? (target as StationState).armorDie
                 : (adversaryData ? adversaryData.armorDie : (target as ShipState).armorDie) || 'd4';
@@ -2248,7 +2261,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
               !f.isDestroyed && 
               hexDistance(f.position, target.position) <= f.weaponRangeMax
             );
-            const ewModifier = ewFighters.length > 0 ? -1 : 0;
+            // Apply aura TN penalties from enemy Interdictor-class ships
+            const auraTNPenalty = (isEnemy && !isMarker && !isStation)
+              ? applyAuraTNPenalty(target.position, state.enemyShips)
+              : 0;
+            const ewModifier = (ewFighters.length > 0 ? -1 : 0) + auraTNPenalty;
 
             const damageResult = resolveAttack(
                 ship.position, ship.facing,
@@ -3464,17 +3481,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
       get().resolveTorpedoStep('enemy');
     }
 
-    // ═ ══ ═ Carrier Fighter Spawning ═ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ═
-    // Any Support-tagged enemy (Carrier) spawns 2 fighters during its execution step
+    // ═ ══ ═ Trait Spawner: fighter-spawning enemies (e.g. Carrier) ═ ══ ═
+    // Any enemy with a { type: 'spawner' } trait spawns fighters during its execution step
     {
       const liveState = get(); // re-read after updates
-      const carrierEnemies = liveState.enemyShips.filter(s => {
+      const spawnerEnemies = liveState.enemyShips.filter(s => {
         if (s.isDestroyed) return false;
         const adv = getAdversaryById(s.adversaryId);
-        return adv?.aiTag === 'support';
+        return (adv?.traits ?? []).some(t => t.type === 'spawner');
       });
 
-      if (carrierEnemies.length > 0) {
+      if (spawnerEnemies.length > 0) {
         const occupiedFighterHexes = new Map<string, number>();
         liveState.fighterTokens.filter(f => !f.isDestroyed).forEach(f => {
           const k = hexKey(f.position);
@@ -3482,7 +3499,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
         });
 
         const newFighters: import('../types/game').FighterToken[] = [];
-        carrierEnemies.forEach(carrier => {
+        spawnerEnemies.forEach(carrier => {
+          const adv = getAdversaryById(carrier.adversaryId);
+          const spawnerTrait = (adv?.traits ?? []).find(t => t.type === 'spawner');
+          if (!spawnerTrait || spawnerTrait.type !== 'spawner') return;
           const usedNames = new Set(liveState.fighterTokens.map(f => f.name));
           const spawned = buildCarrierFighters(
             carrier.id,
@@ -3495,7 +3515,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           );
           spawned.forEach(f => newFighters.push(f));
           if (spawned.length > 0) {
-            get().addLog('system', `⬡ [CARRIER] ${carrier.id} launched ${spawned.length} Strike Fighter(s).`);
+            get().addLog('system', `⬡ [${adv?.name ?? carrier.id}] launched ${spawned.length} fighter(s).`);
           }
         });
 
@@ -4432,6 +4452,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       hasDrifted: false,
       firedWeaponIndicesThisRound: [],
       isJammed: false,
+      hasMovedThisRound: false,
+      hexesMovedThisRound: 0,
     }));
 
     // Reset fighter round-state flags (survivors carry over, only flags reset)

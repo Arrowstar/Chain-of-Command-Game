@@ -194,6 +194,7 @@ export function resolveAttack(
 ): DamageResult {
   const distance = hexDistance(attackerPos, defenderPos);
 
+
   // Validate range
   if (distance < weapon.rangeMin || distance > weapon.rangeMax) {
     const emptyVolley: VolleyResult = { dice: [], targetNumber: 0, totalHits: 0, totalCrits: 0, totalStandardHits: 0, totalCriticalHits: 0 };
@@ -312,6 +313,7 @@ export function resolveAttack(
 
   if (isIonWeapon) {
     // Ion: each hit removes 2 shield points, no hull overflow
+    console.log(`DEBUG: Ion shieldHits calculation: totalHits=${totalHits}, currentShield=${currentShield}`);
     shieldHits = Math.min(totalHits * 2, currentShield);
     overflowHits = 0; // Ion cannot damage hull
   } else {
@@ -345,6 +347,7 @@ export function resolveAttack(
 
   // Add the piercing hits directly to hull damage (bypassing shields and armor)
   // Ion weapons: critical hits also deal 0 hull damage
+  if (isIonWeapon) console.log(`DEBUG: Ion check before hull damage: piercingHits=${piercingHits}, isIonWeapon=${isIonWeapon}`);
   if (piercingHits > 0 && !isIonWeapon) {
     hullDamage += piercingHits;
   }
