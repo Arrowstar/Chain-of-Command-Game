@@ -234,6 +234,7 @@ export interface GameInitConfig {
   pendingSpawns?: { adversaryId: string; position: HexCoord; spawnRound: number }[];
   /** Station spawns loaded from ScenarioData.stationSpawns. */
   stationSpawns?: { stationId: string; position: HexCoord; facing?: HexFacing; name?: string }[];
+  fighterTokens?: FighterToken[];
 }
 
 function hasScar(ship: Pick<ShipState, 'scars'>, scarId: string): boolean {
@@ -768,7 +769,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       players: initialPlayers,
       playerShips: deployedPlayerShips,
       enemyShips: initialEnemyShips,
-      fighterTokens: [],
+      fighterTokens: config.fighterTokens ?? [],
       torpedoTokens: [],
       stations: initialStations,
       terrainMap,
@@ -3403,6 +3404,40 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 weaponTags: [], // Stations use generic beam; isHeavy could refine this later
                 isEnemy: true,
               });
+            }
+
+            // Queue volley modal — sequential per attack
+            useUIStore.getState().queueModal('volley', {
+              results: [{
+                damageResult: det.damageResult,
+                defenderId: det.target,
+                defenderName,
+                outOfArc: false,
+              }],
+              weaponName: det.isHeavy ? `${attackerName}'s heavy weapons` : `${attackerName}'s weapons`,
+              attackerId: attackerName,
+            });
+
+            // Trauma Hook: Shell-Shocked (+1 stress on ≥3 hull damage)
+            if (det.target && (det.hullDmg ?? 0) >= 3) {
+               set(state => {
+                  const pIndex = state.players.findIndex(p => p.shipId === det.target);
+                  if (pIndex === -1) return state;
+                  const player = state.players[pIndex];
+                  const newOfficers = player.officers.map(o => {
+                      if (!o.traumas.some(t => t.id === 'shell-shocked')) return o;
+                      const officerData = getOfficerById(o.officerId);
+                      get().addLog('stress', `[Trauma] Shell-Shocked: ${officerData?.name} gained +1 Stress from heavy hull damage!`);
+                      const maxStress = getCombatMaxStress(o, officerData, get().experimentalTech) ?? 99;
+                      return { ...o, currentStress: Math.min(maxStress, o.currentStress + 1) };
+                  });
+                  if (newOfficers.some((o, i) => o.currentStress !== player.officers[i].currentStress)) {
+                     const newPlayers = [...state.players];
+                     newPlayers[pIndex] = { ...player, officers: newOfficers };
+                     return { players: newPlayers };
+                  }
+                  return state;
+               });
             }
           } else if (a.type === 'launch') {
             const station = liveState.stations.find(s => s.id === a.stationId);

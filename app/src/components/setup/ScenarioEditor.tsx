@@ -6,6 +6,8 @@ import type { TerrainType, HexCoord } from '../../types/game';
 import { HexFacing } from '../../types/game';
 import { ADVERSARIES } from '../../data/adversaries';
 import { ROE_DECK } from '../../data/roeDeck';
+import { STATIONS } from '../../data/stations';
+import { ENEMY_FIGHTER_CLASSES } from '../../data/fighters';
 import { generateSkirmishConfig } from '../../utils/skirmishGeneratorUtils';
 
 export interface CustomScenarioConfig {
@@ -14,6 +16,8 @@ export interface CustomScenarioConfig {
   allies: { id: string; coord: HexCoord; facing: HexFacing; adversaryId: string }[];
   playerSpawns: { id: string; coord: HexCoord; facing: HexFacing }[];
   startingRoEId?: string;
+  stationSpawns?: { id: string; coord: HexCoord; facing: HexFacing; stationId: string; name?: string }[];
+  fighterSpawns?: { id: string; coord: HexCoord; facing: HexFacing; classId: string; allegiance: 'enemy' | 'allied' }[];
 }
 
 interface ScenarioEditorProps {
@@ -21,7 +25,7 @@ interface ScenarioEditorProps {
   onCancel: () => void;
 }
 
-type BrushMode = 'terrain' | 'enemy' | 'allied' | 'playerSpawn' | 'erase';
+type BrushMode = 'terrain' | 'enemy' | 'allied' | 'playerSpawn' | 'erase' | 'station' | 'fighter';
 
 export default function ScenarioEditor({ onConfirm, onCancel }: ScenarioEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -33,6 +37,8 @@ export default function ScenarioEditor({ onConfirm, onCancel }: ScenarioEditorPr
   const [enemies, setEnemies] = useState<{ id: string; hex: string; adversaryId: string; facing: number }[]>([]);
   const [allies, setAllies] = useState<{ id: string; hex: string; adversaryId: string; facing: number }[]>([]);
   const [spawns, setSpawns] = useState<{ id: string; hex: string; facing: number }[]>([]);
+  const [stationSpawns, setStationSpawns] = useState<{ id: string; hex: string; stationId: string; facing: number }[]>([]);
+  const [fighterSpawns, setFighterSpawns] = useState<{ id: string; hex: string; classId: string; facing: number; allegiance: 'enemy' | 'allied' }[]>([]);
 
   // Auto-Gen State
   const [autoGenThreatLevel, setAutoGenThreatLevel] = useState<number>(1);
@@ -190,7 +196,66 @@ export default function ScenarioEditor({ onConfirm, onCancel }: ScenarioEditorPr
       eGfx.addChild(tempGfx);
     });
 
-  }, [terrainMap, enemies, allies, spawns, cameraX, cameraY, cameraZoom]);
+    // Draw Stations
+    stationSpawns.forEach(s => {
+      const [q, r] = s.hex.split(',').map(Number);
+      const center = hexToPixel({ q, r });
+      const rot = ((s.facing * 60) - 30) * (Math.PI / 180);
+      
+      const tempGfx = new PIXI.Graphics();
+      tempGfx.x = center.x;
+      tempGfx.y = center.y;
+      tempGfx.rotation = rot;
+      
+      const stationData = STATIONS.find(st => st.id === s.stationId);
+      const hasSprite = attachOrUpdateSprite(tempGfx, stationData?.imageKey, true, 'enemy');
+      if (!hasSprite) {
+        tempGfx.lineStyle(2, 0xFF4444);
+        tempGfx.beginFill(0x220000, 0.8);
+        tempGfx.drawRect(-15, -15, 30, 30);
+        tempGfx.endFill();
+      } else {
+        drawFacingIndicator(tempGfx, 'enemy');
+      }
+      eGfx.addChild(tempGfx);
+    });
+
+    // Draw Fighters
+    fighterSpawns.forEach(f => {
+      const [q, r] = f.hex.split(',').map(Number);
+      const center = hexToPixel({ q, r });
+      const rot = ((f.facing * 60) - 30) * (Math.PI / 180);
+      
+      const tempGfx = new PIXI.Graphics();
+      tempGfx.x = center.x;
+      tempGfx.y = center.y;
+      tempGfx.rotation = rot;
+      
+      const fighterClass = ENEMY_FIGHTER_CLASSES[f.classId];
+      const hasSprite = attachOrUpdateSprite(tempGfx, fighterClass?.imageKey, true, f.allegiance === 'enemy' ? 'enemy' : 'allied');
+      if (!hasSprite) {
+        tempGfx.lineStyle(1, f.allegiance === 'enemy' ? 0xFF4444 : 0x4444FF);
+        tempGfx.beginFill(f.allegiance === 'enemy' ? 0x880000 : 0x000088, 0.8);
+        tempGfx.moveTo(0, -6);
+        tempGfx.lineTo(4, 6);
+        tempGfx.lineTo(-4, 6);
+        tempGfx.closePath();
+        tempGfx.endFill();
+      } else {
+        const color = f.allegiance === 'allied' ? 0x7CFFB2 : 0xFF6B6B;
+        tempGfx.lineStyle(1.5, color, 0.9);
+        tempGfx.beginFill(color, 0.7);
+        tempGfx.moveTo(18, 0);
+        tempGfx.lineTo(12, 4);
+        tempGfx.lineTo(14, 0);
+        tempGfx.lineTo(12, -4);
+        tempGfx.closePath();
+        tempGfx.endFill();
+      }
+      eGfx.addChild(tempGfx);
+    });
+
+  }, [terrainMap, enemies, allies, spawns, stationSpawns, fighterSpawns, cameraX, cameraY, cameraZoom]);
 
   // Input Handlers
   const handleWheel = useCallback((e: React.WheelEvent) => {
@@ -219,6 +284,8 @@ export default function ScenarioEditor({ onConfirm, onCancel }: ScenarioEditorPr
         setEnemies(prev => prev.filter(e => e.hex !== key));
         setAllies(prev => prev.filter(a => a.hex !== key));
         setSpawns(prev => prev.filter(s => s.hex !== key));
+        setStationSpawns(prev => prev.filter(s => s.hex !== key));
+        setFighterSpawns(prev => prev.filter(f => f.hex !== key));
         setTerrainMap(prev => {
           const next = { ...prev };
           delete next[key];
@@ -236,6 +303,8 @@ export default function ScenarioEditor({ onConfirm, onCancel }: ScenarioEditorPr
       const existingEnemyIdx = enemies.findIndex(e => e.hex === key);
       const existingAllyIdx = allies.findIndex(a => a.hex === key);
       const existingSpawnIdx = spawns.findIndex(s => s.hex === key);
+      const existingStationIdx = stationSpawns.findIndex(s => s.hex === key);
+      const existingFighterIdx = fighterSpawns.findIndex(f => f.hex === key);
 
       // If clicking same hex with same brush mode, rotate it!
       if (brushMode === 'enemy' && existingEnemyIdx !== -1) {
@@ -256,6 +325,18 @@ export default function ScenarioEditor({ onConfirm, onCancel }: ScenarioEditorPr
         ));
         return;
       }
+      if (brushMode === 'station' && existingStationIdx !== -1) {
+        setStationSpawns(prev => prev.map((s, i) =>
+          i === existingStationIdx ? { ...s, facing: (s.facing + 1) % 6 } : s
+        ));
+        return;
+      }
+      if (brushMode === 'fighter' && existingFighterIdx !== -1) {
+        setFighterSpawns(prev => prev.map((f, i) =>
+          i === existingFighterIdx ? { ...f, facing: (f.facing + 1) % 6 } : f
+        ));
+        return;
+      }
 
       // Otherwise place new
       const newId = Math.random().toString(36).substring(7);
@@ -265,6 +346,11 @@ export default function ScenarioEditor({ onConfirm, onCancel }: ScenarioEditorPr
         setAllies(prev => [...prev.filter(a => a.hex !== key), { id: newId, hex: key, adversaryId: brushSelection, facing: HexFacing.Fore }]);
       } else if (brushMode === 'playerSpawn') {
         setSpawns(prev => [...prev.filter(s => s.hex !== key), { id: newId, hex: key, facing: HexFacing.Fore }]);
+      } else if (brushMode === 'station') {
+        setStationSpawns(prev => [...prev.filter(s => s.hex !== key), { id: newId, hex: key, stationId: brushSelection, facing: HexFacing.Fore }]);
+      } else if (brushMode === 'fighter') {
+        // Simple logic to set allegiance based on brush selection id or hardcode
+        setFighterSpawns(prev => [...prev.filter(f => f.hex !== key), { id: newId, hex: key, classId: brushSelection, facing: HexFacing.Fore, allegiance: 'enemy' }]);
       }
     }
   };
@@ -317,6 +403,9 @@ export default function ScenarioEditor({ onConfirm, onCancel }: ScenarioEditorPr
         facing: s.facing
       })));
     }
+    
+    setStationSpawns([]);
+    setFighterSpawns([]);
   };
 
   const handleConfirm = () => {
@@ -338,6 +427,14 @@ export default function ScenarioEditor({ onConfirm, onCancel }: ScenarioEditorPr
         return { id: s.id, coord: { q, r }, facing: s.facing as HexFacing };
       }),
       startingRoEId: selectedRoEId || undefined,
+      stationSpawns: stationSpawns.map(s => {
+        const [q, r] = s.hex.split(',').map(Number);
+        return { id: s.id, coord: { q, r }, facing: s.facing as HexFacing, stationId: s.stationId };
+      }),
+      fighterSpawns: fighterSpawns.map(f => {
+        const [q, r] = f.hex.split(',').map(Number);
+        return { id: f.id, coord: { q, r }, facing: f.facing as HexFacing, classId: f.classId, allegiance: f.allegiance };
+      }),
     };
     onConfirm(config);
   };
@@ -452,6 +549,34 @@ export default function ScenarioEditor({ onConfirm, onCancel }: ScenarioEditorPr
                 onClick={() => { setBrushMode('allied'); setBrushSelection(a.id); }}
               >
                 {a.name}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ marginBottom: 'var(--space-md)' }}>
+            <h3 style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem', marginBottom: '8px' }}>STATIONS & TURRETS</h3>
+            {STATIONS.map(s => (
+              <button 
+                key={s.id}
+                className={`btn ${brushMode === 'station' && brushSelection === s.id ? 'active' : ''}`} 
+                style={{ width: '100%', marginBottom: '4px', justifyContent: 'flex-start', textAlign: 'left', minHeight: '40px' }}
+                onClick={() => { setBrushMode('station'); setBrushSelection(s.id); }}
+              >
+                {s.name}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ marginBottom: 'var(--space-md)' }}>
+            <h3 style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem', marginBottom: '8px' }}>FIGHTERS</h3>
+            {Object.values(ENEMY_FIGHTER_CLASSES).map(f => (
+              <button 
+                key={f.id}
+                className={`btn ${brushMode === 'fighter' && brushSelection === f.id ? 'active' : ''}`} 
+                style={{ width: '100%', marginBottom: '4px', justifyContent: 'flex-start', textAlign: 'left', minHeight: '40px' }}
+                onClick={() => { setBrushMode('fighter'); setBrushSelection(f.id); }}
+              >
+                {f.name}
               </button>
             ))}
           </div>

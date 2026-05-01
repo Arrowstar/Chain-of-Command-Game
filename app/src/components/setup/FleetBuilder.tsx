@@ -4,6 +4,7 @@ import { OFFICERS } from '../../data/officers';
 import { WEAPONS, TAG_DESCRIPTIONS, TAG_LABELS, getPurchasableWeapons } from '../../data/weapons';
 import { SUBSYSTEMS, getPurchasableSubsystems } from '../../data/subsystems';
 import { ADVERSARIES } from '../../data/adversaries';
+import { getFighterClassById } from '../../data/fighters';
 import { useGameStore, type GameInitConfig } from '../../store/useGameStore';
 import { computeDpBreakdown, DP_BUDGET } from '../../engine/dpCost';
 import type { OfficerStation, OfficerState, ShipState, EnemyShipState, ShipArc } from '../../types/game';
@@ -490,7 +491,50 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
           isDestroyed: false, hasDroppedBelow50: false, hasDrifted: false, targetLocks: [], isAllied: e.isAllied,
         } as EnemyShipState;
       });
-      config = { scenarioId: 'custom-scenario', maxRounds: 8, terrain: scenarioConfig.terrain, players: finalPlayers, playerShips: finalShips, enemyShips: mappedEnemies, startingRoEId: scenarioConfig.startingRoEId };
+      
+      const stationSpawns = scenarioConfig.stationSpawns?.map(s => ({
+        stationId: s.stationId,
+        position: s.coord,
+        facing: s.facing,
+        name: s.name,
+      })) || [];
+
+      const fighterTokens = (scenarioConfig.fighterSpawns || []).map((f, i) => {
+        const fighterClass = getFighterClassById(f.classId);
+        if (!fighterClass) return null;
+        return {
+          id: `scenario-fighter-${i}`,
+          name: fighterClass.name,
+          classId: f.classId,
+          allegiance: f.allegiance,
+          sourceShipId: 'scenario',
+          position: f.coord,
+          facing: f.facing,
+          currentHull: fighterClass.hull,
+          maxHull: fighterClass.hull,
+          speed: fighterClass.speed,
+          baseEvasion: fighterClass.baseEvasion,
+          volleyPool: fighterClass.volleyPool,
+          weaponRangeMax: fighterClass.weaponRangeMax,
+          behavior: fighterClass.behavior,
+          isDestroyed: false,
+          hasDrifted: false,
+          hasActed: false,
+          assignedTargetId: null,
+        } as any;
+      }).filter(Boolean);
+
+      config = { 
+        scenarioId: 'custom-scenario', 
+        maxRounds: 8, 
+        terrain: scenarioConfig.terrain, 
+        players: finalPlayers, 
+        playerShips: finalShips, 
+        enemyShips: mappedEnemies, 
+        startingRoEId: scenarioConfig.startingRoEId,
+        stationSpawns,
+        fighterTokens
+      };
     } else {
       const enemy = ADVERSARIES[0];
       const enemyShip: EnemyShipState = {

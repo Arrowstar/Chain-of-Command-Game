@@ -75,7 +75,12 @@ function formatDetailValue(key: string, v: unknown, details: Record<string, unkn
   if ((key === 'collisionDamage' || key === 'terrainDamage') && typeof v === 'number') {
     return v === 0 ? 'None' : `${v} hull`;
   }
-  if (typeof v === 'object') return JSON.stringify(v);
+  if (typeof v === 'object') {
+    if (Array.isArray(v)) return v.map(item => typeof item === 'object' ? JSON.stringify(item) : String(item)).join(', ');
+    return Object.entries(v as Record<string, unknown>)
+      .map(([nestedK, nestedV]) => `${DETAIL_LABELS[nestedK] ?? toSentenceCase(nestedK)}: ${String(nestedV)}`)
+      .join(' | ');
+  }
   return String(v);
 }
 

@@ -232,7 +232,12 @@ function stringifyDetailValue(value: unknown): string {
   if (value === null || value === undefined) return '';
   if (Array.isArray(value)) return value.map(stringifyDetailValue).filter(Boolean).join(', ');
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
-  if (typeof value === 'object') return JSON.stringify(value);
+  if (typeof value === 'object') {
+    return Object.entries(value as Record<string, unknown>)
+      .filter(([, v]) => v !== null && v !== undefined)
+      .map(([k, v]) => `${formatKeyLabel(k)}: ${stringifyDetailValue(v)}`)
+      .join(' | ');
+  }
   return String(value);
 }
 
