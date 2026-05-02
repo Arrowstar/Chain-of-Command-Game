@@ -82,8 +82,8 @@ describe('CampaignSaveManager', () => {
     it('triggers a file download during export', () => {
       // Mocking Blob and URL
       const mockUrl = 'blob:http://localhost:3000/mock-uuid';
-      global.URL.createObjectURL = vi.fn(() => mockUrl);
-      global.URL.revokeObjectURL = vi.fn();
+      globalThis.URL.createObjectURL = vi.fn(() => mockUrl);
+      globalThis.URL.revokeObjectURL = vi.fn();
       
       // Mock link element behavior
       const link = { 
@@ -102,7 +102,7 @@ describe('CampaignSaveManager', () => {
       expect(link.href).toBe(mockUrl);
       expect(link.download).toMatch(/^coc_campaign_save_\d{4}-\d{2}-\d{2}\.json$/);
       expect(link.click).toHaveBeenCalled();
-      expect(global.URL.revokeObjectURL).toHaveBeenCalledWith(mockUrl);
+      expect(globalThis.URL.revokeObjectURL).toHaveBeenCalledWith(mockUrl);
     });
 
     it('successfully imports a valid save file from disk', async () => {

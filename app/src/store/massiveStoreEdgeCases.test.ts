@@ -27,6 +27,7 @@ describe('Massive Store Edge Cases', () => {
       const store = useGameStore.getState();
       store.initializeGame({
         scenarioId: 'salvage-test',
+        maxRounds: 8,
         objectiveType: 'Salvage Run',
         players: [{ 
             id: 'p1', name: 'Player 1', officers: [
@@ -75,6 +76,7 @@ describe('Massive Store Edge Cases', () => {
       const store = useGameStore.getState();
       store.initializeGame({
         scenarioId: 'breakout-test',
+        maxRounds: 8,
         objectiveType: 'Breakout',
         players: [
           { id: 'p1', name: 'P1', officers: [{ officerId: 'vance', station: 'helm', currentStress: 0, currentTier: 'veteran', traumas: [], hasFumbledThisRound: false, actionsPerformedThisRound: 0, usedMethodicalThisRound: false, isLocked: false, lockDuration: 0 }], commandTokens: 10, maxCommandTokens: 10, assignedActions: [], shipId: 's1' },
@@ -103,6 +105,7 @@ describe('Massive Store Edge Cases', () => {
         const store = useGameStore.getState();
         store.initializeGame({
           scenarioId: 'debris-test',
+          maxRounds: null,
           players: [{ id: 'p1', name: 'P1', officers: [], commandTokens: 10, maxCommandTokens: 10, assignedActions: [], shipId: 's1' }],
           playerShips: [{ id: 's1', name: 'Ship', chassisId: 'vanguard', position: { q: 0, r: 0 }, facing: 0, currentHull: 10, maxHull: 10, currentSpeed: 0, shields: { fore: 5, foreStarboard: 5, aftStarboard: 5, aft: 5, aftPort: 5, forePort: 5 }, maxShieldsPerSector: 5, armorDie: 'd6', baseEvasion: 4, isDestroyed: false, criticalDamage: [], equippedWeapons: [], equippedSubsystems: [], evasionModifiers: 0, scars: [], ownerId: 'p1', hasDrifted: false, hasDroppedBelow50: false, firedWeaponIndicesThisRound: [], targetLocks: [] }],
           enemyShips: [],
@@ -120,6 +123,7 @@ describe('Massive Store Edge Cases', () => {
         const store = useGameStore.getState();
         store.initializeGame({
           scenarioId: 'reset-test',
+          maxRounds: null,
           players: [{ id: 'p1', name: 'P1', officers: [], commandTokens: 10, maxCommandTokens: 10, assignedActions: [], shipId: 's1' }],
           playerShips: [],
           enemyShips: [],
@@ -140,6 +144,7 @@ describe('Massive Store Edge Cases', () => {
         const store = useGameStore.getState();
         store.initializeGame({
           scenarioId: 'roe-bypass-test',
+          maxRounds: 8,
           players: [{ 
             id: 'p1', 
             name: 'P1', 
@@ -186,7 +191,7 @@ describe('Massive Store Edge Cases', () => {
             firedWeaponIndicesThisRound: [], 
             targetLocks: [] 
           }],
-          enemyShips: [{ id: 'e1', name: 'Enemy', adversaryId: 'hunter-killer', position: { q: -1, r: 1 }, facing: 0, currentHull: 6, maxHull: 6, shields: { fore: 3, foreStarboard: 0, aftStarboard: 0, aft: 0, aftPort: 0, forePort: 0 }, armorDie: 'd4', isDestroyed: false, criticalDamage: [], hasDrifted: false, targetLocks: [], hasDroppedBelow50: false, baseEvasion: 3 }],
+          enemyShips: [{ id: 'e1', name: 'Enemy', adversaryId: 'hunter-killer', position: { q: -1, r: 1 }, facing: 0, currentSpeed: 0, currentHull: 6, maxHull: 6, shields: { fore: 3, foreStarboard: 0, aftStarboard: 0, aft: 0, aftPort: 0, forePort: 0 }, maxShieldsPerSector: 3, armorDie: 'd4', isDestroyed: false, criticalDamage: [], hasDrifted: false, targetLocks: [], hasDroppedBelow50: false, baseEvasion: 3 }],
           terrain: [],
         });
 

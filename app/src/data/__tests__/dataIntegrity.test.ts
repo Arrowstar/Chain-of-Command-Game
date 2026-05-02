@@ -110,7 +110,7 @@ describe('Data Integrity', () => {
     it('ensures all weapons and subsystems have an imagePath defined', () => {
         [...WEAPONS, ...SUBSYSTEMS].forEach(item => {
             expect(item.imagePath).toBeDefined();
-            expect(item.imagePath.length).toBeGreaterThan(0);
+            expect(item.imagePath!.length).toBeGreaterThan(0);
         });
     });
   });

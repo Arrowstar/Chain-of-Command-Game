@@ -20,14 +20,16 @@ describe('Cross-Reference Data Integrity', () => {
 
     it('every station has a valid imageKey mapping in ASSET_MAP', () => {
       STATIONS.forEach(station => {
-        expect(ASSET_MAP[station.imageKey], `Station ${station.id} has invalid imageKey: ${station.imageKey}`).toBeDefined();
+        expect(station.imageKey, `Station ${station.id} is missing imageKey`).toBeDefined();
+        expect(ASSET_MAP[station.imageKey!], `Station ${station.id} has invalid imageKey: ${station.imageKey}`).toBeDefined();
       });
     });
 
     it('every fighter class has a valid imageKey mapping in ASSET_MAP', () => {
       const allFighters = { ...FIGHTER_CLASSES, ...ENEMY_FIGHTER_CLASSES };
       Object.values(allFighters).forEach(fc => {
-        expect(ASSET_MAP[fc.imageKey], `Fighter class ${fc.id} has invalid imageKey: ${fc.imageKey}`).toBeDefined();
+        expect(fc.imageKey, `Fighter class ${fc.id} is missing imageKey`).toBeDefined();
+        expect(ASSET_MAP[fc.imageKey!], `Fighter class ${fc.id} has invalid imageKey: ${fc.imageKey}`).toBeDefined();
       });
     });
 

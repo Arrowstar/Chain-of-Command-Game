@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type {
   GamePhase, ExecutionStep, ShipState, EnemyShipState, PlayerState,
   RoECard, TacticCard, FumbleCard, CriticalDamageCard,
-  HexCoord, TerrainType, LogEntry, QueuedAction, OfficerStation, FighterToken, TorpedoToken, ShieldState, HexFacing, ObjectiveMarkerState, DeploymentBounds, TacticHazardState,
+  HexCoord, TerrainType, LogEntry, QueuedAction, OfficerStation, OfficerState, FighterToken, TorpedoToken, ShieldState, HexFacing, ObjectiveMarkerState, DeploymentBounds, TacticHazardState,
   PendingTargetingPackage, TargetingPackageMode, ShipArc, StationState, CombatTarget,
 } from '../types/game';
 import { ShipSize, isSmallCraftSize, isCapitalShipSize } from '../types/game';
@@ -1650,9 +1650,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
   
   resolveAction: (playerId, shipId, assignedActionId, context) => {
-    try {
-      require('fs').appendFileSync('scratch/debug.log', `Resolving Action: player=${playerId}, ship=${shipId}, action=${assignedActionId}\n`);
-    } catch(e) {}
     // Cancel any in-flight weapon animations before resolving the next action
 
 
