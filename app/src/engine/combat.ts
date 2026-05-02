@@ -146,6 +146,8 @@ export interface DamageResult {
    * reflects the unchanged real sector value, not 0.
    */
   ionNebulaActive?: boolean;
+  /** True if the attack was made with an Ion weapon (Shield Breaker). */
+  isIonWeapon?: boolean;
 }
 
 /**
@@ -372,6 +374,7 @@ export function resolveAttack(
     volleyResult,
     tnBreakdown,
     ionNebulaActive: defenderInIonNebula || undefined,
+    isIonWeapon: !!isIonWeapon,
   };
 }
 

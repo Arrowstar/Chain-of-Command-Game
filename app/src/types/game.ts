@@ -538,7 +538,9 @@ export type ShipTrait =
   /** Grants Armor Piercing on attacks when this ship did not move this round. */
   | { type: 'stationaryConditional'; grantsArmorPiercing: boolean }
   /** Bonus evasion when no player ship is within radius. */
-  | { type: 'isolationConditional'; radius: number; evasionBonus: number };
+  | { type: 'isolationConditional'; radius: number; evasionBonus: number }
+  /** The ship's weapons deal double damage to shields but zero damage to hull. */
+  | { type: 'shieldBreaker' };
 
 export interface AdversaryData {
   id: string;
@@ -558,6 +560,8 @@ export interface AdversaryData {
   special?: string;
   /** Data-driven special abilities. Processed by the engine at runtime. */
   traits?: ShipTrait[];
+  /** Optional tags for the ship's primary weapon system. */
+  weaponTags?: import('./game').WeaponTag[];
 }
 
 export interface EnemyShipState {
@@ -724,6 +728,10 @@ export interface StationData {
   };
   special?: string;
   imageKey?: string;
+  /** Optional tags for the station's primary weapon system. */
+  weaponTags?: import('./game').WeaponTag[];
+  /** Data-driven special abilities. Processed by the engine at runtime. */
+  traits?: ShipTrait[];
 }
 
 export interface StationState {

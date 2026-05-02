@@ -309,6 +309,16 @@ function ShipTooltipContent({ ship, isEnemy }: { ship: ShipState | EnemyShipStat
             <span style={{ color: 'var(--color-text-dim)' }}>Volley:</span>
             <span>{adversary.volleyPool.join(', ')}</span>
           </div>
+          {adversary.traits && adversary.traits.length > 0 && (
+            <div style={{ marginTop: '8px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '6px' }}>
+              <div className="label" style={{ color: 'var(--color-alert-amber)', fontSize: '0.7rem', marginBottom: '4px' }}>Special Traits</div>
+              {adversary.traits.map((trait, idx) => (
+                <div key={idx} style={{ fontSize: '0.75rem', color: 'var(--color-text-bright)', marginBottom: '2px', lineHeight: 1.3 }}>
+                  • {formatTraitDescription(trait)}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -491,6 +501,17 @@ function StationTooltipContent({ station }: { station: StationState }) {
           </div>
         </div>
       )}
+
+      {stationData?.traits && stationData.traits.length > 0 && (
+        <div className="panel panel--raised" style={{ padding: 'var(--space-sm)', marginTop: 'var(--space-sm)' }}>
+          <div className="label" style={{ color: 'var(--color-alert-amber)', marginBottom: '4px' }}>Special Traits</div>
+          {stationData.traits.map((trait, idx) => (
+            <div key={idx} style={{ fontSize: '0.75rem', color: 'var(--color-text-bright)', marginBottom: '4px', lineHeight: 1.3 }}>
+              • {formatTraitDescription(trait)}
+            </div>
+          ))}
+        </div>
+      )}
     </>
   );
 }
@@ -630,4 +651,31 @@ function formatEnemyVesselName(name: string) {
   }
 
   return withoutFlagship;
+}
+
+function formatTraitDescription(trait: any): string {
+  switch (trait.type) {
+    case 'aura':
+      return `${trait.effect === 'tnPenalty' ? 'Jamming' : 'Command'} Aura (${trait.radius} hex): ${trait.amount > 0 ? '+' : ''}${trait.amount} ${trait.effect === 'tnPenalty' ? 'TN to attackers' : 'Evasion to allies'}`;
+    case 'rangeConditional':
+      return `Precision Fire: ${trait.extraVolley ? '+' + trait.extraVolley.join(',') : ''} ${trait.evasionBonus ? '+' + trait.evasionBonus + ' Evasion' : ''} at Range ${trait.minRange}-${trait.maxRange}`;
+    case 'flankingConditional':
+      return `Exploitative Fire: +${trait.extraVolley.join(',')} when striking ${trait.requiredArcs.length >= 3 ? 'Flank/Rear' : trait.requiredArcs.join('/')} arcs`;
+    case 'terrainConditional':
+      return `Environmental Advantage: +${trait.evasionBonus} Evasion in ${trait.terrain}`;
+    case 'spawner':
+      return `Hangar Bay: Spawns ${trait.count} ${trait.tokenClass.replace('enemy-fighter-', '').toUpperCase()} each round`;
+    case 'movementConditional':
+      return `Hit and Run: +${trait.evasionBonus} Evasion if moved ${trait.minHexesMoved}+ hexes`;
+    case 'hullThresholdConditional':
+      return `Enrage Protocol: +${trait.extraVolley.join(',')} when below ${trait.threshold * 100}% Hull`;
+    case 'stationaryConditional':
+      return `Siege Mode: Grants Armor Piercing if ship did not move`;
+    case 'isolationConditional':
+      return `Stealth Coating: +${trait.evasionBonus} Evasion when no enemies within ${trait.radius} hexes`;
+    case 'shieldBreaker':
+      return `Shield Breaker: Double shield damage, 0 hull damage`;
+    default:
+      return 'Unique tactical capability';
+  }
 }

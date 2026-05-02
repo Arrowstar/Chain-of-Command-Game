@@ -59,7 +59,7 @@ export const ADVERSARIES: AdversaryData[] = [
     special: 'Moves away from combat. Spawns 2 Strike Fighter tokens every round during Step 3.',
     traits: [
       // Hangar Bay: spawns fighters each round
-      { type: 'spawner', tokenClass: 'enemy-fighter-strike', count: 2 },
+      { type: 'spawner', tokenClass: 'enemy-strike-fighter', count: 2 },
     ],
   },
   {

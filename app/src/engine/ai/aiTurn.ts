@@ -300,14 +300,16 @@ export function executeAITier(
         // All Critical Hits bypass shields and armor completely.
         const piercingHits = volley.totalCriticalHits;
         const standardHits = volley.totalStandardHits;
+        const isIonWeapon = adversary.weaponTags?.includes('shieldBreaker') || adversary.traits?.some(t => t.type === 'shieldBreaker');
 
         // ── Ion Nebula Rule: shields are 0 while inside the nebula ─────────────
         const targetInIonNebula = defTerrain === 'ionNebula';
         const shieldVal = targetInIonNebula ? 0 : target.shields[sector];
         
         // Standard hits go against shields
-        const shieldDmg = Math.min(standardHits, shieldVal);
-        const overflow = standardHits - shieldDmg;
+        const totalShieldHits = isIonWeapon ? standardHits * 2 : standardHits;
+        const shieldDmg = Math.min(totalShieldHits, shieldVal);
+        const overflow = isIonWeapon ? 0 : standardHits - shieldDmg;
         
         // Roll armor die to mitigate overflow damage
         let armorRoll = 0;
@@ -322,8 +324,10 @@ export function executeAITier(
         }
 
 
-        // Add piercing hits directly to hull damage
-        hullDmg += piercingHits;
+        // Add piercing hits directly to hull damage (Ion weapons deal 0 hull damage)
+        if (!isIonWeapon) {
+          hullDmg += piercingHits;
+        }
 
         playerDamage.push({
           targetId: target.id,
@@ -345,7 +349,8 @@ export function executeAITier(
               criticalTriggered: piercingHits > 0,
               shieldRemaining: targetInIonNebula ? shieldVal : shieldVal - shieldDmg,
               armorDie: target.armorDie || 'd4',
-              ionNebulaActive: targetInIonNebula || undefined
+              ionNebulaActive: targetInIonNebula || undefined,
+              isIonWeapon: !!isIonWeapon,
             }
         }});
       }

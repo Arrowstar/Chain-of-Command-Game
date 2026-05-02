@@ -168,7 +168,7 @@ function DiceDetail({ details }: DiceDetailProps) {
         <>
           {damageResult.shieldHits > 0 && (
             <div className="game-log-details-row" style={{ marginTop: 4 }}>
-              <span>Shield Hit ({damageResult.struckSector})</span>
+              <span>Shield Hit ({damageResult.struckSector}){damageResult.isIonWeapon ? ' [ION]' : ''}</span>
               <span>-{damageResult.shieldHits}</span>
             </div>
           )}
@@ -189,6 +189,12 @@ function DiceDetail({ details }: DiceDetailProps) {
                 <span>{damageResult.hullDamage}</span>
               </div>
             </>
+          )}
+          {damageResult.isIonWeapon && damageResult.hullDamage === 0 && (
+            <div className="game-log-details-row" style={{ color: 'var(--color-text-dim)', fontSize: '0.8rem' }}>
+              <span>Ion Impact neutralized by hull</span>
+              <span>0</span>
+            </div>
           )}
           {damageResult.criticalTriggered && (
             <div className="game-log-details-row" style={{ color: 'var(--color-crit-gold)' }}>

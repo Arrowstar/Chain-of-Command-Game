@@ -29,7 +29,7 @@ const MAX_FIGHTERS_PER_HEX = 3;
 /**
  * Simple aggro scoring for stations. Prioritizes closest player targets.
  */
-function calculateStationAggroScores(
+export function calculateStationAggroScores(
   station: StationState,
   targets: (ShipState | EnemyShipState)[],
 ): { targetId: string; score: number; distance: number }[] {
@@ -129,12 +129,14 @@ export function executeStationTurn(
 
         const piercingHits = volley.totalCriticalHits;
         const standardHits = volley.totalStandardHits;
+        const isIonWeapon = stationData.weaponTags?.includes('shieldBreaker') || stationData.traits?.some(t => t.type === 'shieldBreaker');
 
         const targetInIonNebula = defTerrain === 'ionNebula';
         const shieldVal = targetInIonNebula ? 0 : target.shields[sector];
 
-        const shieldDmg = Math.min(standardHits, shieldVal);
-        const overflow = standardHits - shieldDmg;
+        const totalShieldHits = isIonWeapon ? standardHits * 2 : standardHits;
+        const shieldDmg = Math.min(totalShieldHits, shieldVal);
+        const overflow = isIonWeapon ? 0 : standardHits - shieldDmg;
 
         let armorRoll = 0;
         let hullDmg = 0;
@@ -146,7 +148,10 @@ export function executeStationTurn(
           hullDmg = Math.max(1, overflow - armorRoll);
         }
 
-        hullDmg += piercingHits;
+        if (!isIonWeapon) {
+          hullDmg += piercingHits;
+        }
+
 
         playerDamage.push({
           targetId: target.id,
@@ -177,6 +182,7 @@ export function executeStationTurn(
               shieldRemaining: targetInIonNebula ? shieldVal : shieldVal - shieldDmg,
               armorDie: target.armorDie || 'd4',
               ionNebulaActive: targetInIonNebula || undefined,
+              isIonWeapon: !!isIonWeapon,
             },
           },
         });
@@ -206,12 +212,14 @@ export function executeStationTurn(
 
         const piercingHits = volley.totalCriticalHits;
         const standardHits = volley.totalStandardHits;
+        const isIonWeapon = stationData.weaponTags?.includes('shieldBreaker') || stationData.traits?.some(t => t.type === 'shieldBreaker');
 
         const targetInIonNebula = defTerrain2 === 'ionNebula';
         const shieldVal = targetInIonNebula ? 0 : target.shields[sector];
 
-        const shieldDmg = Math.min(standardHits, shieldVal);
-        const overflow = standardHits - shieldDmg;
+        const totalShieldHits = isIonWeapon ? standardHits * 2 : standardHits;
+        const shieldDmg = Math.min(totalShieldHits, shieldVal);
+        const overflow = isIonWeapon ? 0 : standardHits - shieldDmg;
 
         let armorRoll = 0;
         let hullDmg = 0;
@@ -223,7 +231,10 @@ export function executeStationTurn(
           hullDmg = Math.max(1, overflow - armorRoll);
         }
 
-        hullDmg += piercingHits;
+        if (!isIonWeapon) {
+          hullDmg += piercingHits;
+        }
+
 
         playerDamage.push({
           targetId: target.id,
@@ -254,6 +265,7 @@ export function executeStationTurn(
               shieldRemaining: targetInIonNebula ? shieldVal : shieldVal - shieldDmg,
               armorDie: target.armorDie || 'd4',
               ionNebulaActive: targetInIonNebula || undefined,
+              isIonWeapon: !!isIonWeapon,
             },
           },
         });

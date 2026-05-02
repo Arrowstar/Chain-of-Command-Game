@@ -820,6 +820,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
       shipsWithHullDamageThisRound: [],
     });
 
+
+
+
+
     (config.scenarioGenerationReport ?? []).forEach(line => {
       get().addLog('system', line);
     });
@@ -862,15 +866,32 @@ export const useGameStore = create<GameStore>((set, get) => ({
       inertialDampenersTriggeredShipIds: [],
       hardLightTriggeredShipIds: [],
       shipsWithHullDamageThisRound: [],
+      salvageCratesCollected: 0,
+      warpedOutShipIds: [],
+      successfulEscapes: 0,
+      objectiveType: '',
+      objectiveMarkers: [],
+      players: [],
+      playerShips: [],
+      enemyShips: [],
     });
+
   },
 
   // ═ ══ ══ ═ Game Over Check ═ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ═
   checkGameOver: () => {
     const state = get();
+
     const result = checkGameOverConditions(state as any);
+
     if (result.gameOver) {
-      set({ gameOver: true, victory: result.victory, phase: 'gameOver' });
+      set({ 
+        gameOver: true, 
+        victory: result.victory, 
+        gameOverReason: result.reason,
+        phase: 'gameOver' 
+      });
+
       
       if (result.victory) {
         let rewardText = [];
@@ -1222,23 +1243,30 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   // ═ ══ ══ ═ Command Phase ═ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ═
   assignToken: (playerId, action) => {
+
     set(state => {
       const playerIndex = state.players.findIndex(p => p.id === playerId);
       if (playerIndex === -1) return state;
       
       const player = state.players[playerIndex];
       const officerIndex = player.officers.findIndex(o => o.station === action.station);
-      if (officerIndex === -1) return state;
+      if (officerIndex === -1) {
+
+        return state;
+      }
 
       const officer = player.officers[officerIndex];
       const officerData = getOfficerById(officer.officerId);
       
-      if (!officerData) return state;
+      if (!officerData) {
+
+        return state;
+      }
 
       // By The Book check
       const currentMaxStress = getCombatMaxStress(officer, officerData, state.experimentalTech);
       if (officerData.traitName === 'By The Book' && currentMaxStress !== null && officer.currentStress >= currentMaxStress) {
-        // block assignment
+
         return state;
       }
 
@@ -1247,16 +1275,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
       // Fumble Lockouts
       if (ship) {
         if (ship.navLockout && (action.actionId === 'adjust-speed' || action.actionId === 'rotate')) {
-          get().addLog('system', `Navigational Lockout prevents ${action.actionId}!`);
+
           return state;
         }
         if (ship.ordnanceJammed && action.actionId === 'load-ordinance') {
-          get().addLog('system', `Ordnance Jam prevents loading ordnance!`);
+
           return state;
         }
         if (action.actionId === 'fire-primary' && action.weaponSlotIndex !== undefined) {
           if (ship.disabledWeaponIndices?.includes(action.weaponSlotIndex)) {
-             get().addLog('system', `Cannot fire that weapon; it is damaged from a Power Surge!`);
+
              return state;
           }
         }
@@ -1266,11 +1294,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const hasTrauma = (id: string) => officer.traumas.some(t => t.id === id);
 
       if (hasTrauma('trigger-happy') && (action.actionId === 'target-lock' || action.actionId === 'vector-orders')) {
-        get().addLog('system', `Trigger-Happy prevents assigning ${action.actionId}!`);
+
         return state;
       }
       if (hasTrauma('tremors') && action.actionId === 'load-ordinance') {
-        get().addLog('system', `Tremors prevents loading ordnance!`);
+
         return state;
       }
       if (hasTrauma('over-compensator') && action.actionId === 'reinforce-shields') {
@@ -1280,23 +1308,21 @@ export const useGameStore = create<GameStore>((set, get) => ({
           // Allow non-fore only if fore is already maxed
           const foreMaxed = ship ? ship.shields.fore >= (ship.maxShieldsPerSector ?? 99) : false;
           if (!foreMaxed) {
-            get().addLog('system', `Over-Compensator forces reinforcing Fore shields first!`);
+
             return state;
           }
         }
       }
       if (hasTrauma('comms-phobic') && action.actionId === 'cyber-warfare') {
-        get().addLog('system', `Comms-Phobic prevents assigning ${action.actionId}!`);
+
         return state;
       }
       if (state.currentTactic?.mechanicalEffect.disablePlayerStation === action.station) {
-        get().addLog('system', `${state.currentTactic.name} prevents ${action.station} actions this round!`);
+
         return state;
       }
 
-      // Repeat-assignment cumulative stress: each additional assignment of the same
-      // action at this station adds +1 stress on top of the (trait-modified) base cost.
-      // 1st time: +0, 2nd time: +1, 3rd time: +2, etc.
+      // Repeat-assignment cumulative stress
       const priorAssignmentCount = player.assignedActions.filter(
         a => a.station === action.station && a.actionId === action.actionId
       ).length;
@@ -1335,7 +1361,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
       const recycledCoolantUsedThisRound = state.recycledCoolantUsedThisRound || coolantResult.consumed;
 
-      // ─── RoE: "Hold Together With Duct Tape" — Damage Control costs 3 CT ───
+      // RoE overrides
       const activeRoE = state.activeRoE;
       let ctCost = baseCt;
       if (action.actionId === 'damage-control' && activeRoE?.mechanicalEffect.damageControlCostOverride !== undefined) {
@@ -1345,14 +1371,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
         ctCost += 1;
       }
       if (player.commandTokens < ctCost) {
-        get().addLog('system', `[CMD] ${officerData.name} cannot assign ${action.actionId}: need ${ctCost} CT, have ${player.commandTokens}.`);
+
         return state;
       }
 
-      // ─── RoE: "Live-Fire Telemetry" — No shield targeting in rounds 1-3 ───
+      // Live-Fire Telemetry check
       if (action.actionId === 'fire-primary' && activeRoE?.mechanicalEffect.shieldTargetBanRounds !== undefined) {
         if (state.round <= activeRoE.mechanicalEffect.shieldTargetBanRounds) {
-          // Shield ban: only block if targetShipId is set and that ship has shields > 0 on any sector
           const targetId = action.targetShipId || action.context?.targetShipId;
           if (targetId) {
             const targetShip = state.enemyShips.find(s => s.id === targetId);
@@ -1360,7 +1385,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
               const hasShields = Object.values(targetShip.shields).some(v => v > 0);
               const canOverride = state.tacticalOverrideShipIds.includes(player.shipId);
               if (hasShields && !canOverride) {
-                get().addLog('roe', `🚫 LIVE-FIRE TELEMETRY: Cannot target ${targetShip.name} — enemy has active shields (forbidden until Round ${activeRoE.mechanicalEffect.shieldTargetBanRounds! + 1})!`);
+
                 return state;
               }
             }
@@ -1368,29 +1393,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
       }
 
-      // Lumbering (Minotaur) ═  block speed-increase actions entirely
+      // Lumbering Trait
       if (action.actionId === 'adjust-speed') {
-        const ship = state.playerShips.find(s => s.id === player.shipId);
         const shipChassis = getChassisById(ship?.chassisId || '');
         if (shipChassis?.uniqueTraitName === 'Lumbering' && ship && ship.currentSpeed >= 1) {
-          // Speed already at cap ═  refuse the assignment
+
           return state;
         }
       }
 
-      // Apply Stress
-      // Apply Stress
-      const { newStress } = applyStress(
-        officer,
-        officerData,
-        stressCost
-      );
-
-      const modifiedOfficer = {
+      // Officer stress and round state updates
+      const { newStress } = applyStress(officer, officerData, stressCost);
+      const modifiedOfficer: OfficerState = {
         ...officer,
         currentStress: newStress,
         actionsPerformedThisRound: officer.actionsPerformedThisRound + 1,
-        usedMethodicalThisRound: usedMethodical,
+        usedMethodicalThisRound: officer.usedMethodicalThisRound || usedMethodical,
       };
 
       const updatedPlayers = [...state.players];
@@ -1424,6 +1442,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       };
     });
   },
+
 
   unassignToken: (playerId, actionId) => {
     set(state => {
@@ -1631,18 +1650,28 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
   
   resolveAction: (playerId, shipId, assignedActionId, context) => {
+    try {
+      require('fs').appendFileSync('scratch/debug.log', `Resolving Action: player=${playerId}, ship=${shipId}, action=${assignedActionId}\n`);
+    } catch(e) {}
     // Cancel any in-flight weapon animations before resolving the next action
+
+
     useUIStore.getState().cancelAllFireAnimations();
 
     const state = get();
+
     const playerIndex = state.players.findIndex(p => p.id === playerId);
+
     if (playerIndex === -1) return;
     const player = state.players[playerIndex];
     
     const actionList = player.assignedActions;
     const actionIndex = actionList.findIndex(a => a.id === assignedActionId);
+
     if (actionIndex === -1) return;
+
     if (actionList[actionIndex].resolved) return;
+
     const action = actionList[actionIndex];
 
     // ─── Waste Action fallback ───────────────────────────────────────
@@ -1675,7 +1704,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // Resolve specific actions
     const updates: Partial<ShipState> = {};
     
+
     switch (action.actionId) {
+
       case 'adjust-speed': {
         // Enforce the delta that was queued during Planning
         let delta = action.context?.delta ?? context?.delta ?? 1;
@@ -3053,10 +3084,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // Mark ship as warped out — removed from active board
         updates.warpedOut = true;
         const inZone = isInBreakoutZone(ship.position) || state.extractionWindowShipIds.includes(ship.id);
-        set(s => ({
-          warpedOutShipIds: [...s.warpedOutShipIds, ship.id],
-          successfulEscapes: inZone ? s.successfulEscapes + 1 : s.successfulEscapes,
-        }));
+        set(s => {
+          const newWarped = [...s.warpedOutShipIds, ship.id];
+
+          return {
+            warpedOutShipIds: newWarped,
+            successfulEscapes: inZone ? s.successfulEscapes + 1 : s.successfulEscapes,
+          };
+        });
+
         if (inZone) {
           get().addLog('system', `🌀 ${ship.name} jumped to warp from the escape zone!`);
         } else {

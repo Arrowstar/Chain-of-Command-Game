@@ -128,6 +128,8 @@ export function checkGameOverConditions(state: GameState): {
   victory: boolean | null;
   reason: string;
 } {
+
+
   // ── Universal Defeat: Fleet Favor ────────────────────────────────
   if (state.fleetFavor <= -5) {
     return { gameOver: true, victory: false, reason: 'Fleet Favor dropped to -5. High Command has abandoned you.' };
@@ -197,6 +199,8 @@ export function checkGameOverConditions(state: GameState): {
   if (obj === 'Salvage Run') {
     // Collect 3 crates, then jump to warp
     if (state.salvageCratesCollected >= 3 && state.warpedOutShipIds.length >= 1) {
+
+
       return { gameOver: true, victory: true, reason: `${state.salvageCratesCollected} supply crates salvaged and fleet jumped to safety. Victory!` };
     }
   }

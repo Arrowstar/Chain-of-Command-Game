@@ -258,8 +258,14 @@ export default function VolleyBreakdown({ results, damageResult, outOfArc, weapo
                 </div>
                 {volley.totalHits > 0 && (
                   <div className="mono" style={{ fontSize: '0.85rem', marginBottom: 'var(--space-sm)', letterSpacing: '1px' }}>
-                    {currentItem.damageResult.hullDamage === 0 && currentItem.damageResult.shieldHits > 0 && (
+                    {currentItem.damageResult.isIonWeapon && (
+                      <span style={{ color: 'var(--color-alert-amber)', display: 'block', marginBottom: '4px' }}>⚡ ION IMPACT ⚡</span>
+                    )}
+                    {currentItem.damageResult.hullDamage === 0 && currentItem.damageResult.shieldHits > 0 && !currentItem.damageResult.isIonWeapon && (
                       <span style={{ color: 'var(--color-holo-cyan)' }}>IMPACT ABSORBED BY SHIELDS</span>
+                    )}
+                    {currentItem.damageResult.hullDamage === 0 && currentItem.damageResult.isIonWeapon && (
+                      <span style={{ color: 'var(--color-text-dim)', fontSize: '0.75rem' }}>ION FIELD NEUTRALIZED BY HULL PLATING</span>
                     )}
                     {currentItem.damageResult.hullDamage > 0 && currentItem.damageResult.shieldHits > 0 && (
                       <span style={{ color: 'var(--color-alert-amber)' }}>SHIELDS PIERCED</span>
@@ -330,7 +336,16 @@ export default function VolleyBreakdown({ results, damageResult, outOfArc, weapo
                         const min1RuleApplied = mitigatedOverflow === 1 && (overflowHits - armorRoll) <= 0;
 
                         if (hullDamage === 0) {
-                          return <div className="mono" style={{ color: 'var(--color-hostile-red)', marginTop: '4px' }}>0</div>;
+                          return (
+                            <div style={{ marginTop: '4px' }}>
+                              <div className="mono" style={{ color: 'var(--color-hostile-red)', fontSize: '1.2rem' }}>0</div>
+                              {currentItem.damageResult.isIonWeapon && (
+                                <div className="label" style={{ fontSize: '0.65rem', color: 'var(--color-text-dim)', marginTop: '4px', lineHeight: 1.2 }}>
+                                  SHIELD BREAKER:<br/>NO HULL DAMAGE
+                                </div>
+                              )}
+                            </div>
+                          );
                         }
 
                         return (
