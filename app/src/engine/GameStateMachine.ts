@@ -220,15 +220,6 @@ export function checkGameOverConditions(state: GameState): {
     return { gameOver: true, victory: true, reason: 'All enemy forces eliminated. Victory!' };
   }
 
-  // ── Universal Defeat: Round Limit ────────────────────────────────
-  if (state.maxRounds && state.round > state.maxRounds) {
-    return { gameOver: true, victory: false, reason: `Round ${state.maxRounds} ended. The enemy fleet has arrived.` };
-  }
-  
-  if (state.maxRounds && state.round === state.maxRounds && state.phase === 'cleanup') {
-    return { gameOver: true, victory: false, reason: `Round ${state.maxRounds} ended. The enemy fleet has arrived.` };
-  }
-
   // ── Universal Defeat: Retreat/Abandonment ──────────────────────
   // If no player ships are left on the map (all either destroyed or warped out)
   // and we haven't met any victory conditions above, it's a loss.

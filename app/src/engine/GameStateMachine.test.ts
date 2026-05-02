@@ -72,14 +72,6 @@ describe('GameStateMachine — checkGameOverConditions', () => {
       expect(res.reason).toContain('Fleet Favor');
     });
 
-    it('triggers defeat if round limit is exceeded', () => {
-      const state = { ...makeInitialState(), round: 11, maxRounds: 10 } as GameState;
-      const res = checkGameOverConditions(state);
-      expect(res.gameOver).toBe(true);
-      expect(res.victory).toBe(false);
-      expect(res.reason).toContain('Round 10 ended');
-    });
-
     it('triggers defeat if all player ships are destroyed', () => {
       const s1 = makeShip('s1', true);
       const state = { ...makeInitialState(), playerShips: [s1] } as GameState;
@@ -91,8 +83,8 @@ describe('GameStateMachine — checkGameOverConditions', () => {
 
     it('triggers defeat if all player ships have retreated without winning', () => {
       const s1 = makeShip('s1', false, true); // warped out
-      const state = { 
-        ...makeInitialState('Breakout'), 
+      const state = {
+        ...makeInitialState('Breakout'),
         playerShips: [s1],
         successfulEscapes: 0, // didn't use the zone
       } as GameState;
@@ -106,8 +98,8 @@ describe('GameStateMachine — checkGameOverConditions', () => {
   describe('Search & Destroy', () => {
     it('wins when all enemies are destroyed', () => {
       const e1 = makeEnemy('e1', true);
-      const state = { 
-        ...makeInitialState('Search & Destroy'), 
+      const state = {
+        ...makeInitialState('Search & Destroy'),
         playerShips: [makeShip('s1')],
         enemyShips: [e1],
       } as GameState;
@@ -121,8 +113,8 @@ describe('GameStateMachine — checkGameOverConditions', () => {
     it('wins when the flagship is destroyed', () => {
       const f = makeEnemy('e1', true, 'Dreadnought (Flagship)');
       const e = makeEnemy('e2', false);
-      const state = { 
-        ...makeInitialState('Assassination'), 
+      const state = {
+        ...makeInitialState('Assassination'),
         playerShips: [makeShip('s1')],
         enemyShips: [f, e],
       } as GameState;
@@ -135,8 +127,8 @@ describe('GameStateMachine — checkGameOverConditions', () => {
     it('continues if only regular escorts are destroyed', () => {
       const f = makeEnemy('e1', false, 'Dreadnought (Flagship)');
       const e = makeEnemy('e2', true);
-      const state = { 
-        ...makeInitialState('Assassination'), 
+      const state = {
+        ...makeInitialState('Assassination'),
         playerShips: [makeShip('s1')],
         enemyShips: [f, e],
       } as GameState;
@@ -149,8 +141,8 @@ describe('GameStateMachine — checkGameOverConditions', () => {
     it('wins when 50% of fleet escapes via zone (2 ships, 1 needed)', () => {
       const s1 = makeShip('s1', false, true);
       const s2 = makeShip('s2', false, false);
-      const state = { 
-        ...makeInitialState('Breakout'), 
+      const state = {
+        ...makeInitialState('Breakout'),
         playerShips: [s1, s2],
         successfulEscapes: 1,
       } as GameState;
@@ -163,8 +155,8 @@ describe('GameStateMachine — checkGameOverConditions', () => {
     it('continues if ships warped out but NOT enough via zone', () => {
       const s1 = makeShip('s1', false, true);
       const s2 = makeShip('s2', false, false);
-      const state = { 
-        ...makeInitialState('Breakout'), 
+      const state = {
+        ...makeInitialState('Breakout'),
         playerShips: [s1, s2],
         successfulEscapes: 0, // warped out, but maybe it was a retreat?
       } as GameState;
@@ -174,8 +166,8 @@ describe('GameStateMachine — checkGameOverConditions', () => {
 
     it('triggers defeat if last ship on board retreats/dies without meeting goal', () => {
       const s1 = makeShip('s1', false, true); // warped out outside zone
-      const state = { 
-        ...makeInitialState('Breakout'), 
+      const state = {
+        ...makeInitialState('Breakout'),
         playerShips: [s1],
         successfulEscapes: 0,
       } as GameState;
@@ -187,8 +179,8 @@ describe('GameStateMachine — checkGameOverConditions', () => {
 
   describe('Data Siphon', () => {
     it('wins when all 3 relays are siphoned', () => {
-      const state = { 
-        ...makeInitialState('Data Siphon'), 
+      const state = {
+        ...makeInitialState('Data Siphon'),
         playerShips: [makeShip('s1')],
         dataSiphonedRelayNames: ['Comm Relay Alpha', 'Comm Relay Beta', 'Comm Relay Gamma'],
       } as GameState;
@@ -198,8 +190,8 @@ describe('GameStateMachine — checkGameOverConditions', () => {
     });
 
     it('continues if only 2 relays are siphoned', () => {
-      const state = { 
-        ...makeInitialState('Data Siphon'), 
+      const state = {
+        ...makeInitialState('Data Siphon'),
         playerShips: [makeShip('s1')],
         dataSiphonedRelayNames: ['Comm Relay Alpha', 'Comm Relay Beta'],
       } as GameState;
@@ -210,8 +202,8 @@ describe('GameStateMachine — checkGameOverConditions', () => {
 
   describe('Hold the Line', () => {
     it('wins at the end of Round 6 if player still has ships', () => {
-      const state = { 
-        ...makeInitialState('Hold the Line'), 
+      const state = {
+        ...makeInitialState('Hold the Line'),
         round: 6,
         phase: 'cleanup',
         playerShips: [makeShip('s1')],
@@ -223,8 +215,8 @@ describe('GameStateMachine — checkGameOverConditions', () => {
     });
 
     it('continues during Round 1-5', () => {
-      const state = { 
-        ...makeInitialState('Hold the Line'), 
+      const state = {
+        ...makeInitialState('Hold the Line'),
         round: 5,
         playerShips: [makeShip('s1')],
       } as GameState;
@@ -236,8 +228,8 @@ describe('GameStateMachine — checkGameOverConditions', () => {
   describe('Salvage Run', () => {
     it('wins when 3 crates collected AND at least one ship warped out', () => {
       const s1 = makeShip('s1', false, true);
-      const state = { 
-        ...makeInitialState('Salvage Run'), 
+      const state = {
+        ...makeInitialState('Salvage Run'),
         playerShips: [s1],
         salvageCratesCollected: 3,
         warpedOutShipIds: ['s1'],
@@ -250,8 +242,8 @@ describe('GameStateMachine — checkGameOverConditions', () => {
 
     it('continues if 3 crates collected but no ships jumped yet', () => {
       const s1 = makeShip('s1', false, false);
-      const state = { 
-        ...makeInitialState('Salvage Run'), 
+      const state = {
+        ...makeInitialState('Salvage Run'),
         playerShips: [s1],
         salvageCratesCollected: 3,
         warpedOutShipIds: [],
@@ -264,8 +256,8 @@ describe('GameStateMachine — checkGameOverConditions', () => {
   describe('Handcrafted Scenarios', () => {
     it('wins "Ambush at Kaelen-IV" when Comms Array is destroyed', () => {
       const array = makeMarker('Hegemony Comms Array', true);
-      const state = { 
-        ...makeInitialState(), 
+      const state = {
+        ...makeInitialState(),
         scenarioId: 'ambush-kaelen-iv',
         playerShips: [makeShip('s1')],
         objectiveMarkers: [array],
