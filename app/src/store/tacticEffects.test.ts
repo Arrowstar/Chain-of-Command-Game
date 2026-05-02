@@ -155,4 +155,36 @@ describe('enemy tactic effects', () => {
     expect(state.currentTactic?.id).toBe('minefield-calibration');
     expect(state.tacticHazards).toHaveLength(3);
   });
+
+  it('strips shields from player ships and enemies inside an ion nebula at briefing', () => {
+    const tactic = TACTIC_DECK.find(card => card.id === 'minefield-calibration')!;
+    useGameStore.setState({
+      tacticDeck: [tactic],
+      playerShips: [
+        {
+          ...makePlayerShip(),
+          position: { q: 0, r: 0 },
+          shields: { fore: 2, foreStarboard: 2, aftStarboard: 2, aft: 2, aftPort: 2, forePort: 2 },
+        },
+      ],
+      enemyShips: [
+        {
+          ...makeEnemyShip({
+            position: { q: 5, r: 0 },
+            shields: { fore: 2, foreStarboard: 2, aftStarboard: 2, aft: 2, aftPort: 2, forePort: 2 },
+          }),
+        },
+      ],
+      terrainMap: new Map([
+        ['0,0', 'ionNebula'],
+        ['5,0', 'ionNebula'],
+      ]),
+    });
+
+    useGameStore.getState().executeBriefingPhase();
+    const state = useGameStore.getState();
+
+    expect(state.playerShips[0].shields.fore).toBe(0);
+    expect(state.enemyShips[0].shields.fore).toBe(0);
+  });
 });

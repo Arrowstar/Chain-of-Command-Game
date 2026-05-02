@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { existsSync } from 'node:fs';
+import { basename, join } from 'node:path';
 import { ADVERSARIES } from '../adversaries';
 import { SHIP_CHASSIS } from '../shipChassis';
 import { WEAPONS } from '../weapons';
@@ -11,6 +13,19 @@ import { TACTIC_DECK } from '../tacticDeck';
 import { ROE_DECK } from '../roeDeck';
 import { FUMBLE_DECK } from '../fumbleDeck';
 import { PLAYER_CRITICAL_DECK, ENEMY_CRITICAL_DECK } from '../criticalDamage';
+import { OFFICERS } from '../officers';
+
+const projectRoot = process.cwd();
+
+function publicAssetExists(imagePath: string): boolean {
+  const normalized = imagePath.replace(/^\/+/, '').replace(/\//g, '\\');
+  return existsSync(join(projectRoot, 'public', normalized));
+}
+
+function importedAssetExists(assetUrl: string, folders: string[]): boolean {
+  const filename = basename(assetUrl);
+  return folders.some(folder => existsSync(join(projectRoot, folder, filename)));
+}
 
 describe('Data Integrity', () => {
   const collections = [
@@ -111,6 +126,32 @@ describe('Data Integrity', () => {
         [...WEAPONS, ...SUBSYSTEMS].forEach(item => {
             expect(item.imagePath).toBeDefined();
             expect(item.imagePath!.length).toBeGreaterThan(0);
+        });
+    });
+
+    it('ensures all defined ship, officer, weapon, and subsystem art assets exist in the project', () => {
+        SHIP_CHASSIS.forEach(chassis => {
+            const image = chassis.image ?? '';
+            expect(
+              importedAssetExists(image, ['art\\ships\\player']),
+              `Missing ship image for ${chassis.id}: ${image}`,
+            ).toBe(true);
+        });
+
+        OFFICERS.forEach(officer => {
+            const avatar = officer.avatar ?? '';
+            expect(
+              importedAssetExists(avatar, ['art\\officers']),
+              `Missing officer image for ${officer.id}: ${avatar}`,
+            ).toBe(true);
+        });
+
+        [...WEAPONS, ...SUBSYSTEMS].forEach(item => {
+            const imagePath = item.imagePath ?? '';
+            expect(
+              publicAssetExists(imagePath),
+              `Missing public asset for ${item.id}: ${imagePath}`,
+            ).toBe(true);
         });
     });
   });

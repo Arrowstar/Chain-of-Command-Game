@@ -7,4 +7,7 @@ import { tmpdir } from 'os'
 export default defineConfig({
   plugins: [react()],
   cacheDir: join(tmpdir(), 'vite-coc-cache'),
+  build: {
+    emptyOutDir: false,
+  },
 })

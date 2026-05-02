@@ -159,6 +159,17 @@ describe('Remote Neutralization (remote-disarm-drone-rig) Resolution', () => {
     expect(useGameStore.getState().log.some(l => l.message.includes('Target acquisition failed'))).toBe(true);
   });
 
+  it('should fail before rolling when the target token is out of subsystem range', () => {
+    const hazard = { id: 'target-1', name: 'Mine', position: { q: 4, r: 0 }, damage: 3, expiresAfterRound: 99 };
+    useGameStore.setState({ tacticHazards: [hazard] });
+
+    useGameStore.getState().resolveAction(PLAYER_ID, SHIP_ID, ACTION_ID);
+
+    expect(diceRoller.rollOfficerSkillProc).not.toHaveBeenCalled();
+    expect(useGameStore.getState().tacticHazards).toHaveLength(1);
+    expect(useGameStore.getState().log.some(l => l.message.includes('target out of range'))).toBe(true);
+  });
+
   it('should refund stress on a critical success', () => {
     const hazard = { id: 'target-1', name: 'Mine', position: { q: 2, r: 0 }, damage: 3, expiresAfterRound: 99 };
     useGameStore.setState({ tacticHazards: [hazard] });

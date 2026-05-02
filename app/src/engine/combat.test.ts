@@ -10,6 +10,12 @@ describe('combat engine', () => {
     expect(breakdown.total).toBe(10); // 5 + 1 + 2 + 2
   });
 
+  it('calculateTN applies ion nebula targeting reduction', () => {
+    const breakdown = calculateTN(5, 3, TerrainType.IonNebula, 0, 0);
+    expect(breakdown.terrainModifier).toBe(-1);
+    expect(breakdown.total).toBe(5);
+  });
+
   it('assembleVolleyPool combines weapon and tactical officer die', () => {
     const weapon: WeaponModule = {
       id: 'w1', name: 'W1', arcs: ['fore'], rangeMin: 1, rangeMax: 3,

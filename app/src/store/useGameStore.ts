@@ -2842,6 +2842,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
       case 'remote-disarm-drone-rig': {
         const targetId = action.targetShipId || context?.targetShipId;
         if (!targetId) break;
+        const subsystemRangeMax = getSubsystemById('remote-disarm-drone-rig')?.rangeMax ?? 3;
+        const targetPosition =
+          state.tacticHazards.find(h => h.id === targetId)?.position
+          ?? state.torpedoTokens.find(t => t.id === targetId)?.position
+          ?? state.fighterTokens.find(f => f.id === targetId && f.allegiance === 'enemy')?.position;
+
+        if (targetPosition && hexDistance(ship.position, targetPosition) > subsystemRangeMax) {
+          get().addLog(
+            'system',
+            `Remote Neutralization failed — target out of range (dist: ${hexDistance(ship.position, targetPosition)}, max: ${subsystemRangeMax}).`,
+          );
+          break;
+        }
 
         const officer = player.officers.find(o => o.station === 'engineering');
         const officerData = officer ? getOfficerById(officer.officerId) : null;
@@ -4446,7 +4459,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const { card: newTactic, remainingDeck: remainingTactics } = drawTacticCard(state.tacticDeck, state.enemyShips);
 
     // ─── Ion Nebula: strip all shields to 0 for ships inside ────────
-    const applyNebulaShieldStrip = (ships: typeof state.playerShips) =>
+    const applyNebulaShieldStrip = <T extends { name: string; position: HexCoord; shields: ShieldState }>(ships: T[]) =>
       ships.map(s => {
         const terrain = state.terrainMap.get(hexKey(s.position));
         if (terrain !== 'ionNebula') return s;
@@ -4488,6 +4501,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
       hasMovedThisRound: false,
       hexesMovedThisRound: 0,
     }));
+    updatedEnemyShips = applyNebulaShieldStrip(updatedEnemyShips);
+
+    const updatedStations = applyNebulaShieldStrip(
+      state.stations.map(s => ({
+        ...s,
+        evasionModifiers: 0,
+        hasActed: false,
+      }))
+    );
 
     // Reset fighter round-state flags (survivors carry over, only flags reset)
     let updatedFighters = state.fighterTokens
@@ -4532,6 +4554,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       players: updatedPlayers,
       playerShips: updatedPlayerShips,
       enemyShips: updatedEnemyShips,
+      stations: updatedStations,
       fighterTokens: updatedFighters,
       torpedoTokens: updatedTorpedoes,
       currentTactic: newTactic,

@@ -160,6 +160,17 @@ describe('Fleet Assets', () => {
     expect(state.useFleetAsset('emergency-reinforcement', { shipId: 's2' })).toBe(false);
   });
 
+  it('blocks fleet assets when the fleet lacks enough Fleet Favor and does not deduct anything', () => {
+    useGameStore.setState({ fleetFavor: 0 });
+
+    const result = useGameStore.getState().useFleetAsset('tactical-override', { shipId: 's1' });
+
+    expect(result).toBe(false);
+    expect(useGameStore.getState().fleetFavor).toBe(0);
+    expect(useGameStore.getState().tacticalOverrideShipIds).toEqual([]);
+    expect(useGameStore.getState().log.some(l => l.message.includes('not enough Fleet Favor'))).toBe(true);
+  });
+
   it('Tactical Override bypasses Live-Fire Telemetry during the attack resolution', () => {
     const liveFire = ROE_DECK.find(card => card.id === 'live-fire-telemetry')!;
     useGameStore.setState({

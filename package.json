@@ -1,0 +1,10 @@
+{
+  "name": "chain-of-command-game-workspace",
+  "private": true,
+  "scripts": {
+    "build": "npm --prefix app run build",
+    "dev": "npm --prefix app run dev",
+    "test": "npm --prefix app run test",
+    "lint": "npm --prefix app run lint"
+  }
+}

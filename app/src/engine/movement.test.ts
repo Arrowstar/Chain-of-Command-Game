@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { executeDrift, rotateShip, adjustSpeed, canOccupyHex } from './movement';
 import type { ShipState } from '../types/game';
 import { HexFacing, TerrainType } from '../types/game';
@@ -29,6 +29,10 @@ const dummyShip: ShipState = {
 };
 
 describe('movement engine', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('executeDrift moves the ship cleanly in open space', () => {
     const occupied = new Set<string>();
     const terrain = new Map<string, TerrainType>();
@@ -71,6 +75,22 @@ describe('movement engine', () => {
     expect(result.hazards.length).toBeGreaterThan(0);
     // terrainDamage is 0 unless the D6 entry roll was a 1 — just verify it's non-negative
     expect(result.terrainDamage).toBeGreaterThanOrEqual(0);
+  });
+
+  it('executeDrift applies asteroid hull damage after a failed entry roll', () => {
+    const occupied = new Set<string>();
+    const terrain = new Map<string, TerrainType>();
+    terrain.set('1,-1', TerrainType.Asteroids);
+
+    vi.spyOn(Math, 'random')
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(0.74);
+
+    const result = executeDrift(dummyShip, occupied, terrain, false);
+
+    expect(result.finalPosition).toEqual({ q: 1, r: -1 });
+    expect(result.resultingSpeed).toBe(0);
+    expect(result.terrainDamage).toBe(3);
   });
 
   it('rotateShip rotates correctly', () => {
