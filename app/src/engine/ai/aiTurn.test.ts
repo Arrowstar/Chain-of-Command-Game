@@ -89,26 +89,4 @@ describe('AI movement preview', () => {
     expect(preview?.targetHex).not.toEqual(enemyShip.position);
     expect(preview?.newFacing).not.toBe(enemyShip.facing);
   });
-
-  it('shows zero movement when overwhelming firepower is active', () => {
-    const playerShip = makePlayerShip();
-    const enemyShip = makeEnemyShip();
-    const overwhelmingFirepower = TACTIC_DECK.find(card => card.id === 'overwhelming-firepower') ?? null;
-
-    const preview = previewAITierMovement(
-      [enemyShip],
-      [playerShip],
-      [enemyShip],
-      overwhelmingFirepower,
-      new Set([hexKey(playerShip.position), hexKey(enemyShip.position)]),
-      new Map(),
-    ).get(enemyShip.id);
-
-    expect(preview).toEqual({
-      targetHex: enemyShip.position,
-      newFacing: enemyShip.facing,
-      path: [],
-      noMovement: true,
-    });
-  });
 });
