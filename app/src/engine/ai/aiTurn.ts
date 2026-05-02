@@ -98,18 +98,7 @@ export function previewAITierMovement(
     const target = possibleTargets.find(p => p.id === primaryTarget.targetId);
     if (!target) continue;
 
-    const noMovement = tacticCard?.id === 'overwhelming-firepower';
     const extraMove = getTacticMovementBonus(aiShip, target, adversary.size, tacticCard);
-
-    if (noMovement) {
-      previews.set(aiShip.id, {
-        targetHex: aiShip.position,
-        newFacing: aiShip.facing,
-        path: [],
-        noMovement: true,
-      });
-      continue;
-    }
 
     const isFighter = isSmallCraftSize(adversary.size);
     const movePlan = planAIMovement(
@@ -163,7 +152,7 @@ export function executeAITier(
     const adversary = getAdversaryById(aiShip.adversaryId);
     if (!adversary) continue;
 
-    const possibleTargets = aiShip.isAllied 
+    const possibleTargets = aiShip.isAllied
       ? allEnemyShips.filter(e => !e.isAllied && !e.isDestroyed)
       : [...allPlayerShips, ...allEnemyShips.filter(e => e.isAllied && !e.isDestroyed)];
 
@@ -175,7 +164,7 @@ export function executeAITier(
     if (!target) continue;
 
     // 2. Check if tactic card prevents movement
-    const noMovement = tacticCard?.id === 'overwhelming-firepower';
+    const noMovement = false;
     const extraMove = getTacticMovementBonus(aiShip, target, adversary.size, tacticCard);
 
     // 3. Move
@@ -231,7 +220,7 @@ export function executeAITier(
       if (!weaponsDisabled) {
         const defTerrain = terrainMap.get(hexKey(target.position));
         let targetEvasion = target.baseEvasion + (target.evasionModifiers ?? 0);
-        
+
         // Apply Bulwark (only if target is playerShip)
         const isAdjacentPaladin = 'chassisId' in target && allPlayerShips.some(s => {
           if (s.id === target.id || s.isDestroyed) return false;
@@ -256,7 +245,7 @@ export function executeAITier(
         const hullRatio = aiShip.currentHull / (adversary.hull || 1);
         const hasMovedThisRound = (shipUpdates.get(aiShip.id)?.hasMovedThisRound) ?? aiShip.hasMovedThisRound ?? false;
         const sector = determineStruckShieldSector(aiShip.position, target.position, target.facing);
-        
+
         const { pool, armorPiercing: traitArmorPiercing } = applyAttackTraits(
           adversary,
           adversary.volleyPool.map(dt => ({ type: dt, source: 'weapon' } as VolleyDieInput)),
@@ -295,7 +284,7 @@ export function executeAITier(
           volley.totalStandardHits += extraVolley.totalStandardHits;
           volley.totalCriticalHits += extraVolley.totalCriticalHits;
         }
-        
+
         // Option 2: Critical Hits Pierce
         // All Critical Hits bypass shields and armor completely.
         const piercingHits = volley.totalCriticalHits;
@@ -305,12 +294,12 @@ export function executeAITier(
         // ── Ion Nebula Rule: shields are 0 while inside the nebula ─────────────
         const targetInIonNebula = defTerrain === 'ionNebula';
         const shieldVal = targetInIonNebula ? 0 : target.shields[sector];
-        
+
         // Standard hits go against shields
         const totalShieldHits = isIonWeapon ? standardHits * 2 : standardHits;
         const shieldDmg = Math.min(totalShieldHits, shieldVal);
         const overflow = isIonWeapon ? 0 : standardHits - shieldDmg;
-        
+
         // Roll armor die to mitigate overflow damage
         let armorRoll = 0;
         let hullDmg = 0;
@@ -336,8 +325,9 @@ export function executeAITier(
           sector,
           officerStress: piercingHits > 0 ? tacticCard?.mechanicalEffect.criticalStressBonus : undefined,
         });
-        actions.push({ shipId: aiShip.id, type: 'attack', details: {
-          target: target.id, hits: volley.totalHits, hullDmg, shieldDmg, sector,
+        actions.push({
+          shipId: aiShip.id, type: 'attack', details: {
+            target: target.id, hits: volley.totalHits, hullDmg, shieldDmg, sector,
             damageResult: {
               tnBreakdown: tn,
               volleyResult: volley,
@@ -352,7 +342,8 @@ export function executeAITier(
               ionNebulaActive: targetInIonNebula || undefined,
               isIonWeapon: !!isIonWeapon,
             }
-        }});
+          }
+        });
       }
     }
   }
