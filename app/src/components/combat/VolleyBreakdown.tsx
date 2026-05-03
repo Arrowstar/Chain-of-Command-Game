@@ -261,6 +261,9 @@ export default function VolleyBreakdown({ results, damageResult, outOfArc, weapo
                     {currentItem.damageResult.isIonWeapon && (
                       <span style={{ color: 'var(--color-alert-amber)', display: 'block', marginBottom: '4px' }}>⚡ ION IMPACT ⚡</span>
                     )}
+                    {currentItem.damageResult.isArmorPiercing && !currentItem.damageResult.isIonWeapon && (
+                      <span style={{ color: 'var(--color-alert-amber)', display: 'block', marginBottom: '4px' }}>🎯 ARMOR PIERCING VOLLEY 🎯</span>
+                    )}
                     {currentItem.damageResult.hullDamage === 0 && currentItem.damageResult.shieldHits > 0 && !currentItem.damageResult.isIonWeapon && (
                       <span style={{ color: 'var(--color-holo-cyan)' }}>IMPACT ABSORBED BY SHIELDS</span>
                     )}

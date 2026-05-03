@@ -42,7 +42,12 @@ export default function SkillProcResolution({ data, onClose }: SkillProcResoluti
     { label: 'Action', value: data.actionName },
     { label: 'Skill Die', value: result.dieType.toUpperCase() },
     { label: 'Success On', value: `${result.successThreshold}+` },
-    { label: 'Critical On', value: result.maxFace > result.successThreshold ? `${result.maxFace}` : 'GATED' },
+    { 
+      label: 'Critical On', 
+      value: result.maxFace > result.successThreshold 
+        ? `${result.maxFace}` 
+        : `GATED (${result.dieType.toUpperCase()} Tier)` 
+    },
   ];
 
   return (
@@ -118,6 +123,11 @@ export default function SkillProcResolution({ data, onClose }: SkillProcResoluti
                 <div className="mono" style={{ marginTop: '4px', color: 'var(--color-text-primary)', whiteSpace: 'pre-wrap' }}>
                   {result.isCritical ? data.criticalEffect : 'Not triggered.'}
                 </div>
+                {!result.isCritical && result.maxFace <= result.successThreshold && (
+                  <div style={{ marginTop: '8px', fontSize: '0.65rem', color: 'var(--color-alert-amber)', fontStyle: 'italic' }}>
+                    * Critical effects are unavailable for {result.dieType.toUpperCase()} tier officers on this action (Success Threshold {result.successThreshold}).
+                  </div>
+                )}
               </div>
             )}
           </motion.div>

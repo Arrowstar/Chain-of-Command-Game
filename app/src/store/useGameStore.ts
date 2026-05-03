@@ -2470,6 +2470,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     currentHull: Math.max(0, stationTarget.currentHull - finalHullDamage),
                 };
                 if (targetUpdates.currentHull === 0) targetUpdates.isDestroyed = true;
+                
+                // Station Target Lock consumption (matches ship logic)
+                targetUpdates.targetLocks = finalTargetLocks;
+                targetUpdates.targetLocksRerolls = targetLockRerolls;
+                targetUpdates.targetLockArmorPiercingShots = Math.max(0, targetLockArmorPiercingShots - (targetPaintingArmorPiercing ? 1 : 0));
+
                 get().updateStation(stationTarget.id, targetUpdates);
 
                 if (damageResult.criticalTriggered && !targetUpdates.isDestroyed) {
@@ -2675,7 +2681,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         } else {
           const hullRepairAmount = procResult?.isSuccess ? 2 : 1;
           targetUpdates.currentHull = Math.min(target.maxHull, target.currentHull + hullRepairAmount);
-          get().addLog('repair', `═x ═ ${dcName}: Repaired 1 hull on ${target.name} (${target.currentHull} ═   ${targetUpdates.currentHull}/${target.maxHull})`);
+          get().addLog('repair', `═x ═ ${dcName}: Repaired ${hullRepairAmount} hull on ${target.name} (${target.currentHull} ═   ${targetUpdates.currentHull}/${target.maxHull})`);
         }
         
         if (!context?.clearCritId) {
@@ -5204,6 +5210,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
         ...station,
         shields: newShields,
         hasActed: false,
+        targetLocks: [],
+        targetLocksRerolls: 0,
+        targetLockArmorPiercingShots: 0,
       };
     });
 

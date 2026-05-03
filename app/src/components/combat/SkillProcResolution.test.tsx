@@ -76,7 +76,7 @@ describe('SkillProcResolution', () => {
       />,
     );
 
-    expect(screen.getByText('GATED')).toBeInTheDocument();
+    expect(screen.getByText('GATED (D4 Tier)')).toBeInTheDocument();
     act(() => {
       vi.advanceTimersByTime(2000);
     });

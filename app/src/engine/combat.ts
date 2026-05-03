@@ -152,6 +152,8 @@ export interface DamageResult {
   ionNebulaActive?: boolean;
   /** True if the attack was made with an Ion weapon (Shield Breaker). */
   isIonWeapon?: boolean;
+  /** True if the entire volley was Armor Piercing (ignores Armor mitigation). */
+  isArmorPiercing?: boolean;
 }
 
 /**
@@ -383,6 +385,7 @@ export function resolveAttack(
     tnBreakdown,
     ionNebulaActive: defenderInIonNebula || undefined,
     isIonWeapon: !!isIonWeapon,
+    isArmorPiercing: !!armorPiercingAttack || weapon.tags.includes('armorPiercing'),
   };
 }
 
