@@ -97,4 +97,25 @@ describe('generateProceduralScenario terrain variety', () => {
     expect(new Set(scenario.enemyShips.map(ship => ship.position.q)).size).toBeGreaterThan(1);
     expect(scenario.generationReport.some(line => line.includes('wreckfield pickets'))).toBe(true);
   });
+  
+  it('utilizes the expanded Hegemony roster including new capital ships', () => {
+    withRandomSequence([
+      0.95, // objective: Search & Destroy
+      0.45, // environment
+      0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, // terrain
+      0.9,  // first ship
+      0.1,  // second ship
+      0.8,  // third ship
+    ]);
+
+    const scenario = generateProceduralScenario(3, 2, null);
+    
+    const shipIds = scenario.enemyShips.map(s => s.adversaryId);
+    const reportText = scenario.generationReport.join('\n');
+    
+    expect(scenario.enemyShips.length).toBeGreaterThan(0);
+    expect(reportText).toContain('Fleet Roll: selected');
+    expect(shipIds.length).toBeGreaterThan(0);
+  });
 });
+

@@ -666,10 +666,15 @@ export function generateProceduralScenario(
   const shipTable = [
     { id: 'strike-fighter', cost: 1 },
     { id: 'hegemony-corvette', cost: 2 },
+    { id: 'hegemony-escort', cost: 3 },
+    { id: 'hegemony-stealth-corvette', cost: 3 },
     { id: 'hunter-killer', cost: 4 },
-    { id: 'hunter-killer', cost: 4 },
+    { id: 'hegemony-interdictor', cost: 5 },
     { id: 'monitor', cost: 7 },
-    { id: 'hegemony-dreadnought', cost: 10 },
+    { id: 'hegemony-railgun', cost: 8 },
+    { id: 'hegemony-ravager', cost: 8 },
+    { id: 'carrier', cost: 9 },
+    { id: 'hegemony-dreadnought', cost: 12 },
   ];
 
   const stationTable = [
@@ -784,23 +789,16 @@ export function generateProceduralScenario(
   }
 
   while (budget > 0) {
-    const roll = rollD6();
-    let selected = shipTable[roll - 1];
-    let selectionReason = `table result ${selected.id} (cost ${selected.cost})`;
-
-    if (selected.cost > budget) {
-      const affordable = [...shipTable].reverse().find(s => s.cost <= budget);
-      if (!affordable) {
-        generationReport.push(`[PROCGEN] Fleet Roll: d6 = ${roll} but no unit fit remaining budget ${budget}; deployment ended.`);
-        break;
-      }
-      selected = affordable;
-      selectionReason = `table result unaffordable; downgraded to ${selected.id} (cost ${selected.cost})`;
+    const affordable = shipTable.filter(s => s.cost <= budget);
+    if (affordable.length === 0) {
+      generationReport.push(`[PROCGEN] Fleet Roll: no units fit remaining budget ${budget}; deployment ended.`);
+      break;
     }
 
+    const selected = affordable[Math.floor(Math.random() * affordable.length)];
     enemyRoster.push(selected.id);
     budget -= selected.cost;
-    generationReport.push(`[PROCGEN] Fleet Roll: d6 = ${roll} -> ${selectionReason}. Remaining budget ${budget}.`);
+    generationReport.push(`[PROCGEN] Fleet Roll: selected ${selected.id} (cost ${selected.cost}). Remaining budget ${budget}.`);
   }
 
   const usedNames = new Set<string>();
