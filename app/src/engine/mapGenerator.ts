@@ -64,7 +64,7 @@ export function generateSectorMap(seed: number = Math.random(), totalLayers: num
 
     for (let slot = 0; slot < width; slot++) {
       const type = slot === havenSlot ? NodeType.Haven : pickNodeType(layer, slot, width, random);
-      const position = clamp((slot + 1) / (width + 1) + (random() * 0.12 - 0.06), 0.05, 0.95);
+      const position = clamp((slot + 1) / (width + 1) + (random() * 0.12 - 0.06), 0.12, 0.88);
       nodes.push({
         id: type === NodeType.Haven ? `haven-${layer}` : `node-${layer}-${slot}`,
         type,

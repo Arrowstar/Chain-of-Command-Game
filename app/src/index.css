@@ -527,7 +527,7 @@ h4 { font-size: 1rem;   font-weight: 500; }
 }
 
 .fleet-status-side-rail {
-  pointer-events: auto;
+  pointer-events: none;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -535,6 +535,7 @@ h4 { font-size: 1rem;   font-weight: 500; }
 }
 
 .fleet-status-card {
+  pointer-events: auto;
   width: 240px;
   flex-shrink: 0;
   display: flex;
