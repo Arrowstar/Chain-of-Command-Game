@@ -542,6 +542,7 @@ export function generateProceduralScenario(
   sector: number,
   playerCount: number,
   combatModifiers: CombatModifiers | null,
+  difficulty: 'combat' | 'elite' | 'boss' = 'combat',
 ): ProceduralScenarioConfig {
   const rules: string[] = [];
   const generationReport: string[] = [];
@@ -647,7 +648,14 @@ export function generateProceduralScenario(
   if (sector === 2) threatPerPlayer = 7;
   if (sector === 3) threatPerPlayer = 10;
 
-  const baseBudget = playerCount * threatPerPlayer;
+  const rawBaseBudget = playerCount * threatPerPlayer;
+  let multiplier = 0;
+  if (difficulty === 'elite') multiplier = 0.25;
+  if (difficulty === 'boss') multiplier = 0.50;
+
+  const eliteBudgetBonus = Math.round(rawBaseBudget * multiplier);
+  const baseBudget = rawBaseBudget + eliteBudgetBonus;
+
   const modifierBudgetBonus =
     (combatModifiers?.threatBudgetBonus ?? 0) +
     (combatModifiers?.propagandaExposedBonus ?? 0) +
@@ -686,7 +694,7 @@ export function generateProceduralScenario(
   if (combatModifiers?.highPriorityBounty) modifierNotes.push('high priority bounty (+3 threat)');
   if (combatModifiers?.propagandaExposedBonus) modifierNotes.push(`propaganda exposed bonus +${combatModifiers.propagandaExposedBonus}`);
 
-  generationReport.push(`[PROCGEN] Step 3 - Threat Budget: sector ${sector} => ${threatPerPlayer} threat/player x ${playerCount} = ${baseBudget}; modifiers ${modifierBudgetBonus >= 0 ? '+' : ''}${modifierBudgetBonus}; starting budget ${startingBudget}.`);
+  generationReport.push(`[PROCGEN] Step 3 - Threat Budget: sector ${sector} => ${threatPerPlayer} threat/player x ${playerCount} = ${rawBaseBudget}${eliteBudgetBonus > 0 ? `; ${difficulty.toUpperCase()} bonus +${eliteBudgetBonus}` : ''}; modifiers ${modifierBudgetBonus >= 0 ? '+' : ''}${modifierBudgetBonus}; starting budget ${startingBudget}.`);
   generationReport.push(`[PROCGEN] Combat Modifiers: ${modifierNotes.length > 0 ? modifierNotes.join(', ') : 'none'}.`);
 
   const stationSpawns: { stationId: string; position: HexCoord; facing?: number; name?: string }[] = [];

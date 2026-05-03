@@ -35,13 +35,15 @@ export default function NodeResolutionModal({ onStartCombat }: Props) {
     const { persistedPlayers, persistedShips, campaign } = useCampaignStore.getState();
     if (!campaign) return;
 
-    const isElite = currentNode.type === NodeType.Elite || currentNode.type === NodeType.Boss;
+    const isElite = currentNode.type === NodeType.Elite;
+    const isBoss = currentNode.type === NodeType.Boss;
 
     // Generate the full procedural scenario using the 4-step algorithm
     const generated = generateProceduralScenario(
       campaign.currentSector,
       persistedShips.length,
-      campaign.nextCombatModifiers
+      campaign.nextCombatModifiers,
+      isBoss ? 'boss' : (isElite ? 'elite' : 'combat')
     );
 
     const deploymentRevealLogs = generated.generationReport.filter(line =>
@@ -51,8 +53,8 @@ export default function NodeResolutionModal({ onStartCombat }: Props) {
       !deploymentRevealLogs.includes(line)
     );
 
-    // For elite/boss nodes, boost enemy hull values
-    const enemies = isElite
+    // Boss nodes retain the 1.25x hull multiplier; Elite nodes now rely on the increased threat budget.
+    const enemies = isBoss
       ? generated.enemyShips.map(e => ({
           ...e,
           currentHull: Math.round(e.currentHull * 1.25),
@@ -60,10 +62,10 @@ export default function NodeResolutionModal({ onStartCombat }: Props) {
         }))
       : generated.enemyShips;
 
-    if (isElite) {
-      scenarioGenerationReport.push(`[PROCGEN] Node Difficulty Override: ${currentNode.type} node detected. All generated enemy hull values increased by 25% after roster creation.`);
+    if (isBoss) {
+      scenarioGenerationReport.push(`[PROCGEN] Node Difficulty Override: BOSS node detected. All generated enemy hull values increased by 25% after roster creation.`);
       enemies.forEach(enemy => {
-        scenarioGenerationReport.push(`[PROCGEN] Elite Hull Pass: ${enemy.name} now enters combat at Hull ${enemy.currentHull}/${enemy.maxHull}.`);
+        scenarioGenerationReport.push(`[PROCGEN] Boss Hull Pass: ${enemy.name} now enters combat at Hull ${enemy.currentHull}/${enemy.maxHull}.`);
       });
     }
 
