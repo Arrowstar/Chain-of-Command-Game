@@ -1,7 +1,8 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import * as PIXI from 'pixi.js';
 import { useGameStore } from '../../store/useGameStore';
-import { useUIStore } from '../../store/useUIStore';
+import { useUIStore, type SelectionTarget } from '../../store/useUIStore';
+import SelectionPicker from './SelectionPicker';
 import { hexToPixel, hexCorners, hexKey, pixelToHex, isInFiringArc, hexDistance, hexNeighbors } from '../../engine/hexGrid';
 import { EXECUTION_STEP_ORDER, getShipSizeForStep, isAlliedStep, isInBreakoutZone } from '../../engine/GameStateMachine';
 import type { TerrainType, ShipArc, ShipState, EnemyShipState, TacticHazardState } from '../../types/game';
@@ -1274,20 +1275,55 @@ export default function HexMap() {
         
         // If we are in targeting mode, process the target
         const targetingModeState = useUIStore.getState().targetingMode;
+        const key = hexKey(clickedHex);
+
+        const collectHexTargets = (): SelectionTarget[] => {
+          const state = useGameStore.getState();
+          const t: SelectionTarget[] = [];
+          state.playerShips.filter(s => !s.isDestroyed && hexKey(s.position) === key).forEach(s => t.push({ kind: 'ship', ship: s, isEnemy: false }));
+          state.enemyShips.filter(s => !s.isDestroyed && hexKey(s.position) === key).forEach(s => t.push({ kind: 'ship', ship: s, isEnemy: true }));
+          state.fighterTokens.filter(f => !f.isDestroyed && hexKey(f.position) === key).forEach(f => t.push({ kind: 'fighter', fighter: f }));
+          state.stations.filter(s => !s.isDestroyed && hexKey(s.position) === key).forEach(s => t.push({ kind: 'station', station: s }));
+          state.objectiveMarkers.filter(m => !m.isDestroyed && !m.isCollected && hexKey(m.position) === key).forEach(m => t.push({ kind: 'objective', marker: m }));
+          state.torpedoTokens.filter(t_ => !t_.isDestroyed && hexKey(t_.position) === key).forEach(t_ => t.push({ kind: 'torpedo', torpedo: t_ }));
+          state.tacticHazards.filter(h => hexKey(h.position) === key).forEach(h => t.push({ kind: 'hazard', hazard: h }));
+          return t;
+        };
+
         if (targetingModeState) {
           const actionData = useUIStore.getState().activeTargetingAction;
           if (actionData) {
             if (targetingModeState === 'ship') {
-              // Check if a ship OR fighter is on this hex
-              const key = hexKey(clickedHex);
-              const pShip = useGameStore.getState().playerShips.find(s => !s.isDestroyed && hexKey(s.position) === key);
-              const eShip = useGameStore.getState().enemyShips.find(s => !s.isDestroyed && hexKey(s.position) === key);
-              // Also allow targeting fighter tokens (e.g. PDC fire)
-              const eFighter = useGameStore.getState().fighterTokens.find(f => !f.isDestroyed && hexKey(f.position) === key);
-              const objectiveMarker = useGameStore.getState().objectiveMarkers.find(m => !m.isDestroyed && !m.isCollected && hexKey(m.position) === key);
-              const stationTarget = useGameStore.getState().stations.find(s => !s.isDestroyed && hexKey(s.position) === key);
-              const hazard = useGameStore.getState().tacticHazards.find(h => hexKey(h.position) === key);
-              const torpedo = useGameStore.getState().torpedoTokens.find(t => !t.isDestroyed && hexKey(t.position) === key);
+              const hexTargets = collectHexTargets();
+
+              // If multiple potential targets, open picker
+              if (hexTargets.length > 1) {
+                const ctx = useUIStore.getState().activeTargetingContext || {};
+                useUIStore.getState().openSelectionPicker(clickedHex, hexTargets, { x: screenX, y: screenY }, actionData, ctx);
+                return;
+              }
+
+              // Otherwise proceed with single target logic (or none)
+              const pShipTarget = hexTargets.find(t => t.kind === 'ship' && !t.isEnemy);
+              const pShip = pShipTarget?.kind === 'ship' ? pShipTarget.ship as ShipState : undefined;
+              
+              const eShipTarget = hexTargets.find(t => t.kind === 'ship' && t.isEnemy);
+              const eShip = eShipTarget?.kind === 'ship' ? eShipTarget.ship as EnemyShipState : undefined;
+              
+              const fighterTarget = hexTargets.find(t => t.kind === 'fighter');
+              const eFighter = fighterTarget?.kind === 'fighter' ? fighterTarget.fighter : undefined;
+              
+              const objectiveTarget = hexTargets.find(t => t.kind === 'objective');
+              const objectiveMarker = objectiveTarget?.kind === 'objective' ? objectiveTarget.marker : undefined;
+              
+              const stationTg = hexTargets.find(t => t.kind === 'station');
+              const stationTarget = stationTg?.kind === 'station' ? stationTg.station : undefined;
+              
+              const hazardTarget = hexTargets.find(t => t.kind === 'hazard');
+              const hazard = hazardTarget?.kind === 'hazard' ? hazardTarget.hazard : undefined;
+              
+              const torpedoTarget = hexTargets.find(t => t.kind === 'torpedo');
+              const torpedo = torpedoTarget?.kind === 'torpedo' ? torpedoTarget.torpedo : undefined;
 
               const target = pShip || eShip || 
                              (eFighter ? { id: eFighter.id } : null) || 
@@ -1445,7 +1481,15 @@ export default function HexMap() {
           }
         }
         
-        useUIStore.getState().selectShip(null);
+        // Non-targeting selection
+        const hexTargets = collectHexTargets();
+        if (hexTargets.length > 1) {
+          useUIStore.getState().openSelectionPicker(clickedHex, hexTargets, { x: screenX, y: screenY });
+        } else if (hexTargets.length === 1 && hexTargets[0].kind === 'ship') {
+          useUIStore.getState().selectShip(hexTargets[0].ship.id);
+        } else {
+          useUIStore.getState().selectShip(null);
+        }
       }
     }
   };
@@ -1564,6 +1608,7 @@ export default function HexMap() {
       <div className="scanline-overlay" />
       <TerrainLegend />
       <ShipInfoPanel target={hoverTooltip?.target ?? null} position={hoverTooltip?.position ?? null} />
+      <SelectionPicker />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { HexCoord, WeaponFireEvent } from '../types/game';
+import type { HexCoord, WeaponFireEvent, ShipState, EnemyShipState, StationState, ObjectiveMarkerState, FighterToken, TorpedoToken, TacticHazardState } from '../types/game';
 
 // ═══════════════════════════════════════════════════════════════════
 // UI Store — Visual/interaction state only (no game logic)
@@ -10,6 +10,16 @@ interface UIStore {
   selectedShipId: string | null;
   hoveredHex: HexCoord | null;
   hoveredShipId: string | null;
+
+  // Selection Picker
+  selectionPicker: {
+    isOpen: boolean;
+    hex: HexCoord | null;
+    targets: SelectionTarget[];
+    position: { x: number; y: number } | null;
+    action: { shipId: string; actionId: string } | null;
+    context: Record<string, any> | null;
+  } | null;
 
   // Drag and drop
   isDraggingToken: boolean;
@@ -50,6 +60,10 @@ interface UIStore {
   selectShip: (id: string | null) => void;
   hoverHex: (hex: HexCoord | null) => void;
   hoverShip: (id: string | null) => void;
+
+  // Selection Picker Actions
+  openSelectionPicker: (hex: HexCoord, targets: SelectionTarget[], position: { x: number; y: number }, action?: { shipId: string; actionId: string } | null, context?: Record<string, any> | null) => void;
+  closeSelectionPicker: () => void;
   setDragging: (dragging: boolean, station?: string | null) => void;
   panCamera: (dx: number, dy: number) => void;
   zoomCamera: (delta: number) => void;
@@ -105,6 +119,7 @@ export const useUIStore = create<UIStore>((set) => ({
   targetingMode: null,
   activeTargetingAction: null,
   activeTargetingContext: null,
+  selectionPicker: null,
 
   selectShip: (id) => set({ selectedShipId: id, shipInfoPanelOpen: id !== null }),
   hoverHex: (hex) => set({ hoveredHex: hex }),
@@ -140,6 +155,11 @@ export const useUIStore = create<UIStore>((set) => ({
   updateTargetingContext: (context) => set(s => ({ activeTargetingContext: { ...s.activeTargetingContext, ...context } })),
   clearTargeting: () => set({ targetingMode: null, activeTargetingAction: null, activeTargetingContext: null }),
 
+  openSelectionPicker: (hex, targets, position, action = null, context = null) => set({
+    selectionPicker: { isOpen: true, hex, targets, position, action, context }
+  }),
+  closeSelectionPicker: () => set({ selectionPicker: null }),
+
   queueFireAnimation: (event) => set(s => ({ pendingFireAnimations: [...s.pendingFireAnimations, event] })),
   consumeFireAnimation: (id) => set(s => ({ pendingFireAnimations: s.pendingFireAnimations.filter(e => e.id !== id) })),
   cancelAllFireAnimations: () => set({ pendingFireAnimations: [] }),
@@ -167,5 +187,14 @@ export const useUIStore = create<UIStore>((set) => ({
     targetingMode: null,
     activeTargetingAction: null,
     activeTargetingContext: null,
+    selectionPicker: null,
   }),
 }));
+
+export type SelectionTarget =
+  | { kind: 'ship'; ship: ShipState | EnemyShipState; isEnemy: boolean }
+  | { kind: 'station'; station: StationState }
+  | { kind: 'objective'; marker: ObjectiveMarkerState }
+  | { kind: 'fighter'; fighter: FighterToken; stackCount?: number }
+  | { kind: 'torpedo'; torpedo: TorpedoToken }
+  | { kind: 'hazard'; hazard: TacticHazardState };
