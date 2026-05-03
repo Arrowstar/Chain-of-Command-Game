@@ -1,4 +1,4 @@
-import type { HexCoord, HexFacing, AIBehaviorTag, TerrainType } from '../../types/game';
+import { TerrainType, type HexCoord, type HexFacing, type AIBehaviorTag } from '../../types/game';
 import { hexDistance, hexNeighbors, hexKey, hexNeighbor, isInFiringArc } from '../hexGrid';
 
 // ═══════════════════════════════════════════════════════════════════
@@ -68,8 +68,8 @@ function planAggressive(
     const distB = hexDistance(b.hex, targetPos);
     
     // Penalty for ending in asteroids
-    const terrainA = terrain.get(hexKey(a.hex)) === 'asteroids' ? 2 : 0;
-    const terrainB = terrain.get(hexKey(b.hex)) === 'asteroids' ? 2 : 0;
+    const terrainA = terrain.get(hexKey(a.hex)) === TerrainType.Asteroids ? 0.5 : 0;
+    const terrainB = terrain.get(hexKey(b.hex)) === TerrainType.Asteroids ? 0.5 : 0;
 
     if (distA + terrainA !== distB + terrainB) return (distA + terrainA) - (distB + terrainB);
     return scoreFacing(a, targetPos) - scoreFacing(b, targetPos);
@@ -179,9 +179,7 @@ function getReachableStates(
     if (!occupied.has(fwdKeyHex)) {
       const t = terrain.get(fwdKeyHex);
       let canMove = true;
-      if (isFighter && t === 'debrisField') canMove = false;
-      // Capital ships CAN enter asteroids but they halt immediately.
-      
+      if (isFighter && t === TerrainType.DebrisField) canMove = false;
       if (canMove) {
         const nextCost = curr.cost + 1;
         const prevCost = visited.get(fwdStateKey) ?? Infinity;
@@ -191,7 +189,7 @@ function getReachableStates(
           if (prevCost === Infinity) reachable.push({ hex: fwd, facing: curr.facing, path: nextPath });
           
           // If it's an asteroid hex and NOT a fighter, the ship is halted.
-          const isHalted = t === 'asteroids' && !isFighter;
+          const isHalted = t === TerrainType.Asteroids && !isFighter;
           if (!isHalted) {
             queue.push({ hex: fwd, facing: curr.facing, cost: nextCost, path: nextPath });
           }

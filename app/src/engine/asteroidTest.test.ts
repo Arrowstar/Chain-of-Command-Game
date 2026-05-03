@@ -1,8 +1,10 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { executeDrift } from '../engine/movement';
+import { executeDrift, resolveAsteroidEntry } from '../engine/movement';
 import { applyGravityWellPull } from '../engine/gravityWell';
-import { HexFacing, TerrainType, ShipState, EnemyShipState } from '../types/game';
+import { planAIMovement } from './ai/behaviors';
+import { HexFacing, TerrainType, type ShipState, type EnemyShipState } from '../types/game';
+import { hexKey } from './hexGrid';
 
 const dummyShip: ShipState = {
   id: 'ship-1',
@@ -34,41 +36,67 @@ describe('Asteroid Entry Logic', () => {
     vi.restoreAllMocks();
   });
 
-  it('Drift: entering asteroid field triggers D6 roll and potential damage', () => {
+  it('Drift: entering asteroid field triggers D6 roll and returns result', () => {
     const occupied = new Set<string>();
     const terrain = new Map<string, TerrainType>();
-    terrain.set('1,-1', TerrainType.Asteroids);
+    terrain.set(hexKey({ q: 1, r: -1 }), 'asteroids' as any);
 
-    // Mock Math.random to guarantee a '1' on D6 and '3' on D4
-    // D6: Math.floor(0 * 6) + 1 = 1
-    // D4: Math.floor(0.5 * 4) + 1 = 3
     const randomSpy = vi.spyOn(Math, 'random');
-    randomSpy.mockReturnValueOnce(0); // D6 roll
-    randomSpy.mockReturnValueOnce(0.5); // D4 damage
+    randomSpy.mockReturnValueOnce(0); // D6 roll = 1
+    randomSpy.mockReturnValueOnce(0.5); // D4 damage = 3
 
     const result = executeDrift(dummyShip, occupied, terrain, false);
 
     expect(result.finalPosition).toEqual({ q: 1, r: -1 });
+    expect(result.asteroidRoll?.entryRoll).toBe(1);
+    expect(result.asteroidRoll?.damage).toBe(3);
     expect(result.terrainDamage).toBe(3);
-    expect(result.resultingSpeed).toBe(0);
   });
 
-  it('Gravity Well: pulling into asteroid field SHOULD trigger roll (but currently does not?)', () => {
+  it('Gravity Well: pulling into asteroid field now triggers roll and returns result', () => {
     const playerShips = [dummyShip];
     const enemyShips: EnemyShipState[] = [];
-    const gravityWellHexes = [{ q: 2, r: -2 }]; // 2 steps away in Fore direction
+    const gravityWellHexes = [{ q: 2, r: -2 }];
     const occupied = new Set<string>();
     const terrain = new Map<string, TerrainType>();
-    terrain.set('1,-1', TerrainType.Asteroids); // Pulled into this hex
+    terrain.set(hexKey({ q: 1, r: -1 }), 'asteroids' as any);
 
-    // If it triggers a roll, we should see Math.random calls
     const randomSpy = vi.spyOn(Math, 'random');
+    randomSpy.mockReturnValueOnce(0); // D6 roll = 1
+    randomSpy.mockReturnValueOnce(0.5); // D4 damage = 3
 
-    const results = applyGravityWellPull(playerShips, enemyShips, gravityWellHexes, occupied);
+    const results = applyGravityWellPull(playerShips, enemyShips, gravityWellHexes, occupied, terrain);
 
     expect(results[0].toPos).toEqual({ q: 1, r: -1 });
-    // CURRENT BEHAVIOR: No roll, no damage field in results
-    // GravityPullResult only has collisionDamage, not terrainDamage.
-    expect(randomSpy).not.toHaveBeenCalled(); 
+    expect(results[0].asteroidRoll?.entryRoll).toBe(1);
+    expect(results[0].asteroidRoll?.damage).toBe(3);
+  });
+
+  it('AI Pathfinding: capital ships can now enter asteroids but are halted', () => {
+    const aiPos = { q: 0, r: 0 };
+    const aiFacing = HexFacing.Fore;
+    const targetPos = { q: 2, r: -2 };
+    const terrain = new Map<string, TerrainType>();
+    terrain.set(hexKey({ q: 1, r: -1 }), 'asteroids' as any);
+    
+    const plan = planAIMovement(aiPos, aiFacing, 2, targetPos, 'aggressive', 1, new Set(), terrain, 0, false);
+
+    // Should stop at (1,-1) because it's an asteroid
+    expect(plan.targetHex).toEqual({ q: 1, r: -1 });
+  });
+
+  it('AI Pathfinding: prefers avoiding asteroids if a clean path is available', () => {
+    const aiPos = { q: 0, r: 0 };
+    const aiFacing = HexFacing.Fore;
+    const targetPos = { q: 1, r: 0 }; // Change target to something closer
+    const terrain = new Map<string, TerrainType>();
+    terrain.set(hexKey({ q: 1, r: -1 }), 'asteroids' as any);
+    
+    // Path 1: (0,0) -> (1,-1) [Asteroids, HALT, dist to target = 1]
+    // Path 2: (0,0) -> turn CW(1) -> (1,0) [Open, dist to target = 0]
+    
+    const plan = planAIMovement(aiPos, aiFacing, 2, targetPos, 'aggressive', 1, new Set(), terrain, 0, false);
+
+    expect(plan.targetHex).toEqual({ q: 1, r: 0 });
   });
 });

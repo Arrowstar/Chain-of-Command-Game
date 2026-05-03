@@ -1,4 +1,5 @@
 import type { EnemyShipState, ShipState, TacticCard, TerrainType, HexFacing, ShipArc, PlayerState, VolleyDieInput, TacticHazardState } from '../../types/game';
+import { resolveAsteroidEntry, type AsteroidRollResult } from '../movement';
 import { isSmallCraftSize } from '../../types/game';
 import { getAdversaryById } from '../../data/adversaries';
 import { getChassisById } from '../../data/shipChassis';
@@ -187,13 +188,13 @@ export function executeAITier(
       );
       
       let asteroidDamage = 0;
-      let asteroidRollResult: import('../movement').AsteroidRollResult | undefined;
+      let asteroidRollResult: AsteroidRollResult | undefined;
       
       if (!isFighter) {
         const asteroidHex = movePlan.path.find(step => terrainMap.get(hexKey(step)) === 'asteroids');
         if (asteroidHex) {
           // AI doesn't have officers, so helmTrait is null.
-          asteroidRollResult = import('../movement').resolveAsteroidEntry(false, null);
+          asteroidRollResult = resolveAsteroidEntry(false, null);
           asteroidDamage = asteroidRollResult.damage;
         }
       }

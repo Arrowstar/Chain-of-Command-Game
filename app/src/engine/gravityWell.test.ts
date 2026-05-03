@@ -25,7 +25,7 @@ describe('Gravity Well Engine', () => {
     const playerShip = makeShip('p1', { q: 2, r: 0 }); // dist 2
     const enemyShip = makeEnemyShip('e1', { q: -3, r: 0 }); // dist 3
     
-    const results = applyGravityWellPull([playerShip], [enemyShip], [well], new Set());
+    const results = applyGravityWellPull([playerShip], [enemyShip], [well], new Set(), new Map(), () => null);
     
     expect(results.length).toBe(2);
     expect(results[0].shipId).toBe('p1');
@@ -38,7 +38,7 @@ describe('Gravity Well Engine', () => {
     const well = { q: 0, r: 0 };
     const ship = makeShip('p1', { q: 0, r: 0 });
     
-    const results = applyGravityWellPull([ship], [], [well], new Set());
+    const results = applyGravityWellPull([ship], [], [well], new Set(), new Map(), () => null);
     
     expect(results.length).toBe(0);
   });
@@ -47,7 +47,7 @@ describe('Gravity Well Engine', () => {
     const well = { q: 0, r: 0 };
     const ship = makeShip('p1', { q: 6, r: 0 });
     
-    const results = applyGravityWellPull([ship], [], [well], new Set());
+    const results = applyGravityWellPull([ship], [], [well], new Set(), new Map(), () => null);
     
     expect(results.length).toBe(0);
   });
@@ -58,7 +58,7 @@ describe('Gravity Well Engine', () => {
     const obstacle = makeShip('p2', { q: 1, r: 0 });
     
     const occupied = new Set([hexKey(ship.position), hexKey(obstacle.position)]);
-    const results = applyGravityWellPull([ship, obstacle], [], [well], occupied);
+    const results = applyGravityWellPull([ship, obstacle], [], [well], occupied, new Map(), () => null);
     
     const p1Result = results.find(r => r.shipId === 'p1');
     expect(p1Result).toBeDefined();
@@ -70,7 +70,7 @@ describe('Gravity Well Engine', () => {
     const wells = [{ q: -10, r: 0 }, { q: 10, r: 0 }];
     const ship = makeShip('p1', { q: 8, r: 0 }); // Closest to well 2 (dist 2), but well 1 is too far
     
-    const results = applyGravityWellPull([ship], [], wells, new Set());
+    const results = applyGravityWellPull([ship], [], wells, new Set(), new Map(), () => null);
     
     expect(results.length).toBe(1);
     expect(results[0].toPos).toEqual({ q: 9, r: 0 }); // Pulled toward well 2

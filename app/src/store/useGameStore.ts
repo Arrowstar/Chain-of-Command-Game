@@ -13,7 +13,7 @@ import { createShuffledFumbleDeck, drawFumbleCard } from '../data/fumbleDeck';
 import { createShuffledPlayerCritDeck, createShuffledEnemyCritDeck, drawCriticalCard } from '../data/criticalDamage';
 import { calculateStressRecovery, recoverStress, resetOfficerRoundState, applyStress, getMaxStress } from '../engine/stress';
 import { regenerateShields, resolveAttack, assembleVolleyPool, getValidTargetsForWeapon, getAntiSmallCraftTNModifier, type DamageResult } from '../engine/combat';
-import { executeDrift, rotateShip, adjustSpeed } from '../engine/movement';
+import { executeDrift, rotateShip, adjustSpeed, type AsteroidRollResult } from '../engine/movement';
 import { moveTorpedo, resolveTorpedoAttack } from '../engine/torpedoMovement';
 import { hexKey, hexDistance, checkLineOfSight, parseHexKey, isInFiringArc, hexNeighbors, hexEquals } from '../engine/hexGrid';
 import { applyGravityWellPull } from '../engine/gravityWell';
@@ -3322,6 +3322,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
           );
           get().addLog('movement',
             `═ ═[ENEMY] ${adversary?.name ?? a.shipId} moved ═   (${to.q},${to.r})`);
+          
+          const asteroidRoll = (a.details as any).asteroidRoll as AsteroidRollResult | undefined;
+          if (asteroidRoll) {
+            const shipName = get().getShipName(a.shipId);
+            const rollMsg = `☄️ ${shipName} Asteroid Entry: Roll ${asteroidRoll.entryRoll} ${asteroidRoll.entryRoll === 1 ? 'FAIL' : 'PASS'}${asteroidRoll.damage > 0 ? ` ═ ${asteroidRoll.damage} hull damage!` : ''}`;
+            get().addLog('movement', rollMsg);
+          }
         } else if (a.type === 'attack') {
           const det = a.details as Record<string, any>;
           const attackingShip = state.enemyShips.find(e => e.id === a.shipId);
