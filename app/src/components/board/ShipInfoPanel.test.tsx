@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, act, fireEvent } from '@testing-library/react';
 import ShipInfoPanel, { type MapHoverTarget } from './ShipInfoPanel';
 
 vi.mock('../../data/shipChassis', () => ({
@@ -21,6 +21,11 @@ describe('ShipInfoPanel', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('renders nothing when no target is provided', () => {
@@ -187,5 +192,134 @@ describe('ShipInfoPanel', () => {
 
     // Check for the station abbreviation (STN for mining outpost)
     expect(screen.getByText('STN')).toBeInTheDocument();
+  });
+
+  describe('Locking Behavior', () => {
+    const target: MapHoverTarget = {
+      kind: 'ship',
+      isEnemy: false,
+      ship: {
+        id: 'ship-1', chassisId: 'c1', ownerId: 'p1', name: 'ISS Resolute', position: { q: 0, r: 0 }, facing: 0,
+        currentSpeed: 2, currentHull: 8, maxHull: 10,
+        shields: { fore: 2, foreStarboard: 2, aftStarboard: 2, aft: 2, aftPort: 2, forePort: 2 },
+        maxShieldsPerSector: 2, equippedWeapons: [], equippedSubsystems: [], criticalDamage: [], scars: [],
+        armorDie: 'd4', baseEvasion: 5, evasionModifiers: 0, isDestroyed: false, hasDroppedBelow50: false,
+      } as any,
+    };
+
+    it('starts with pointer-events: none and transitions to auto after 1 second', () => {
+      const { getByTestId } = render(<ShipInfoPanel target={target} position={position} />);
+      const panel = getByTestId('ship-info-panel');
+
+      expect(panel).toHaveStyle({ pointerEvents: 'none' });
+
+      // Advance time by 1.1 seconds to be safe
+      act(() => {
+        vi.advanceTimersByTime(1100);
+      });
+
+      expect(panel).toHaveStyle({ pointerEvents: 'auto' });
+    });
+
+    it('calls onClose when mouse leaves after locking', () => {
+      const onClose = vi.fn();
+      const { getByTestId } = render(<ShipInfoPanel target={target} position={position} onClose={onClose} />);
+      const panel = getByTestId('ship-info-panel');
+
+      // Move mouse out before locking
+      act(() => {
+        fireEvent.pointerLeave(panel);
+      });
+      expect(onClose).not.toHaveBeenCalled();
+
+      // Lock the panel
+      act(() => {
+        vi.advanceTimersByTime(1100);
+      });
+
+      // Move mouse out after locking
+      act(() => {
+        fireEvent.pointerLeave(panel);
+      });
+      expect(onClose).toHaveBeenCalled();
+    });
+
+    it('resets progress when target changes', () => {
+      const { getByTestId, rerender } = render(<ShipInfoPanel target={target} position={position} />);
+      const panel = getByTestId('ship-info-panel');
+
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+      expect(panel).toHaveStyle({ pointerEvents: 'none' });
+
+      const newTarget = { ...target, ship: { ...target.ship, id: 'ship-2' } };
+      // Simulate remount via key change in parent (HexMap)
+      act(() => {
+        rerender(<ShipInfoPanel key="ship-2" target={newTarget} position={position} />);
+      });
+      
+      const newPanel = getByTestId('ship-info-panel');
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+      // If it hadn't reset, it would have locked by now (500 + 500 = 1000)
+      expect(newPanel).toHaveStyle({ pointerEvents: 'none' });
+
+      act(() => {
+        vi.advanceTimersByTime(600);
+      });
+      expect(newPanel).toHaveStyle({ pointerEvents: 'auto' });
+    });
+
+    it('freezes position when locked', () => {
+      const offsetWidthSpy = vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(320);
+      const offsetHeightSpy = vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(220);
+      const clientWidthSpy = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(800);
+      const clientHeightSpy = vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(600);
+
+      const { getByTestId, rerender } = render(<ShipInfoPanel target={target} position={{ x: 100, y: 100 }} />);
+      const panel = getByTestId('ship-info-panel');
+
+      // Initially moves
+      rerender(<ShipInfoPanel target={target} position={{ x: 120, y: 120 }} />);
+      expect(panel).toHaveStyle({ left: '120px', top: '120px' });
+
+      // Lock it
+      act(() => {
+        vi.advanceTimersByTime(1100);
+      });
+      expect(panel).toHaveStyle({ pointerEvents: 'auto' });
+
+      // Try to move it
+      rerender(<ShipInfoPanel target={target} position={{ x: 200, y: 200 }} />);
+      // Should still be at 120, 120
+      expect(panel).toHaveStyle({ left: '120px', top: '120px' });
+
+      offsetWidthSpy.mockRestore();
+      offsetHeightSpy.mockRestore();
+      clientWidthSpy.mockRestore();
+      clientHeightSpy.mockRestore();
+    });
+
+    it('does not reset progress when target object identity changes but ID is same', () => {
+      const { getByTestId, rerender } = render(<ShipInfoPanel target={target} position={position} />);
+      
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+
+      // Pass a new object literal with same content
+      const targetClone = { ...target, ship: { ...target.ship } };
+      rerender(<ShipInfoPanel target={targetClone} position={position} />);
+      
+      // Advance remaining 500ms
+      act(() => {
+        vi.advanceTimersByTime(550);
+      });
+
+      const panel = getByTestId('ship-info-panel');
+      expect(panel).toHaveStyle({ pointerEvents: 'auto' });
+    });
   });
 });

@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { EnemyShipState, FighterToken, HexCoord, ObjectiveMarkerState, ShipArc, ShipState, StationState, TacticHazardState, TerrainType, TorpedoToken } from '../../types/game';
 import { getWeaponById } from '../../data/weapons';
 import { getChassisById } from '../../data/shipChassis';
@@ -165,15 +165,59 @@ export type MapHoverTarget =
 interface Props {
   target: MapHoverTarget | null;
   position: { x: number; y: number } | null;
+  onClose?: () => void;
+  onLock?: () => void;
 }
 
-export default function ShipInfoPanel({ target, position }: Props) {
+export function getMapHoverTargetId(target: MapHoverTarget | null): string {
+  if (!target) return 'none';
+  switch (target.kind) {
+    case 'ship': return `ship-${target.ship.id}`;
+    case 'station': return `station-${target.station.id}`;
+    case 'terrain': return `terrain-${target.coord.q}-${target.coord.r}`;
+    case 'objective': return `objective-${target.marker.name}`;
+    case 'fighter': return `fighter-${target.fighter.id}`;
+    case 'torpedo': return `torpedo-${target.torpedo.id}`;
+    case 'hazard': return `hazard-${target.hazard.id}`;
+    default: return 'unknown';
+  }
+}
+
+export default function ShipInfoPanel({ target, position, onClose, onLock }: Props) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [clampedPosition, setClampedPosition] = useState(position);
+  const [lockProgress, setLockProgress] = useState(0);
+  const [isLocked, setIsLocked] = useState(false);
+
+  useEffect(() => {
+    if (!target) {
+      setLockProgress(0);
+      setIsLocked(false);
+      return;
+    }
+
+    if (isLocked) return;
+
+    const startTime = Date.now();
+    const timer = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(100, (elapsed / 1000) * 100);
+      setLockProgress(progress);
+      if (progress >= 100) {
+        setIsLocked(true);
+        if (onLock) onLock();
+        clearInterval(timer);
+      }
+    }, 16); // ~60fps for smooth filling
+
+    return () => clearInterval(timer);
+  }, [getMapHoverTargetId(target), isLocked]);
 
   useLayoutEffect(() => {
-    if (!target || !position || !panelRef.current) {
-      setClampedPosition(position);
+    if (!target || !position || !panelRef.current || isLocked) {
+      if (!isLocked) {
+        setClampedPosition(position);
+      }
       return;
     }
 
@@ -192,7 +236,7 @@ export default function ShipInfoPanel({ target, position }: Props) {
       x: Math.max(padding, Math.min(position.x, maxX)),
       y: Math.max(padding, Math.min(position.y, maxY)),
     });
-  }, [target, position]);
+  }, [target, position, isLocked]);
 
   if (!target || !position) return null;
 
@@ -210,9 +254,15 @@ export default function ShipInfoPanel({ target, position }: Props) {
         maxHeight: 'calc(100% - 24px)',
         overflowY: 'auto',
         zIndex: 'var(--z-tooltip)',
-        pointerEvents: 'none',
+        pointerEvents: isLocked ? 'auto' : 'none',
+      }}
+      onPointerLeave={() => {
+        if (isLocked && onClose) {
+          onClose();
+        }
       }}
     >
+      <LockIndicator progress={lockProgress} isLocked={isLocked} target={target} />
       {target.kind === 'ship' && <ShipTooltipContent ship={target.ship} isEnemy={target.isEnemy} />}
       {target.kind === 'station' && <StationTooltipContent station={target.station} />}
       {target.kind === 'terrain' && <TerrainTooltipContent terrainType={target.terrainType} coord={target.coord} />}
@@ -220,6 +270,64 @@ export default function ShipInfoPanel({ target, position }: Props) {
       {target.kind === 'fighter' && <FighterTooltipContent fighter={target.fighter} stackCount={target.stackCount ?? 1} />}
       {target.kind === 'torpedo' && <TorpedoTooltipContent torpedo={target.torpedo} />}
       {target.kind === 'hazard' && <HazardTooltipContent hazard={target.hazard} />}
+    </div>
+  );
+}
+
+function LockIndicator({ progress, isLocked, target }: { progress: number; isLocked: boolean; target: MapHoverTarget }) {
+  let color = 'var(--color-holo-cyan)';
+  if (target.kind === 'ship') {
+    color = target.isEnemy ? 'var(--color-hostile-red)' : 'var(--color-holo-cyan)';
+  } else if (target.kind === 'station' || target.kind === 'hazard') {
+    color = 'var(--color-hostile-red)';
+  } else if (target.kind === 'terrain' || target.kind === 'objective') {
+    color = 'var(--color-alert-amber)';
+  } else if (target.kind === 'fighter') {
+    color = target.fighter?.allegiance === 'enemy' ? 'var(--color-hostile-red)' : 'var(--color-holo-cyan)';
+  } else if (target.kind === 'torpedo') {
+    color = target.torpedo?.allegiance === 'enemy' ? 'var(--color-hostile-red)' : 'var(--color-holo-cyan)';
+  }
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: '8px',
+        right: '8px',
+        width: '24px',
+        height: '24px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 10,
+        background: 'rgba(0,0,0,0.4)',
+        borderRadius: '50%',
+        border: `1px solid ${isLocked ? color : 'rgba(255,255,255,0.1)'}`,
+        boxShadow: isLocked ? `0 0 8px ${color}` : 'none',
+        transition: 'all 0.2s ease',
+      }}
+    >
+      {isLocked ? (
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+      ) : (
+        <svg width="20" height="20" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.1)" strokeWidth="2" fill="none" />
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+            stroke={color}
+            strokeWidth="2"
+            fill="none"
+            strokeDasharray="62.8"
+            strokeDashoffset={62.8 * (1 - progress / 100)}
+            transform="rotate(-90 12 12)"
+          />
+        </svg>
+      )}
     </div>
   );
 }

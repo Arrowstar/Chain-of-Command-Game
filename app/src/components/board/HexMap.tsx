@@ -20,7 +20,7 @@ import { getSubsystemById } from '../../data/subsystems';
 import { projectDriftPreview } from '../../engine/movement';
 import { previewAITierMovement, type AIMovementPreview } from '../../engine/ai/aiTurn';
 import { resolveFighterMovement } from '../../engine/ai/fighterAI';
-import ShipInfoPanel, { type MapHoverTarget } from './ShipInfoPanel';
+import ShipInfoPanel, { getMapHoverTargetId, type MapHoverTarget } from './ShipInfoPanel';
 
 // ─── Raw PixiJS via useRef (no @pixi/react reconciler) ──────────
 
@@ -91,6 +91,8 @@ export default function HexMap() {
   const [lastMouse, setLastMouse] = useState({ x: 0, y: 0 });
   const [pointerDown, setPointerDown] = useState({ x: 0, y: 0 });
   const [hoverTooltip, setHoverTooltip] = useState<{ target: MapHoverTarget; position: { x: number; y: number } } | null>(null);
+  const [isTooltipLocked, setIsTooltipLocked] = useState(false);
+  const isLockedRef = useRef(false);
 
   // Subscribe to pending fire animation queue
   const pendingFireAnimations = useUIStore(s => s.pendingFireAnimations);
@@ -1211,13 +1213,16 @@ export default function HexMap() {
 
   const handlePointerMove = (e: React.PointerEvent) => {
     const hoverState = getHoverTarget(e.clientX, e.clientY);
-    useUIStore.getState().hoverHex(hoverState?.hex ?? null);
-    useUIStore.getState().hoverShip(hoverState?.target?.kind === 'ship' ? hoverState.target.ship.id : null);
 
-    if (hoverState?.target && hoverState.position) {
-      setHoverTooltip({ target: hoverState.target, position: hoverState.position });
-    } else {
-      setHoverTooltip(null);
+    if (!isLockedRef.current) {
+      useUIStore.getState().hoverHex(hoverState?.hex ?? null);
+      useUIStore.getState().hoverShip(hoverState?.target?.kind === 'ship' ? hoverState.target.ship.id : null);
+
+      if (hoverState?.target && hoverState.position) {
+        setHoverTooltip({ target: hoverState.target, position: hoverState.position });
+      } else {
+        setHoverTooltip(null);
+      }
     }
 
     if (!isPanning) return;
@@ -1607,7 +1612,20 @@ export default function HexMap() {
     >
       <div className="scanline-overlay" />
       <TerrainLegend />
-      <ShipInfoPanel target={hoverTooltip?.target ?? null} position={hoverTooltip?.position ?? null} />
+      <ShipInfoPanel 
+        key={getMapHoverTargetId(hoverTooltip?.target ?? null)}
+        target={hoverTooltip?.target ?? null} 
+        position={hoverTooltip?.position ?? null} 
+        onLock={() => {
+          isLockedRef.current = true;
+          setIsTooltipLocked(true);
+        }}
+        onClose={() => {
+          setHoverTooltip(null);
+          isLockedRef.current = false;
+          setIsTooltipLocked(false);
+        }}
+      />
       <SelectionPicker />
     </div>
   );
