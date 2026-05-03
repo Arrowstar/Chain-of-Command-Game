@@ -25,6 +25,16 @@ export interface DriftResult {
   resultingSpeed: number;
   /** Terrain hazards encountered */
   hazards: { hex: HexCoord; type: TerrainType }[];
+  /** Results of asteroid entry roll, if encountered */
+  asteroidRoll?: AsteroidRollResult;
+}
+
+export interface AsteroidRollResult {
+  entryRoll: number;
+  damageRoll?: number;
+  damage: number;
+  isSmallCraft: boolean;
+  helmTrait: string | null;
 }
 
 export interface DriftPreviewResult {
@@ -66,6 +76,7 @@ export function executeDrift(
   let collisionDamage = 0;
   let terrainDamage = 0;
   let resultingSpeed = ship.currentSpeed;
+  let asteroidRoll: AsteroidRollResult | undefined;
 
   const fullPath = computeDriftPath(ship.position, ship.facing, ship.currentSpeed);
 
@@ -96,12 +107,11 @@ export function executeDrift(
         currentPos = nextHex;
         path.push({ ...nextHex });
         hazards.push({ hex: nextHex, type: terrain });
-        // D6 entry roll — on a 1, take 1D4 hull damage (Hotshot uses D6 for damage die instead).
-        const entryRoll = rollDie('d6');
-        if (entryRoll === 1) {
-          const hazardDieType = helmTrait === 'Hotshot' ? 'd6' : 'd4';
-          terrainDamage += rollDie(hazardDieType);
-        }
+        
+        // Resolve asteroid entry
+        asteroidRoll = resolveAsteroidEntry(isSmallCraft, helmTrait);
+        terrainDamage = asteroidRoll.damage;
+        
         resultingSpeed = 0;
         break;
       }
@@ -134,7 +144,34 @@ export function executeDrift(
     terrainDamage,
     resultingSpeed,
     hazards,
+    asteroidRoll,
   };
+}
+
+/**
+ * Shared helper to resolve asteroid entry risk.
+ * Capital Ships: D6 entry roll — on a 1, take 1D4 hull damage (Hotshot uses D6).
+ * Small Craft (fighters): No risk, pass through freely.
+ */
+export function resolveAsteroidEntry(
+  isSmallCraft: boolean,
+  helmTrait: string | null = null,
+): AsteroidRollResult {
+  if (isSmallCraft) {
+    return { entryRoll: 0, damage: 0, isSmallCraft: true, helmTrait };
+  }
+
+  const entryRoll = rollDie('d6');
+  let damage = 0;
+  let damageRoll: number | undefined;
+
+  if (entryRoll === 1) {
+    const hazardDieType = helmTrait === 'Hotshot' ? 'd6' : 'd4';
+    damageRoll = rollDie(hazardDieType);
+    damage = damageRoll;
+  }
+
+  return { entryRoll, damageRoll, damage, isSmallCraft: false, helmTrait };
 }
 
 /**

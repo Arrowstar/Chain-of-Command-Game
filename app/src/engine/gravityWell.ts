@@ -1,6 +1,7 @@
-import type { HexCoord, ShipState, EnemyShipState } from '../types/game';
+import type { HexCoord, ShipState, EnemyShipState, TerrainType } from '../types/game';
 import { hexKey, hexDistance, hexNeighbors } from './hexGrid';
 import { rollDie } from '../utils/diceRoller';
+import { resolveAsteroidEntry, type AsteroidRollResult } from './movement';
 
 // ═══════════════════════════════════════════════════════════════════
 // Gravity Well Engine — Phase 4 forced pull toward well center
@@ -12,6 +13,7 @@ export interface GravityPullResult {
   fromPos: HexCoord;
   toPos: HexCoord;
   collisionDamage: number;
+  asteroidRoll?: AsteroidRollResult;
 }
 
 /**
@@ -55,6 +57,8 @@ export function applyGravityWellPull(
   gravityWellHexes: HexCoord[],
   /** Keys of ALL currently occupied hexes (player + enemy combined) */
   occupiedHexes: Set<string>,
+  terrainMap: Map<string, TerrainType>,
+  getHelmTrait?: (shipId: string) => string | null,
 ): GravityPullResult[] {
   if (gravityWellHexes.length === 0) return [];
 
@@ -96,12 +100,22 @@ export function applyGravityWellPull(
           collisionDamage,
         });
       } else {
+        const terrain = terrainMap.get(destKey);
+        let asteroidRoll: AsteroidRollResult | undefined;
+        
+        if (terrain === 'asteroids') {
+          const helmTrait = getHelmTrait ? getHelmTrait(ship.id) : null;
+          // Gravity Well pull is always for a capital ship here (ships list)
+          asteroidRoll = resolveAsteroidEntry(false, helmTrait);
+        }
+
         results.push({
           shipId: ship.id,
           isPlayer,
           fromPos: ship.position,
           toPos: destination,
           collisionDamage: 0,
+          asteroidRoll,
         });
       }
 

@@ -66,7 +66,12 @@ function planAggressive(
   candidates.sort((a, b) => {
     const distA = hexDistance(a.hex, targetPos);
     const distB = hexDistance(b.hex, targetPos);
-    if (distA !== distB) return distA - distB;
+    
+    // Penalty for ending in asteroids
+    const terrainA = terrain.get(hexKey(a.hex)) === 'asteroids' ? 2 : 0;
+    const terrainB = terrain.get(hexKey(b.hex)) === 'asteroids' ? 2 : 0;
+
+    if (distA + terrainA !== distB + terrainB) return (distA + terrainA) - (distB + terrainB);
     return scoreFacing(a, targetPos) - scoreFacing(b, targetPos);
   });
   const best = candidates[0] ?? { hex: aiPos, facing: aiFacing, path: [] };
@@ -174,8 +179,8 @@ function getReachableStates(
     if (!occupied.has(fwdKeyHex)) {
       const t = terrain.get(fwdKeyHex);
       let canMove = true;
-      if (t === 'asteroids') canMove = false;
       if (isFighter && t === 'debrisField') canMove = false;
+      // Capital ships CAN enter asteroids but they halt immediately.
       
       if (canMove) {
         const nextCost = curr.cost + 1;
@@ -184,7 +189,12 @@ function getReachableStates(
           const nextPath = [...curr.path, fwd];
           visited.set(fwdStateKey, nextCost);
           if (prevCost === Infinity) reachable.push({ hex: fwd, facing: curr.facing, path: nextPath });
-          queue.push({ hex: fwd, facing: curr.facing, cost: nextCost, path: nextPath });
+          
+          // If it's an asteroid hex and NOT a fighter, the ship is halted.
+          const isHalted = t === 'asteroids' && !isFighter;
+          if (!isHalted) {
+            queue.push({ hex: fwd, facing: curr.facing, cost: nextCost, path: nextPath });
+          }
         }
       }
     }

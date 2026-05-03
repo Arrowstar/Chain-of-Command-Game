@@ -185,26 +185,45 @@ export function executeAITier(
         !consumedHazardIds.has(hazard.id) &&
         movePlan.path.some(step => hexKey(step) === hexKey(hazard.position))
       );
+      
+      let asteroidDamage = 0;
+      let asteroidRollResult: import('../movement').AsteroidRollResult | undefined;
+      
+      if (!isFighter) {
+        const asteroidHex = movePlan.path.find(step => terrainMap.get(hexKey(step)) === 'asteroids');
+        if (asteroidHex) {
+          // AI doesn't have officers, so helmTrait is null.
+          asteroidRollResult = import('../movement').resolveAsteroidEntry(false, null);
+          asteroidDamage = asteroidRollResult.damage;
+        }
+      }
+
       const mineDamage = triggeredHazards.reduce((sum, hazard) => sum + hazard.damage, 0);
+      const totalTerrainDamage = asteroidDamage + mineDamage;
       triggeredHazards.forEach(hazard => consumedHazardIds.add(hazard.id));
 
       shipUpdates.set(aiShip.id, {
         ...existingUpdates,
         position: movePlan.targetHex,
         facing: movePlan.newFacing,
-        currentHull: Math.max(0, (existingUpdates.currentHull ?? aiShip.currentHull) - mineDamage),
-        isDestroyed: Math.max(0, (existingUpdates.currentHull ?? aiShip.currentHull) - mineDamage) === 0,
+        currentHull: Math.max(0, (existingUpdates.currentHull ?? aiShip.currentHull) - totalTerrainDamage),
+        isDestroyed: Math.max(0, (existingUpdates.currentHull ?? aiShip.currentHull) - totalTerrainDamage) === 0,
         hasMovedThisRound: movePlan.path.length > 0,
         hexesMovedThisRound: movePlan.path.length,
       });
 
-      actions.push({ shipId: aiShip.id, type: 'move', details: { to: movePlan.targetHex, path: movePlan.path, triggeredHazardIds: triggeredHazards.map(hazard => hazard.id) } });
+      actions.push({ shipId: aiShip.id, type: 'move', details: { 
+        to: movePlan.targetHex, 
+        path: movePlan.path, 
+        triggeredHazardIds: triggeredHazards.map(hazard => hazard.id),
+        asteroidRoll: asteroidRollResult 
+      } });
 
       // Update local reference for attack range check
       aiShip.position = movePlan.targetHex;
       aiShip.facing = movePlan.newFacing;
-      if (mineDamage > 0) {
-        aiShip.currentHull = Math.max(0, aiShip.currentHull - mineDamage);
+      if (totalTerrainDamage > 0) {
+        aiShip.currentHull = Math.max(0, aiShip.currentHull - totalTerrainDamage);
       }
       if (aiShip.currentHull <= 0) {
         aiShip.isDestroyed = true;

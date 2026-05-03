@@ -1652,6 +1652,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
       collisionDamage: result.collisionDamage,
       terrainDamage: result.terrainDamage,
     });
+
+    if (result.asteroidRoll) {
+      const roll = result.asteroidRoll;
+      const rollMsg = `☄️ ${get().getShipName(shipId)} Asteroid Entry: Roll ${roll.entryRoll} ${roll.entryRoll === 1 ? 'FAIL' : 'PASS'}${roll.damage > 0 ? ` ═ ${roll.damage} hull damage!` : ''}`;
+      get().addLog('movement', rollMsg);
+    }
   },
   
   resolveAction: (playerId, shipId, assignedActionId, context) => {
@@ -5063,7 +5069,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
       state.enemyShips.forEach(s => !s.isDestroyed && occupiedHexes.add(hexKey(s.position)));
 
       const pullResults = applyGravityWellPull(
-        state.playerShips, state.enemyShips, gravityWellHexes, occupiedHexes
+        state.playerShips, 
+        state.enemyShips, 
+        gravityWellHexes, 
+        occupiedHexes, 
+        state.terrainMap,
+        (id) => {
+          const p = get().players.find(player => player.shipId === id);
+          const helm = p?.officers.find(o => o.station === 'helm');
+          return helm ? getOfficerById(helm.officerId)?.traitName || null : null;
+        }
       );
 
       pullResults.forEach(result => {
@@ -5088,12 +5103,26 @@ export const useGameStore = create<GameStore>((set, get) => ({
             `🌀 GRAVITY WELL: ${shipName} pulled but BLOCKED by occupied hex ═  ${result.collisionDamage} hull damage!`);
         } else if (movedOrNot) {
           if (result.isPlayer) {
-            get().updatePlayerShip(result.shipId, { position: result.toPos });
+            get().updatePlayerShip(result.shipId, { 
+              position: result.toPos,
+              currentHull: Math.max(0, (state.playerShips.find(s => s.id === result.shipId)?.currentHull ?? 10) - (result.asteroidRoll?.damage ?? 0)),
+              isDestroyed: ((state.playerShips.find(s => s.id === result.shipId)?.currentHull ?? 10) - (result.asteroidRoll?.damage ?? 0)) <= 0
+            });
           } else {
-            get().updateEnemyShip(result.shipId, { position: result.toPos });
+            get().updateEnemyShip(result.shipId, { 
+              position: result.toPos,
+              currentHull: Math.max(0, (state.enemyShips.find(s => s.id === result.shipId)?.currentHull ?? 10) - (result.asteroidRoll?.damage ?? 0)),
+              isDestroyed: ((state.enemyShips.find(s => s.id === result.shipId)?.currentHull ?? 10) - (result.asteroidRoll?.damage ?? 0)) <= 0
+            });
           }
           get().addLog('movement',
             `🌀 GRAVITY WELL: ${shipName} pulled (${result.fromPos.q},${result.fromPos.r}) ═  (${result.toPos.q},${result.toPos.r})`);
+          
+          if (result.asteroidRoll) {
+            const roll = result.asteroidRoll;
+            const rollMsg = `☄️ ${shipName} pulled into Asteroids: Roll ${roll.entryRoll} ${roll.entryRoll === 1 ? 'FAIL' : 'PASS'}${roll.damage > 0 ? ` ═ ${roll.damage} hull damage!` : ''}`;
+            get().addLog('movement', rollMsg);
+          }
         }
       });
     }
