@@ -331,8 +331,8 @@ export default function VolleyBreakdown({ results, damageResult, outOfArc, weapo
                         const armorRoll = currentItem.damageResult.armorRoll;
                         const hullDamage = currentItem.damageResult.hullDamage;
                         const piercingHits = currentItem.damageResult.piercingHits ?? 0;
-                        const mitigatedDamage = currentItem.damageResult.mitigatedDamage ?? 0;
-                        const min1RuleApplied = mitigatedDamage === 1 && (overflowHits - armorRoll) <= 0 && piercingHits === 0;
+                        const netOverflowHits = currentItem.damageResult.netOverflowHits ?? 0;
+                        const min1RuleApplied = netOverflowHits === 1 && (overflowHits - armorRoll) <= 0 && piercingHits === 0;
 
                         if (hullDamage === 0) {
                           return (
@@ -360,8 +360,8 @@ export default function VolleyBreakdown({ results, damageResult, outOfArc, weapo
                                   <span className="mono" style={{ color: 'var(--color-text-dim)' }}>-{armorRoll}</span>
                                 </div>
                                 <div className="flex-between" style={{ fontSize: '0.75rem' }} title={min1RuleApplied ? "Armor cannot reduce Overflow Hits below 1 unless there are piercing hits." : "The remaining Overflow Hits after armor mitigation."}>
-                                  <span className="label" style={{ color: 'var(--color-text-secondary)', cursor: 'help' }}>Mitigated Damage{min1RuleApplied ? ' (Min 1)' : ''}</span>
-                                  <span className="mono">{mitigatedDamage}</span>
+                                  <span className="label" style={{ color: 'var(--color-text-secondary)', cursor: 'help' }}>Net Overflow Hits{min1RuleApplied ? ' (Min 1)' : ''}</span>
+                                  <span className="mono">{netOverflowHits}</span>
                                 </div>
                               </>
                             )}

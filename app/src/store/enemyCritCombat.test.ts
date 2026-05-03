@@ -58,7 +58,7 @@ describe('Enemy Critical Damage Wiring', () => {
       shieldRemaining: 5,
       overflowHits: 3,
       piercingHits: 0,
-      mitigatedDamage: 0,
+      netOverflowHits: 0,
       armorRoll: 0,
       hullDamage: 3,
       criticalTriggered: true,

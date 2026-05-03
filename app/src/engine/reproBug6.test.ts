@@ -90,7 +90,7 @@ describe('Bug 6 Deep Dive', () => {
       overflowHits: result.overflowHits,
       piercingHits: result.piercingHits,
       hullDamage: result.hullDamage,
-      mitigatedDamage: result.mitigatedDamage,
+      netOverflowHits: result.netOverflowHits,
       armorRoll: result.armorRoll
     });
 

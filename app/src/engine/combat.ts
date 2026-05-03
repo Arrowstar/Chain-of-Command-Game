@@ -126,8 +126,8 @@ export interface DamageResult {
   overflowHits: number;
   /** Number of piercing hits that bypassed shields and armor */
   piercingHits: number;
-  /** Amount of overflow damage mitigated by armor */
-  mitigatedDamage: number;
+  /** Overflow damage remaining after armor mitigation */
+  netOverflowHits: number;
   /** Armor roll value */
   armorRoll: number;
   /** Armor die type used */
@@ -212,7 +212,7 @@ export function resolveAttack(
       shieldRemaining: defenderShields['fore'],
       overflowHits: 0,
       piercingHits: 0,
-      mitigatedDamage: 0,
+      netOverflowHits: 0,
       armorRoll: 0,
       armorDie: defenderArmorDie,
       hullDamage: 0,
@@ -233,7 +233,7 @@ export function resolveAttack(
       shieldRemaining: defenderShields['fore'],
       overflowHits: 0,
       piercingHits: 0,
-      mitigatedDamage: 0,
+      netOverflowHits: 0,
       armorRoll: 0,
       armorDie: defenderArmorDie,
       hullDamage: 0,
@@ -342,7 +342,7 @@ export function resolveAttack(
   // Apply hull damage
   let armorRoll = 0;
   let hullDamage = 0;
-  let mitigatedDamage = 0;
+  let netOverflowHits = 0;
 
   if (overflowHits > 0 && !isIonWeapon) {
     // Roll armor die to mitigate
@@ -351,8 +351,8 @@ export function resolveAttack(
     }
     
     // Standard hits that reach the hull always deal at least 1 damage after armor mitigation.
-    mitigatedDamage = overflowHits - Math.max(1, overflowHits - armorRoll);
-    hullDamage = Math.max(1, overflowHits - armorRoll);
+    netOverflowHits = Math.max(1, overflowHits - armorRoll);
+    hullDamage = netOverflowHits;
   }
 
   // Add the piercing hits directly to hull damage (bypassing shields and armor)
@@ -376,7 +376,7 @@ export function resolveAttack(
     shieldRemaining,
     overflowHits,
     piercingHits: isIonWeapon ? 0 : piercingHits,
-    mitigatedDamage,
+    netOverflowHits,
     armorRoll,
     armorDie: defenderArmorDie,
     hullDamage,

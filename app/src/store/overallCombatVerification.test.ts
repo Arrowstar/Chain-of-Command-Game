@@ -74,7 +74,7 @@ describe('Overall Combat Verification (Enemy Criticals)', () => {
     
     // Attack Enemy 1
     (resolveAttack as any).mockReturnValueOnce({
-      shieldHits: 0, struckSector: 'fore', shieldRemaining: 5, overflowHits: 3, piercingHits: 0, mitigatedDamage: 0, armorRoll: 0, hullDamage: 3, criticalTriggered: true, volleyResult: { totalHits: 3, totalCrits: 1, dice: [] }, tnBreakdown: { total: 10 }
+      shieldHits: 0, struckSector: 'fore', shieldRemaining: 5, overflowHits: 3, piercingHits: 0, netOverflowHits: 0, armorRoll: 0, hullDamage: 3, criticalTriggered: true, volleyResult: { totalHits: 3, totalCrits: 1, dice: [] }, tnBreakdown: { total: 10 }
     });
     
     const action1 = { id: 'a1', station: 'tactical' as any, actionId: 'fire-primary', weaponSlotIndex: 0, targetShipId: 'e1', ctCost: 2, stressCost: 1, resolved: false };
@@ -85,7 +85,7 @@ describe('Overall Combat Verification (Enemy Criticals)', () => {
     
     // Attack Enemy 2
     (resolveAttack as any).mockReturnValueOnce({
-      shieldHits: 0, struckSector: 'fore', shieldRemaining: 5, overflowHits: 3, piercingHits: 0, mitigatedDamage: 0, armorRoll: 0, hullDamage: 3, criticalTriggered: true, volleyResult: { totalHits: 3, totalCrits: 1, dice: [] }, tnBreakdown: { total: 10 }
+      shieldHits: 0, struckSector: 'fore', shieldRemaining: 5, overflowHits: 3, piercingHits: 0, netOverflowHits: 0, armorRoll: 0, hullDamage: 3, criticalTriggered: true, volleyResult: { totalHits: 3, totalCrits: 1, dice: [] }, tnBreakdown: { total: 10 }
     });
     
     const action2 = { id: 'a2', station: 'tactical' as any, actionId: 'fire-primary', weaponSlotIndex: 0, targetShipId: 'e2', ctCost: 2, stressCost: 1, resolved: false };
