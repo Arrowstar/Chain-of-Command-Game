@@ -45,18 +45,18 @@ function describeTerrainType(type: TerrainType): string {
 
 // Removed local callsign logic in favor of nameGenerator utility
 
-function getRandomHexes(count: number, avoidRadius: number = 2, maxRadius: number = 8): HexCoord[] {
+function getRandomHexes(count: number, avoidRadius: number = 2, maxRadius: number = 8, minDistanceBetween: number = 1): HexCoord[] {
   const result: HexCoord[] = [];
   let attempts = 0;
-  while (result.length < count && attempts < 100) {
+  while (result.length < count && attempts < 200) {
     attempts++;
     const q = Math.floor(Math.random() * (maxRadius * 2 + 1)) - maxRadius;
     const r = Math.floor(Math.random() * (maxRadius * 2 + 1)) - maxRadius;
     if (Math.abs(q) + Math.abs(q + r) + Math.abs(r) > maxRadius * 2) continue;
     if (Math.abs(q) + Math.abs(q + r) + Math.abs(r) < avoidRadius * 2) continue;
 
-    const collides = result.some(h => h.q === q && h.r === r);
-    if (!collides) {
+    const tooClose = result.some(h => hexDistance(h, { q, r }) < minDistanceBetween);
+    if (!tooClose) {
       result.push({ q, r });
     }
   }
@@ -569,9 +569,14 @@ export function generateProceduralScenario(
       objectiveType = 'Data Siphon';
       objectiveSummary = 'End adjacent to each Comm Relay long enough to siphon all three data caches.';
       rules.push('Data Siphon: Spend at least one round ending adjacent to each of the 3 Comm Relays to siphon their data. Siphon all 3 to win.');
-      objectiveMarkers.push({ name: 'Comm Relay Alpha', position: { q: -4, r: 0 }, hull: 10, maxHull: 10, shieldsPerSector: 2 });
-      objectiveMarkers.push({ name: 'Comm Relay Beta', position: { q: 0, r: 0 }, hull: 10, maxHull: 10, shieldsPerSector: 2 });
-      objectiveMarkers.push({ name: 'Comm Relay Gamma', position: { q: 4, r: 0 }, hull: 10, maxHull: 10, shieldsPerSector: 2 });
+      {
+        // 3 relays, minimum distance of 4 between them, avoiding center 2 hexes, within max radius 6
+        const relayCoords = getRandomHexes(3, 2, 6, 4);
+        const labels = ['Alpha', 'Beta', 'Gamma'];
+        relayCoords.forEach((coord, i) => {
+          objectiveMarkers.push({ name: `Comm Relay ${labels[i] || i + 1}`, position: coord, hull: 10, maxHull: 10, shieldsPerSector: 2 });
+        });
+      }
       break;
     case 4:
       objectiveType = 'Hold the Line';
@@ -583,7 +588,7 @@ export function generateProceduralScenario(
       objectiveSummary = 'Recover supply crates from the battlespace, then jump away with the haul.';
       rules.push('Salvage Run: Collect 3 Supply Crate tokens by moving to their hex and using "Pick Up Supply Crate" (Sensors), then jump to warp to win.');
       {
-        const crateCoords = getRandomHexes(5, 3, 7);
+        const crateCoords = getRandomHexes(5, 3, 7, 2); // added min distance of 2 so crates aren't clumped
         crateCoords.forEach((coord, i) => {
           objectiveMarkers.push({ name: `Supply Crate ${i + 1}`, position: coord, hull: 5, maxHull: 5, shieldsPerSector: 0 });
         });

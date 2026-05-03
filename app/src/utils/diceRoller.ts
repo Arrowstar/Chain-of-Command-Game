@@ -181,6 +181,13 @@ export function rollVolley(
     }
   }
 
+  // Final sanity check for UI math
+  if (totalHits !== (totalStandardHits + totalCriticalHits)) {
+    console.warn(`Volley Math Discrepancy: Total(${totalHits}) != Std(${totalStandardHits}) + Crit(${totalCriticalHits})`);
+    // Force consistency if something went wrong in the loop logic
+    totalHits = totalStandardHits + totalCriticalHits;
+  }
+
   return {
     dice,
     targetNumber,

@@ -666,17 +666,27 @@ export default function HexMap() {
     if (!deploymentMode) {
       const fighterPreviewGfx = new PIXI.Graphics();
       const activeFighterTokens = fighterTokens.filter(f => !f.isDestroyed && !f.hasDrifted);
+      let simulatedFighters = [...fighterTokens];
 
       activeFighterTokens.forEach(fighter => {
         const moveResult = resolveFighterMovement(
           fighter,
           playerShips,
           enemyShips,
-          fighterTokens,
+          simulatedFighters,
           terrainMap,
           torpedoTokens,
           stations,
         );
+
+        const fIdx = simulatedFighters.findIndex(sf => sf.id === fighter.id);
+        if (fIdx !== -1) {
+          simulatedFighters[fIdx] = { 
+            ...simulatedFighters[fIdx], 
+            position: moveResult.newPosition,
+            facing: moveResult.newFacing 
+          };
+        }
 
         if (!moveResult.moved || moveResult.traversedHexes.length === 0) {
           if (moveResult.intentionalHold) {

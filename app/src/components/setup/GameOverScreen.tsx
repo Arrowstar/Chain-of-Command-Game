@@ -46,15 +46,17 @@ export default function GameOverScreen({ onReturn }: GameOverScreenProps) {
           textShadow: victory ? 'var(--glow-cyan)' : '0 0 20px var(--color-hostile-red)',
           marginBottom: 'var(--space-sm)'
         }}>
-          {victory ? 'SECTOR SECURED' : (gameOverReason.includes('retreated') ? 'MISSION ABANDONED' : 'SHIP DESTROYED')}
+          {victory 
+            ? (gameOverReason.includes('eliminated') || gameOverReason.includes('destroyed') ? 'SECTOR SECURED' : 'MISSION ACCOMPLISHED')
+            : (gameOverReason.includes('retreated') || gameOverReason.includes('escaped') ? 'MISSION ABANDONED' : 
+               gameOverReason.includes('Favor') ? 'COMMAND RELIEVED' :
+               gameOverReason.includes('Round') || gameOverReason.includes('time') ? 'TIME EXPIRED' : 'SHIP DESTROYED')}
         </h1>
 
-        <div className="label" style={{ color: 'var(--color-text-secondary)', fontSize: '1rem', marginBottom: 'var(--space-lg)' }}>
-          {victory
+        <div className="label" style={{ color: 'var(--color-text-secondary)', fontSize: '1rem', marginBottom: 'var(--space-lg)', padding: '0 var(--space-md)' }}>
+          {gameOverReason || (victory
             ? 'The enemy fleet has been neutralized. Your crew performed admirably.'
-            : (gameOverReason.includes('retreated') 
-                ? 'The fleet has retreated to safety. The objective remains unfulfilled.' 
-                : 'The enemy has overwhelmed your ship. All hands lost.')}
+            : 'The enemy has overwhelmed your ship. All hands lost.')}
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-md)', marginBottom: 'var(--space-lg)' }}>
@@ -88,8 +90,8 @@ export default function GameOverScreen({ onReturn }: GameOverScreenProps) {
           onClick={() => {
             const { campaign, onCombatEnd } = useCampaignStore.getState();
             if (campaign) {
-              const { players, playerShips } = useGameStore.getState();
-              onCombatEnd({ players, ships: playerShips, earnedFF });
+              const { players, playerShips, victory, gameOverReason } = useGameStore.getState();
+              onCombatEnd({ players, ships: playerShips, earnedFF, victory: !!victory, reason: gameOverReason });
               useGameStore.getState().resetGame();
             } else {
               useGameStore.getState().resetGame();

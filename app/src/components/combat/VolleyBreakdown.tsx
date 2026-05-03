@@ -327,13 +327,9 @@ export default function VolleyBreakdown({ results, damageResult, outOfArc, weapo
                         const overflowHits = currentItem.damageResult.overflowHits;
                         const armorRoll = currentItem.damageResult.armorRoll;
                         const hullDamage = currentItem.damageResult.hullDamage;
-                        
-                        let mitigatedOverflow = 0;
-                        if (overflowHits > 0 && hullDamage > 0) {
-                          mitigatedOverflow = Math.max(1, overflowHits - armorRoll);
-                        }
-                        const piercingHits = Math.max(0, hullDamage - mitigatedOverflow);
-                        const min1RuleApplied = mitigatedOverflow === 1 && (overflowHits - armorRoll) <= 0;
+                        const piercingHits = currentItem.damageResult.piercingHits ?? 0;
+                        const mitigatedDamage = currentItem.damageResult.mitigatedDamage ?? 0;
+                        const min1RuleApplied = mitigatedDamage === 1 && (overflowHits - armorRoll) <= 0 && piercingHits === 0;
 
                         if (hullDamage === 0) {
                           return (
@@ -362,7 +358,7 @@ export default function VolleyBreakdown({ results, damageResult, outOfArc, weapo
                                 </div>
                                 <div className="flex-between" style={{ fontSize: '0.75rem' }} title={min1RuleApplied ? "Armor cannot reduce Overflow Hits below 1 unless there are piercing hits." : "The remaining Overflow Hits after armor mitigation."}>
                                   <span className="label" style={{ color: 'var(--color-text-secondary)', cursor: 'help' }}>Mitigated Damage{min1RuleApplied ? ' (Min 1)' : ''}</span>
-                                  <span className="mono">{mitigatedOverflow}</span>
+                                  <span className="mono">{mitigatedDamage}</span>
                                 </div>
                               </>
                             )}

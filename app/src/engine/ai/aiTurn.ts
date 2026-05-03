@@ -168,7 +168,7 @@ export function executeAITier(
     const extraMove = getTacticMovementBonus(aiShip, target, adversary.size, tacticCard);
 
     // 3. Move
-    if (!noMovement) {
+    if (!noMovement && !aiShip.navLockout) {
       const isFighter = isSmallCraftSize(adversary.size);
       const movePlan = planAIMovement(
         aiShip.position, aiShip.facing, adversary.speed,

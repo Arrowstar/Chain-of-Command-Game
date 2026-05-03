@@ -58,6 +58,7 @@ export interface AppliedEventState {
   grantedWeapons: string[];
   grantedSubsystems: string[];
   autoDocConsumed: boolean;
+  clearedScars: { shipId: string; shipName: string; scarName: string }[];
 }
 
 // ─── Scar Templates ──────────────────────────────────────────────
@@ -200,7 +201,15 @@ export function executePostCombatLoop(params: {
     }
   }
 
-  return { rpGained: 0, ffConverted: 0, traumasGained, scarsGained, officerStressResets };
+  return { 
+    victory: false, 
+    reason: '', 
+    rpGained: 0, 
+    ffConverted: 0, 
+    traumasGained, 
+    scarsGained, 
+    officerStressResets 
+  };
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -360,32 +369,52 @@ export function getEventOptionAvailability(
   context: EventRequirementContext
 ): EventOptionAvailability {
   const requirements = option.requirements ?? [];
-  if (requirements.length === 0) {
-    return {
-      visible: true,
-      enabled: true,
-      requirementsMet: true,
-      autoSuccess: option.autoSuccessWhenMet === true && option.requiresRoll === true,
-      unmetRequirementText: [],
-    };
-  }
-
-  const requirementResults = requirements.map(requirement => ({
+  let requirementResults = requirements.map(requirement => ({
     requirement,
     met: requirementMet(requirement, context),
   }));
-  const mode = option.requirementMode ?? 'all';
-  const requirementsMet = mode === 'any'
+
+  let mode = option.requirementMode ?? 'all';
+  let requirementsMet = requirements.length === 0 ? true : (mode === 'any'
     ? requirementResults.some(result => result.met)
-    : requirementResults.every(result => result.met);
-  const unmetRequirementText = requirementResults
+    : requirementResults.every(result => result.met));
+
+  let unmetRequirementText = requirementResults
     .filter(result => !result.met)
     .map(result => describeRequirement(result.requirement));
+
+  const allEffects = [
+    ...(option.effects ?? []),
+    ...(option.goodEffects ?? []),
+    ...(option.badEffects ?? []),
+  ];
+
+  let minFFDelta = 0;
+  let minRPDelta = 0;
+
+  for (const effect of allEffects) {
+    if (effect.type === 'ff' && effect.value && effect.value < 0) {
+      if (effect.value < minFFDelta) minFFDelta = effect.value;
+    }
+    if (effect.type === 'rp' && effect.value && effect.value < 0) {
+      if (effect.value < minRPDelta) minRPDelta = effect.value;
+    }
+  }
+
+  if (context.fleetFavor + minFFDelta <= -5) {
+    requirementsMet = false;
+    unmetRequirementText.push("Option too costly: Fleet Favor would drop to -5 (Game Over).");
+  }
+  if (context.requisitionPoints + minRPDelta < 0) {
+    requirementsMet = false;
+    unmetRequirementText.push(`Requires ${Math.abs(minRPDelta)} Requisition Points.`);
+  }
+
   const visibility = option.visibility ?? 'always';
 
   return {
     visible: visibility === 'hiddenWhenUnmet' ? requirementsMet : true,
-    enabled: visibility === 'disabledWhenUnmet' ? requirementsMet : true,
+    enabled: visibility === 'disabledWhenUnmet' ? requirementsMet : requirementsMet, // Force disable if cost exceeds available
     requirementsMet,
     autoSuccess: requirementsMet && option.autoSuccessWhenMet === true && option.requiresRoll === true,
     unmetRequirementText,
@@ -420,6 +449,7 @@ export function applyEventResolution(params: ApplyEventResolutionParams): Applie
   let autoDocConsumed = false;
   const grantedWeapons: string[] = [];
   const grantedSubsystems: string[] = [];
+  const clearedScars: { shipId: string; shipName: string; scarName: string }[] = [];
 
   for (const effect of resolution.effectsApplied) {
     if (effect.type === 'rp') rp += effect.value ?? 0;
@@ -484,8 +514,16 @@ export function applyEventResolution(params: ApplyEventResolutionParams): Applie
       updatedShips = updatedShips.map(s => {
         if (targets.some(t => t.id === s.id) && s.scars.length > 0) {
           const randomIndex = Math.floor(Math.random() * s.scars.length);
+          const clearedScar = s.scars[randomIndex];
           const newScars = [...s.scars];
           newScars.splice(randomIndex, 1);
+          
+          clearedScars.push({
+            shipId: s.id,
+            shipName: s.name,
+            scarName: clearedScar.name,
+          });
+          
           return { ...s, scars: newScars };
         }
         return s;
@@ -644,6 +682,7 @@ export function applyEventResolution(params: ApplyEventResolutionParams): Applie
     pendingEconomicBuffs: economicBuffs,
     grantedWeapons,
     grantedSubsystems,
+    clearedScars,
     autoDocConsumed,
   };
 }

@@ -594,6 +594,10 @@ export interface EnemyShipState {
   hasMovedThisRound?: boolean;
   /** Number of hexes moved this round (used by movementConditional trait). */
   hexesMovedThisRound?: number;
+  /** Navigational lockout state (e.g. from fumble or ion damage). */
+  navLockout?: boolean;
+  /** Rounds remaining for navigational lockout. */
+  navLockoutDuration?: number;
 }
 
 // ─── Fighter / Small Craft Tokens ────────────────────────────────

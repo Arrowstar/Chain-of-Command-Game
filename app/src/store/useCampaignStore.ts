@@ -74,6 +74,8 @@ interface CampaignStore {
     players: PlayerState[];
     ships: ShipState[];
     earnedFF: number;
+    victory: boolean;
+    reason: string;
   }) => void;
 
   /** Called when a player's ship is destroyed during combat. */
@@ -331,7 +333,7 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
 
 
   // ── Combat End Callback ────────────────────────────────────────
-  onCombatEnd: ({ players, ships, earnedFF }) => {
+  onCombatEnd: ({ players, ships, earnedFF, victory, reason }) => {
     const { smallShipsDestroyedThisMission } = useGameStore.getState();
     set(state => {
       if (!state.campaign) return state;
@@ -346,12 +348,24 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
           ...state.campaign,
           requisitionPoints: state.campaign.requisitionPoints + bonusRp,
           fleetFavor: state.campaign.fleetFavor + earnedFF,
-          campaignPhase: 'postCombat',
+          campaignPhase: (state.campaign.fleetFavor + earnedFF <= -5) ? 'gameOver' : 'postCombat',
+          isGameOver: state.campaign.isGameOver || (state.campaign.fleetFavor + earnedFF <= -5),
+          victory: (state.campaign.isGameOver || (state.campaign.fleetFavor + earnedFF <= -5)) ? false : state.campaign.victory,
+          lastCombatVictory: victory,
+          lastCombatReason: reason,
         },
       };
     });
 
     const { campaign, sectorMap } = get();
+    if (campaign && campaign.fleetFavor <= -5) {
+      useGameStore.setState({
+        gameOver: true,
+        victory: false,
+        gameOverReason: 'Fleet Favor dropped to -5. High Command has terminated your commission.',
+        phase: 'gameOver'
+      });
+    }
     const currentNode = sectorMap?.nodes.find(node => node.id === campaign?.currentNodeId);
     const destroyedShipCount = ships.filter(ship => ship.isDestroyed).length;
     const salvageBonusRp = campaign
@@ -488,7 +502,11 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
       },
     });
 
-    return finalResult;
+    return {
+      ...finalResult,
+      victory: campaign.lastCombatVictory ?? false,
+      reason: campaign.lastCombatReason ?? 'Combat terminated.',
+    };
   },
 
   convertFleetFavorToRP: (amount) => {
@@ -623,10 +641,11 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
       availability.autoSuccess
     );
 
+    let applied: any = null;
     set(state => {
       if (!state.campaign) return state;
       let revealedNodes = [...state.campaign.revealedNodeIds];
-      const applied = applyEventResolution({
+      applied = applyEventResolution({
         resolution,
         requisitionPoints: state.campaign.requisitionPoints,
         fleetFavor: state.campaign.fleetFavor,
@@ -662,10 +681,33 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
           stashedWeapons: applied.stashedWeapons,
           stashedSubsystems: applied.stashedSubsystems,
           pendingEconomicBuffs: applied.pendingEconomicBuffs,
-          campaignPhase: resolution.transformsToCombat ? 'nodeResolution' : 'sectorMap',
+          campaignPhase: applied.fleetFavor <= -5 ? 'gameOver' : (resolution.transformsToCombat ? 'nodeResolution' : 'sectorMap'),
+          isGameOver: state.campaign.isGameOver || applied.fleetFavor <= -5,
+          victory: (state.campaign.isGameOver || applied.fleetFavor <= -5) ? state.campaign.victory : null,
         },
       };
     });
+
+    if (applied && applied.fleetFavor <= -5) {
+      useGameStore.setState({
+        gameOver: true,
+        victory: false,
+        gameOverReason: 'Fleet Favor dropped to -5. The High Command has relieved you of duty and terminated the expedition.',
+        phase: 'gameOver'
+      });
+    }
+
+    // Fire toasts for removed scars
+    if (applied && applied.clearedScars) {
+      applied.clearedScars.forEach((s: any) => {
+        fireToast({ type: 'tech', message: `Scar Removed: ${s.scarName} on ${s.shipName}` });
+        get().pushCampaignLog({
+          type: 'system',
+          message: `Scar Removed: ${s.scarName}`,
+          outcome: `Fleet engineering successfully mitigated the persistent effects of the ${s.scarName} on the ${s.shipName}.`,
+        });
+      });
+    }
 
     // Fire toasts for resource changes
     const prevRP = get().campaign?.requisitionPoints ?? 0;

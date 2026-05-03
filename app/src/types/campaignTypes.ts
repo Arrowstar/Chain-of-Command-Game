@@ -247,6 +247,8 @@ export interface DrydockMutation {
 // ─── Post-Combat Loop ─────────────────────────────────────────────
 
 export interface PostCombatResult {
+  victory: boolean;
+  reason: string;
   rpGained: number;         // From FF → RP conversion
   ffConverted: number;      // How much FF was converted (only positive)
   traumasGained: TraumaGained[];
@@ -350,6 +352,10 @@ export interface CampaignState {
 
   /** Which story beat is currently being displayed. Null when not in the 'story' phase. */
   pendingStoryId: StoryBeatId | null;
+
+  /** Combat results to be displayed in the post-combat summary */
+  lastCombatVictory?: boolean;
+  lastCombatReason?: string;
 }
 
 export interface CampaignLogEntry {

@@ -37,7 +37,18 @@ export default function PostCombatSummary() {
   return (
     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflowY: 'auto', padding: 'var(--space-xl) 0' }}>
       <div className="panel panel--glow" style={{ margin: '0 auto', width: '700px', maxWidth: '90vw', padding: 'var(--space-lg)' }}>
-        <h2 style={{ color: 'var(--color-holo-cyan)', textAlign: 'center', marginTop: 0, fontSize: '2rem' }}>POST-COMBAT SUMMARY</h2>
+        <h2 style={{ 
+          color: result.victory ? 'var(--color-holo-cyan)' : 'var(--color-hostile-red)', 
+          textAlign: 'center', 
+          marginTop: 0, 
+          fontSize: '2rem',
+          textShadow: result.victory ? 'var(--glow-cyan)' : '0 0 15px var(--color-hostile-red)'
+        }}>
+          {result.victory ? 'MISSION SUCCESS' : 'TACTICAL WITHDRAWAL'}
+        </h2>
+        <div className="label" style={{ textAlign: 'center', marginBottom: 'var(--space-lg)', color: 'var(--color-text-secondary)', fontStyle: 'italic' }}>
+          {result.reason}
+        </div>
         
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-md)', margin: 'var(--space-lg) 0' }}>
           <div className="panel panel--raised" style={{ padding: 'var(--space-md)', textAlign: 'center' }}>

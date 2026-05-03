@@ -100,6 +100,9 @@ function App() {
   }
 
   if (appMode === 'campaign') {
+    if (gameOver) {
+      return <GameOverScreen onReturn={() => setAppMode('menu')} />;
+    }
     return (
       <>
         <CampaignScreen onStartCombat={() => setAppMode('campaign-combat')} />

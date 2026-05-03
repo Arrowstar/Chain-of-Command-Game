@@ -15,6 +15,8 @@ describe('VolleyBreakdown', () => {
       struckSector: 'fore',
       shieldRemaining: 3,
       overflowHits: 0,
+      piercingHits: 0,
+      mitigatedDamage: 0,
       armorRoll: 0,
       armorDie: 'd4',
       hullDamage: 0,

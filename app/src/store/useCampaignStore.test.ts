@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { NodeType } from '../engine/mapGenerator';
 import { useCampaignStore } from './useCampaignStore';
+import { useGameStore } from './useGameStore';
 import type { PlayerState, ShipState } from '../types/game';
 
 function makeShip(id: string): ShipState {
@@ -194,5 +195,50 @@ describe('useCampaignStore event resolution', () => {
     const state = useCampaignStore.getState();
     const currentNode = state.sectorMap?.nodes.find(n => n.id === state.campaign?.currentNodeId);
     expect(currentNode?.type).toBe(NodeType.Boss);
+  });
+
+  it('triggers game over and sets reason in useGameStore when Fleet Favor reaches -5 via combat', () => {
+    useCampaignStore.setState(state => ({
+      campaign: state.campaign
+        ? {
+            ...state.campaign,
+            fleetFavor: -4,
+          }
+        : null,
+    }));
+
+    useCampaignStore.getState().onCombatEnd({
+      players: [],
+      ships: [],
+      earnedFF: -1,
+      victory: false,
+      reason: 'Defeat'
+    });
+    
+    const campaignState = useCampaignStore.getState().campaign;
+    const gameStoreState = useGameStore.getState();
+
+    expect(campaignState?.fleetFavor).toBe(-5);
+    expect(campaignState?.campaignPhase).toBe('gameOver');
+    expect(campaignState?.isGameOver).toBe(true);
+    
+    expect(gameStoreState.gameOver).toBe(true);
+    expect(gameStoreState.victory).toBe(false);
+    expect(gameStoreState.gameOverReason).toContain('Fleet Favor dropped to -5');
+  });
+
+  it('persists combat victory and reason when onCombatEnd is called', () => {
+    useCampaignStore.getState().onCombatEnd({
+      players: [],
+      ships: [],
+      earnedFF: 1,
+      victory: true,
+      reason: 'Total Domination'
+    });
+
+    const campaign = useCampaignStore.getState().campaign;
+    expect(campaign?.lastCombatVictory).toBe(true);
+    expect(campaign?.lastCombatReason).toBe('Total Domination');
+    expect(campaign?.campaignPhase).toBe('postCombat');
   });
 });

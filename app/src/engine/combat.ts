@@ -124,6 +124,10 @@ export interface DamageResult {
   shieldRemaining: number;
   /** Hits that overflowed past shields to hull */
   overflowHits: number;
+  /** Number of piercing hits that bypassed shields and armor */
+  piercingHits: number;
+  /** Amount of overflow damage mitigated by armor */
+  mitigatedDamage: number;
   /** Armor roll value */
   armorRoll: number;
   /** Armor die type used */
@@ -205,6 +209,8 @@ export function resolveAttack(
       struckSector: 'fore',
       shieldRemaining: defenderShields['fore'],
       overflowHits: 0,
+      piercingHits: 0,
+      mitigatedDamage: 0,
       armorRoll: 0,
       armorDie: defenderArmorDie,
       hullDamage: 0,
@@ -224,6 +230,8 @@ export function resolveAttack(
       struckSector: 'fore',
       shieldRemaining: defenderShields['fore'],
       overflowHits: 0,
+      piercingHits: 0,
+      mitigatedDamage: 0,
       armorRoll: 0,
       armorDie: defenderArmorDie,
       hullDamage: 0,
@@ -332,6 +340,7 @@ export function resolveAttack(
   // Apply hull damage
   let armorRoll = 0;
   let hullDamage = 0;
+  let mitigatedDamage = 0;
 
   if (overflowHits > 0 && !isIonWeapon) {
     // Roll armor die to mitigate
@@ -339,12 +348,9 @@ export function resolveAttack(
       armorRoll = rollDie(defenderArmorDie);
     }
     
-    // If there are piercing hits, we don't enforce the minimum 1 hull damage rule for overflow.
-    if (piercingHits > 0) {
-      hullDamage = Math.max(0, overflowHits - armorRoll);
-    } else {
-      hullDamage = Math.max(1, overflowHits - armorRoll); // minimum 1 if any reached hull
-    }
+    // Standard hits that reach the hull always deal at least 1 damage after armor mitigation.
+    mitigatedDamage = overflowHits - Math.max(1, overflowHits - armorRoll);
+    hullDamage = Math.max(1, overflowHits - armorRoll);
   }
 
   // Add the piercing hits directly to hull damage (bypassing shields and armor)
@@ -367,6 +373,8 @@ export function resolveAttack(
     struckSector,
     shieldRemaining,
     overflowHits,
+    piercingHits: isIonWeapon ? 0 : piercingHits,
+    mitigatedDamage,
     armorRoll,
     armorDie: defenderArmorDie,
     hullDamage,

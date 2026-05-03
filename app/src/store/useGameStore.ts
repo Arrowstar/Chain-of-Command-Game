@@ -700,10 +700,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const finalSpeedCap = scarSpeedCap === null ? effectiveMaxSpeed : Math.min(effectiveMaxSpeed, scarSpeedCap);
       const currentSpeed = combatModifiers?.playerStartSpeed3
         ? Math.min(3, finalSpeedCap)
-        : Math.min(ship.currentSpeed, finalSpeedCap);
+        : Math.min(1, finalSpeedCap); // Explicitly reset to speed 1 at combat start
       return { 
         ...ship, 
         currentSpeed,
+        warpedOut: false, // Reset warp status for new combat
         fighterLaunchCounts: {} // Reset fighter hangar capacity for the new combat
       };
     });
@@ -1703,8 +1704,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
     
 
     switch (action.actionId) {
-
       case 'adjust-speed': {
+        if (ship.navLockout) {
+          get().addLog('system', `🚫 NAVIGATIONAL LOCKOUT: ${ship.name} cannot Adjust Speed. Helm controls are offline!`);
+          set(s => {
+            const ps = [...s.players];
+            const p = { ...ps[playerIndex] };
+            const as = [...p.assignedActions];
+            as[actionIndex] = { ...as[actionIndex], resolved: true };
+            p.assignedActions = as;
+            ps[playerIndex] = p;
+            return { players: ps };
+          });
+          return;
+        }
         // Enforce the delta that was queued during Planning
         let delta = action.context?.delta ?? context?.delta ?? 1;
         // Zephyr (Afterburners) gives +/▶ 2 instead of 1
@@ -1736,6 +1749,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
         break;
       }
       case 'rotate': {
+        if (ship.navLockout) {
+          get().addLog('system', `🚫 NAVIGATIONAL LOCKOUT: ${ship.name} cannot Rotate. Helm controls are offline!`);
+          set(s => {
+            const ps = [...s.players];
+            const p = { ...ps[playerIndex] };
+            const as = [...p.assignedActions];
+            as[actionIndex] = { ...as[actionIndex], resolved: true };
+            p.assignedActions = as;
+            ps[playerIndex] = p;
+            return { players: ps };
+          });
+          return;
+        }
         const dir = context?.direction ?? 'clockwise';
         updates.facing = rotateShip(ship.facing, dir);
         const dirLabel = dir === 'clockwise' ? 'STARBOARD (CW)' : 'PORT (CCW)';
@@ -1743,6 +1769,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
         break;
       }
       case 'evasive-pattern': {
+        if (ship.navLockout) {
+          get().addLog('system', `🚫 NAVIGATIONAL LOCKOUT: ${ship.name} cannot execute Evasive Patterns. Helm response is sluggish!`);
+          set(s => {
+            const ps = [...s.players];
+            const p = { ...ps[playerIndex] };
+            const as = [...p.assignedActions];
+            as[actionIndex] = { ...as[actionIndex], resolved: true };
+            p.assignedActions = as;
+            ps[playerIndex] = p;
+            return { players: ps };
+          });
+          return;
+        }
         const officer = player.officers.find(o => o.station === action.station);
         const officerData = officer ? getOfficerById(officer.officerId) : null;
         const procResult = officer ? rollOfficerSkillProc(officer.currentTier) : null;
@@ -3091,6 +3130,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
         break;
       }
       case 'jump-to-warp': {
+        if (ship.navLockout) {
+          get().addLog('system', `🚫 NAVIGATIONAL LOCKOUT: ${ship.name} cannot Jump to Warp. Navigation core is locked!`);
+          set(s => {
+            const ps = [...s.players];
+            const p = { ...ps[playerIndex] };
+            const as = [...p.assignedActions];
+            as[actionIndex] = { ...as[actionIndex], resolved: true };
+            p.assignedActions = as;
+            ps[playerIndex] = p;
+            return { players: ps };
+          });
+          return;
+        }
         // Mark ship as warped out — removed from active board
         updates.warpedOut = true;
         const inZone = isInBreakoutZone(ship.position) || state.extractionWindowShipIds.includes(ship.id);
@@ -3624,7 +3676,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     fighters.forEach(fighter => {
       // 1. Move
       const moveResult = resolveFighterMovement(
-        fighter, state.playerShips, state.enemyShips, allFighters, state.terrainMap, state.torpedoTokens, state.stations
+        fighter, state.playerShips, state.enemyShips, updatedFighters, state.terrainMap, state.torpedoTokens, state.stations
       );
 
       const fIndex = updatedFighters.findIndex(f => f.id === fighter.id);
@@ -4500,6 +4552,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       isJammed: false,
       hasMovedThisRound: false,
       hexesMovedThisRound: 0,
+      navLockout: s.navLockoutDuration ? s.navLockoutDuration > 1 : false,
+      navLockoutDuration: Math.max(0, (s.navLockoutDuration ?? 0) - 1),
     }));
     updatedEnemyShips = applyNebulaShieldStrip(updatedEnemyShips);
 
@@ -4524,6 +4578,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     if (newTactic.mechanicalEffect.shieldRestore) {
       updatedEnemyShips = restoreEnemyShieldsForTactic(updatedEnemyShips, newTactic.mechanicalEffect.shieldRestore);
+    }
+
+    // Campaign modifier: enemy shields start at 0 for round 1. This re-applies after any
+    // tactic-card shield restore so that the campaign advantage is never overridden.
+    if (state.round === 1 && state.combatModifiers?.enemyShieldsZeroRound1) {
+      const zeroShields: ShieldState = { fore: 0, foreStarboard: 0, aftStarboard: 0, aft: 0, aftPort: 0, forePort: 0 };
+      updatedEnemyShips = updatedEnemyShips.map(s => ({ ...s, shields: zeroShields }));
     }
 
     if (newTactic.mechanicalEffect.reserveSquadronLaunch) {
