@@ -853,6 +853,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       exposedEnemyShipId: null,
       flakUmbrellaShipId: null,
       extractionWindowShipIds: [],
+      fleetFavor: 0,
+      startingFleetFavor: 0,
       currentTactic: null,
       tacticHazards: [],
       stations: [],
@@ -925,7 +927,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
           get().addLog('system', `🏆 Victory Rewards: +${totalReward} Fleet Favor [${rewardText.join(', ')}]`);
         }
       } else {
+        get().adjustFleetFavor(-1);
         get().addLog('phase', `★  DEFEAT ═  ${result.reason}`);
+        get().addLog('system', `⚠ Mission Failure: -1 Fleet Favor.`);
       }
       
       return true;
@@ -2518,16 +2522,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     }
                 }
 
-                if (targetUpdates.isDestroyed && !isEnemy) {
-                    const destroyedFFOverride = fireRoE?.mechanicalEffect.destroyedShipFFOverride;
-                    if (destroyedFFOverride !== undefined) {
-                        get().adjustFleetFavor(destroyedFFOverride);
-                        get().addLog('roe', `☠ ACCEPTABLE LOSSES: ${target.name} destroyed — ${destroyedFFOverride >= 0 ? '+' : ''}${destroyedFFOverride} FF (High Command notes the sacrifice).`);
-                    } else {
-                        get().adjustFleetFavor(-3);
-                        get().addLog('roe', `☠ ${target.name} destroyed — -3 Fleet Favor.`);
-                    }
-                }
             }
 
             const tacOfficerName = tacOfficerData?.name ?? 'Tactical';
@@ -4026,6 +4020,25 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   // ═ ══ ══ ═ Ships ═ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ═
   updatePlayerShip: (shipId, updates) => {
+    const currentState = get();
+    const ship = currentState.playerShips.find(s => s.id === shipId);
+    if (!ship) return;
+
+    // Immediate FF Penalty for destroyed player ships
+    const wasDestroyed = ship.isDestroyed;
+    const isNewlyDestroyed = !wasDestroyed && (updates.isDestroyed === true || (typeof updates.currentHull === 'number' && updates.currentHull <= 0));
+    
+    if (isNewlyDestroyed) {
+      const destroyedFFOverride = currentState.activeRoE?.mechanicalEffect.destroyedShipFFOverride;
+      if (destroyedFFOverride !== undefined) {
+        get().adjustFleetFavor(destroyedFFOverride);
+        get().addLog('roe', `☠ ACCEPTABLE LOSSES: ${ship.name} destroyed — ${destroyedFFOverride >= 0 ? '+' : ''}${destroyedFFOverride} FF (High Command notes the sacrifice).`);
+      } else {
+        get().adjustFleetFavor(-1);
+        get().addLog('roe', `☠ ${ship.name} destroyed — -1 Fleet Favor.`);
+      }
+    }
+
     set(state => {
       const ship = state.playerShips.find(s => s.id === shipId);
       if (!ship) return state;
@@ -4729,8 +4742,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
     const roeName = state.activeRoE.name;
     set({ activeRoE: null, roeOverridden: true });
-    get().adjustFleetFavor(-3);
-    get().addLog('roe', `⚠ INSUBORDINATION: The War Council has overridden "${roeName}"! (-3 Fleet Favor). Operating on own parameters.`);
+    get().adjustFleetFavor(-2);
+    get().addLog('roe', `⚠ INSUBORDINATION: The War Council has overridden "${roeName}"! (-2 Fleet Favor). Operating on own parameters.`);
   },
 
   // ═ ══ ══ ═ Radio Silence Violation ═ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ═

@@ -68,7 +68,7 @@ describe('Rules of Engagement Effects', () => {
     expect(p1.commandTokens).toBe(6);
   });
 
-  it('overrideRoE costs 3 Fleet Favor and clears active RoE mechanical effects', () => {
+  it('overrideRoE costs 2 Fleet Favor and clears active RoE mechanical effects', () => {
     const roe = ROE_DECK.find(c => c.id === 'power-grid-rationing')!;
     useGameStore.setState({ phase: 'briefing', activeRoE: roe });
 
@@ -77,7 +77,7 @@ describe('Rules of Engagement Effects', () => {
 
     expect(state.roeOverridden).toBe(true);
     expect(state.activeRoE).toBeNull();
-    expect(state.fleetFavor).toBe(-1); // 2 - 3
+    expect(state.fleetFavor).toBe(0); // 2 - 2
   });
 
   it('Strict Radio Silence applies stress via reportRadioSilenceViolation', () => {

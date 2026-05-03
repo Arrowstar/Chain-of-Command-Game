@@ -141,6 +141,11 @@ export function checkGameOverConditions(state: GameState): {
     return { gameOver: true, victory: false, reason: 'All player ships destroyed.' };
   }
 
+  // ── Universal Defeat: Round Limit ────────────────────────────────
+  if (state.maxRounds && state.round > state.maxRounds) {
+    return { gameOver: true, victory: false, reason: `Tactical window expired. Hegemony reinforcements have arrived.` };
+  }
+
   // ── Objective-specific Victory conditions ────────────────────────
   const obj = state.objectiveType;
 

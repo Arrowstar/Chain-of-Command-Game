@@ -5,7 +5,7 @@ import type { RoECard } from '../types/game';
 //
 // One card is drawn at game setup and persists for the entire mission.
 // Players may Override the RoE at the start of Phase 1 (Briefing)
-// at a cost of -3 Fleet Favor. If never overridden, they earn +2 FF
+// at a cost of -2 Fleet Favor. If never overridden, they earn +2 FF
 // at end of game for exemplary obedience.
 // ═══════════════════════════════════════════════════════════════════
 
@@ -83,7 +83,7 @@ export const ROE_DECK: RoECard[] = [
     name: 'Acceptable Losses',
     doctrine: 'cruelCalculus',
     flavorText: 'The Admiral expects casualties today. You are data.',
-    rule: 'If a Player Capital Ship is destroyed (reduced to 0 Hull), the fleet does NOT suffer the standard -3 FF penalty. Instead, gain +1 FF for providing valuable combat data through your sacrifice.',
+    rule: 'If a Player Capital Ship is destroyed (reduced to 0 Hull), the fleet does NOT suffer the standard -1 FF penalty. Instead, gain +1 FF for providing valuable combat data through your sacrifice.',
     mechanicalEffect: {
       destroyedShipFFOverride: 1,
     },
