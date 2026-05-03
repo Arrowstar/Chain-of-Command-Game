@@ -15,6 +15,7 @@ export default function PostCombatSummary() {
   const sectorMap = useCampaignStore(s => s.sectorMap);
 
   const isBossNode = sectorMap?.nodes.find(n => n.id === campaign?.currentNodeId)?.type === NodeType.Boss;
+  const isBossDefeat = isBossNode && result && !result.victory;
 
   const executed = useRef(false);
 
@@ -38,13 +39,13 @@ export default function PostCombatSummary() {
     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflowY: 'auto', padding: 'var(--space-xl) 0' }}>
       <div className="panel panel--glow" style={{ margin: '0 auto', width: '700px', maxWidth: '90vw', padding: 'var(--space-lg)' }}>
         <h2 style={{ 
-          color: result.victory ? 'var(--color-holo-cyan)' : 'var(--color-hostile-red)', 
+          color: (result.victory && !isBossDefeat) ? 'var(--color-holo-cyan)' : 'var(--color-hostile-red)', 
           textAlign: 'center', 
           marginTop: 0, 
           fontSize: '2rem',
-          textShadow: result.victory ? 'var(--glow-cyan)' : '0 0 15px var(--color-hostile-red)'
+          textShadow: (result.victory && !isBossDefeat) ? 'var(--glow-cyan)' : '0 0 15px var(--color-hostile-red)'
         }}>
-          {result.victory ? 'MISSION SUCCESS' : 'TACTICAL WITHDRAWAL'}
+          {isBossDefeat ? 'SECTOR COMMAND LOST' : (result.victory ? 'MISSION SUCCESS' : 'TACTICAL WITHDRAWAL')}
         </h2>
         <div className="label" style={{ textAlign: 'center', marginBottom: 'var(--space-lg)', color: 'var(--color-text-secondary)', fontStyle: 'italic' }}>
           {result.reason}
@@ -132,9 +133,9 @@ export default function PostCombatSummary() {
         <button 
           className="btn" 
           style={{ width: '100%', padding: 'var(--space-md)', fontSize: '1.2rem', marginTop: 'var(--space-md)' }}
-          onClick={isBossNode ? completeBossNode : finishPostCombat}
+          onClick={isBossDefeat ? finishPostCombat : (isBossNode ? completeBossNode : finishPostCombat)}
         >
-          {isBossNode ? 'PROCEED TO NEXT SECTOR' : 'RETURN TO SECTOR MAP'}
+          {isBossDefeat ? 'ACCEPT DEFEAT' : (isBossNode ? 'PROCEED TO NEXT SECTOR' : 'RETURN TO SECTOR MAP')}
         </button>
       </div>
     </div>

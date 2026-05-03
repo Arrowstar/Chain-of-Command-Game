@@ -219,7 +219,7 @@ describe('useCampaignStore event resolution', () => {
     const gameStoreState = useGameStore.getState();
 
     expect(campaignState?.fleetFavor).toBe(-5);
-    expect(campaignState?.campaignPhase).toBe('gameOver');
+    expect(campaignState?.campaignPhase).toBe('postCombat');
     expect(campaignState?.isGameOver).toBe(true);
     
     expect(gameStoreState.gameOver).toBe(true);

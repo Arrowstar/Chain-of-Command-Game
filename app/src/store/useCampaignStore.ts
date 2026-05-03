@@ -335,38 +335,53 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
   // ── Combat End Callback ────────────────────────────────────────
   onCombatEnd: ({ players, ships, earnedFF, victory, reason }) => {
     const { smallShipsDestroyedThisMission } = useGameStore.getState();
+    const { campaign, sectorMap } = get();
+    const currentNode = sectorMap?.nodes.find(node => node.id === campaign?.currentNodeId);
+    const isBossNode = currentNode?.type === NodeType.Boss;
+    const isBossDefeat = isBossNode && !victory;
+
     set(state => {
       if (!state.campaign) return state;
+      const newFF = state.campaign.fleetFavor + earnedFF;
+      const isFFGameOver = newFF <= -5;
+      const isTotalWipe = checkTotalWipe(ships);
+      
+      // Mandatory defeat if boss is lost
+      const forceGameOver = isBossDefeat || isFFGameOver || isTotalWipe;
+
       const bonusRp = state.campaign.experimentalTech.reduce(
         (sum, tech) => sum + (tech.isConsumed ? 0 : getSalvagerDronesRP('small', [tech]) * smallShipsDestroyedThisMission),
         0,
       );
+
       return {
         persistedPlayers: players,
         persistedShips: ships,
         campaign: {
           ...state.campaign,
           requisitionPoints: state.campaign.requisitionPoints + bonusRp,
-          fleetFavor: state.campaign.fleetFavor + earnedFF,
-          campaignPhase: (state.campaign.fleetFavor + earnedFF <= -5) ? 'gameOver' : 'postCombat',
-          isGameOver: state.campaign.isGameOver || (state.campaign.fleetFavor + earnedFF <= -5),
-          victory: (state.campaign.isGameOver || (state.campaign.fleetFavor + earnedFF <= -5)) ? false : state.campaign.victory,
+          fleetFavor: newFF,
+          // Transition to gameOver immediately if it's a boss defeat or FF wipe,
+          // but we still go through postCombat first so they see the result.
+          campaignPhase: forceGameOver ? 'postCombat' : 'postCombat', // Actually both go to postCombat first
+          isGameOver: state.campaign.isGameOver || forceGameOver,
+          victory: forceGameOver ? false : (victory ? true : null), // null means "not won yet"
           lastCombatVictory: victory,
-          lastCombatReason: reason,
+          lastCombatReason: isBossDefeat ? `SECTOR COMMAND FAILURE: ${reason}` : reason,
         },
       };
     });
 
-    const { campaign, sectorMap } = get();
-    if (campaign && campaign.fleetFavor <= -5) {
+    if (get().campaign && (get().campaign!.fleetFavor <= -5 || isBossDefeat)) {
       useGameStore.setState({
         gameOver: true,
         victory: false,
-        gameOverReason: 'Fleet Favor dropped to -5. High Command has terminated your commission.',
+        gameOverReason: isBossDefeat 
+          ? 'Sector Command was not secured. The jump gate remains blockaded. Campaign failed.' 
+          : 'Fleet Favor dropped to -5. High Command has terminated your commission.',
         phase: 'gameOver'
       });
     }
-    const currentNode = sectorMap?.nodes.find(node => node.id === campaign?.currentNodeId);
     const destroyedShipCount = ships.filter(ship => ship.isDestroyed).length;
     const salvageBonusRp = campaign
       ? campaign.experimentalTech.reduce(
@@ -543,6 +558,21 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
   },
 
   finishPostCombat: () => {
+    const { campaign } = get();
+    if (!campaign) return;
+
+    if (campaign.isGameOver) {
+      set(state => ({
+        campaign: state.campaign ? { ...state.campaign, campaignPhase: 'gameOver' } : null
+      }));
+      get().pushCampaignLog({
+        type: 'system',
+        message: 'Campaign Terminated',
+        outcome: campaign.victory ? 'War Council successful.' : 'Fleet assets depleted or mission objectives failed.',
+      });
+      return;
+    }
+
     set(state => ({
       campaign: state.campaign ? { ...state.campaign, campaignPhase: 'sectorMap' } : null
     }));
