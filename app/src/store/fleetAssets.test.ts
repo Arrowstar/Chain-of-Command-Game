@@ -171,54 +171,6 @@ describe('Fleet Assets', () => {
     expect(useGameStore.getState().log.some(l => l.message.includes('not enough Fleet Favor'))).toBe(true);
   });
 
-  it('Tactical Override bypasses Live-Fire Telemetry during the attack resolution', () => {
-    const liveFire = ROE_DECK.find(card => card.id === 'live-fire-telemetry')!;
-    useGameStore.setState({
-      phase: 'execution',
-      activeRoE: liveFire,
-      players: [
-        {
-          ...makePlayer(),
-          assignedActions: [{ id: 'fire-1', station: 'tactical', actionId: 'fire-primary', ctCost: 1, stressCost: 1 }],
-        },
-      ],
-    });
-
-    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.7);
-    useGameStore.getState().resolveAction('p1', 's1', 'fire-1', {
-      targetShipId: 'e1',
-      weaponId: 'plasma-battery',
-      weaponIndex: 0,
-    });
-    expect(useGameStore.getState().enemyShips[0].shields.fore).toBe(2);
-
-    useGameStore.setState({
-      players: [
-        {
-          ...makePlayer(),
-          assignedActions: [{ id: 'fire-2', station: 'tactical', actionId: 'fire-primary', ctCost: 1, stressCost: 1 }],
-        },
-      ],
-      enemyShips: [makeEnemy()],
-      tacticalOverrideShipIds: [],
-      fleetAssetRoundUses: {},
-      fleetAssetScenarioUses: {},
-      fleetAssetShipRoundUses: {},
-      fleetFavor: 5,
-    });
-
-    expect(useGameStore.getState().useFleetAsset('tactical-override', { shipId: 's1' })).toBe(true);
-    useGameStore.getState().resolveAction('p1', 's1', 'fire-2', {
-      targetShipId: 'e1',
-      weaponId: 'plasma-battery',
-      weaponIndex: 0,
-    });
-
-    const state = useGameStore.getState();
-    expect(state.enemyShips[0].shields.foreStarboard).toBe(0);
-    expect(state.tacticalOverrideShipIds).toEqual([]);
-    randomSpy.mockRestore();
-  });
 
   it('Intel Feed can cancel the current tactic card', () => {
     const tactic: TacticCard = {

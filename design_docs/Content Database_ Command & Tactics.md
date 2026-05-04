@@ -48,8 +48,6 @@ The deck is divided into thematic doctrines, reflecting the different (and often
 
 * **Acceptable Losses:**  
   * *The Rule:* The Admiral expects casualties today. If a Player Capital Ship is destroyed (reduced to 0 Hull), the fleet does *not* suffer the standard \-3 FF penalty. Instead, gain **\+1 FF** for providing valuable combat data through your sacrifice.  
-* **Live-Fire Telemetry:**  
-  * *The Rule:* High Command needs raw data on enemy shield impacts. For the first 3 Rounds of the game, players are strictly forbidden from targeting Enemy Shields. You may only fire on arcs where the enemy shields are already reduced to 0, or you must wait until Round 4 to fire freely.  
 * **Overclocked Reactors:**  
   * *The Rule:* Safety limiters are disabled. All Player Ships generate \+1 CT per round. However, ANY time a Player Ship takes Hull damage (even 1 point), they must draw a Critical Damage Card.
 

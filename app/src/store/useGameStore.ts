@@ -1383,23 +1383,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
         return state;
       }
 
-      // Live-Fire Telemetry check
-      if (action.actionId === 'fire-primary' && activeRoE?.mechanicalEffect.shieldTargetBanRounds !== undefined) {
-        if (state.round <= activeRoE.mechanicalEffect.shieldTargetBanRounds) {
-          const targetId = action.targetShipId || action.context?.targetShipId;
-          if (targetId) {
-            const targetShip = state.enemyShips.find(s => s.id === targetId);
-            if (targetShip) {
-              const hasShields = Object.values(targetShip.shields).some(v => v > 0);
-              const canOverride = state.tacticalOverrideShipIds.includes(player.shipId);
-              if (hasShields && !canOverride) {
-
-                return state;
-              }
-            }
-          }
-        }
-      }
 
       // Lumbering Trait
       if (action.actionId === 'adjust-speed') {
@@ -2116,18 +2099,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // ─── RoE: "Rigid Firing Lines" — Forward 180° only ─────────────────
         const fireRoE = state.activeRoE;
         const canTacticalOverride = state.tacticalOverrideShipIds.includes(ship.id);
-        if (fireRoE?.mechanicalEffect.shieldTargetBanRounds !== undefined && initialTarget && state.round <= fireRoE.mechanicalEffect.shieldTargetBanRounds) {
-          const hasShields = (initialTarget as any).shields ? Object.values((initialTarget as any).shields).some(v => (v as number) > 0) : ((initialTarget as any).shieldsPerSector ?? 0) > 0;
-          if (hasShields) {
-            if (canTacticalOverride) {
-              tacticalOverrideConsumed = true;
-              get().addLog('roe', `Fleet Asset: Tactical Override bypassed Live-Fire Telemetry for ${ship.name}.`);
-            } else {
-              get().addLog('roe', `🚫 LIVE-FIRE TELEMETRY: ${ship.name} cannot target ${initialTarget.name} until Round ${fireRoE.mechanicalEffect.shieldTargetBanRounds + 1}.`);
-              break;
-            }
-          }
-        }
         if (fireRoE?.mechanicalEffect.forwardArcOnly && initialTarget) {
           const forwardArcs: import('../types/game').ShipArc[] = ['fore', 'forePort', 'foreStarboard'];
           if (!isInFiringArc(ship.position, ship.facing, initialTarget.position, forwardArcs)) {

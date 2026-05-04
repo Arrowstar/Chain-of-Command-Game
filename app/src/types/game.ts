@@ -428,8 +428,6 @@ export interface RoEMechanicalEffect {
    * Positive = gain, negative = lose.
    */
   destroyedShipFFOverride?: number;
-  /** Number of rounds from game start during which shields cannot be targeted */
-  shieldTargetBanRounds?: number;
   /** Bonus CT added to each player's generation each round */
   bonusCTPerRound?: number;
   /** Any hull damage (even 1 point) forces an immediate Critical Damage Card draw */

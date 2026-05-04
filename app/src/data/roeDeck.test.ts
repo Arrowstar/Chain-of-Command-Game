@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { ROE_DECK, drawRoECard, getRoECardById } from './roeDeck';
 
 describe('Rules of Engagement Deck', () => {
-  it('contains exactly 11 cards', () => {
-    expect(ROE_DECK).toHaveLength(11);
+  it('contains exactly 10 cards', () => {
+    expect(ROE_DECK).toHaveLength(10);
   });
 
   it('contains cards with valid structures', () => {

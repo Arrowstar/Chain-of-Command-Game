@@ -89,16 +89,6 @@ export const ROE_DECK: RoECard[] = [
     },
   },
   {
-    id: 'live-fire-telemetry',
-    name: 'Live-Fire Telemetry',
-    doctrine: 'cruelCalculus',
-    flavorText: 'High Command needs raw data on enemy shield impacts.',
-    rule: 'For the first 3 Rounds of the game, players are strictly forbidden from targeting Enemy Shields. You may only fire on arcs where the enemy shields are already reduced to 0, or you must wait until Round 4 to fire freely.',
-    mechanicalEffect: {
-      shieldTargetBanRounds: 3,
-    },
-  },
-  {
     id: 'overclocked-reactors',
     name: 'Overclocked Reactors',
     doctrine: 'cruelCalculus',
