@@ -1,8 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { EnemyShipState, FighterToken, HexCoord, ObjectiveMarkerState, ShipArc, ShipState, StationState, TacticHazardState, TerrainType, TorpedoToken } from '../../types/game';
 import { getWeaponById } from '../../data/weapons';
+import { getSubsystemById } from '../../data/subsystems';
 import { getChassisById } from '../../data/shipChassis';
 import { getAdversaryById } from '../../data/adversaries';
+import Tooltip from './Tooltip';
 import { getStationById } from '../../data/stations';
 import { getTerrainData } from '../../data/terrain';
 import { ASSET_MAP } from '../../engine/pixiGraphics';
@@ -68,8 +70,10 @@ function ShipSchematicPreview({ ship, isEnemy }: { ship: ShipState | EnemyShipSt
     : [];
 
   const adversary = isEnemy && 'adversaryId' in ship ? getAdversaryById(ship.adversaryId) : null;
-  const maxShieldValue = !isEnemy && 'maxShieldsPerSector' in ship ? Math.max(1, ship.maxShieldsPerSector) : (adversary?.shieldsPerSector || 1);
+  const maxShieldValue = !isEnemy && 'maxShieldsPerSector' in ship ? ship.maxShieldsPerSector : (adversary?.shieldsPerSector || 0);
   const shipSprite = 'chassisId' in ship ? ASSET_MAP[ship.chassisId] : (adversary ? ASSET_MAP[adversary.id] : null);
+
+  const hasShields = maxShieldValue > 0;
 
   return (
     <div className="panel panel--raised" style={{ padding: 'var(--space-sm)', margin: 'var(--space-sm) 0', display: 'flex', justifyContent: 'center', background: 'rgba(0,0,0,0.2)' }}>
@@ -79,14 +83,23 @@ function ShipSchematicPreview({ ship, isEnemy }: { ship: ShipState | EnemyShipSt
             <circle cx="60" cy="60" r="20" />
           </clipPath>
         </defs>
-        {ARC_ORDER.map((arc, index) => {
+        {hasShields && ARC_ORDER.map((arc, index) => {
           const startAngle = index * 60 - 30;
           const endAngle = startAngle + 60;
           const shieldValue = ship.shields[arc];
           const opacity = 0.18 + (shieldValue / maxShieldValue) * 0.58;
           const labelPos = polarPoint(60, 60, 28, startAngle + 30);
           return (
-            <g key={`shield-${arc}`}>
+            <Tooltip
+              key={`shield-${arc}`}
+              tag="g"
+              content={
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ color: 'var(--color-shield-blue)', fontWeight: 'bold', marginBottom: '2px', textTransform: 'uppercase' }}>{arc} Shields</div>
+                  <div>Strength: {shieldValue} / {maxShieldValue}</div>
+                </div>
+              }
+            >
               <path
                 d={getArcBandPath(60, 60, 24, 38, startAngle + 2, endAngle - 2)}
                 fill={isEnemy ? `rgba(255, 107, 107, ${opacity})` : `rgba(79, 209, 197, ${opacity})`}
@@ -104,7 +117,7 @@ function ShipSchematicPreview({ ship, isEnemy }: { ship: ShipState | EnemyShipSt
               >
                 {shieldValue}
               </text>
-            </g>
+            </Tooltip>
           );
         })}
 
@@ -162,11 +175,11 @@ export type MapHoverTarget =
   | { kind: 'torpedo'; torpedo: TorpedoToken }
   | { kind: 'hazard'; hazard: TacticHazardState };
 
-interface Props {
-  target: MapHoverTarget | null;
+interface ShipInfoPanelProps {
+  targets: MapHoverTarget[];
   position: { x: number; y: number } | null;
-  onClose?: () => void;
   onLock?: () => void;
+  onClose?: () => void;
 }
 
 export function getMapHoverTargetId(target: MapHoverTarget | null): string {
@@ -183,14 +196,14 @@ export function getMapHoverTargetId(target: MapHoverTarget | null): string {
   }
 }
 
-export default function ShipInfoPanel({ target, position, onClose, onLock }: Props) {
+export default function ShipInfoPanel({ targets, position, onClose, onLock }: ShipInfoPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [clampedPosition, setClampedPosition] = useState(position);
   const [lockProgress, setLockProgress] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
 
   useEffect(() => {
-    if (!target) {
+    if (targets.length === 0) {
       setLockProgress(0);
       setIsLocked(false);
       return;
@@ -208,13 +221,13 @@ export default function ShipInfoPanel({ target, position, onClose, onLock }: Pro
         if (onLock) onLock();
         clearInterval(timer);
       }
-    }, 16); // ~60fps for smooth filling
+    }, 16);
 
     return () => clearInterval(timer);
-  }, [getMapHoverTargetId(target), isLocked]);
+  }, [targets.map(t => getMapHoverTargetId(t)).join('|'), isLocked]);
 
   useLayoutEffect(() => {
-    if (!target || !position || !panelRef.current || isLocked) {
+    if (targets.length === 0 || !position || !panelRef.current || isLocked) {
       if (!isLocked) {
         setClampedPosition(position);
       }
@@ -236,9 +249,9 @@ export default function ShipInfoPanel({ target, position, onClose, onLock }: Pro
       x: Math.max(padding, Math.min(position.x, maxX)),
       y: Math.max(padding, Math.min(position.y, maxY)),
     });
-  }, [target, position, isLocked]);
+  }, [targets, position, isLocked]);
 
-  if (!target || !position) return null;
+  if (!targets.length || !position) return null;
 
   return (
     <div
@@ -249,12 +262,23 @@ export default function ShipInfoPanel({ target, position, onClose, onLock }: Pro
         position: 'absolute',
         top: clampedPosition?.y ?? position.y,
         left: clampedPosition?.x ?? position.x,
-        width: '320px',
-        maxWidth: 'min(320px, calc(100% - 24px))',
-        maxHeight: 'calc(100% - 24px)',
-        overflowY: 'auto',
+        display: 'flex',
+        flexDirection: 'row',
+        gap: 'var(--space-md)',
+        padding: 'var(--space-md)',
+        background: 'rgba(10, 15, 25, 0.92)',
+        backdropFilter: 'blur(10px)',
+        border: '1px solid rgba(0, 204, 255, 0.25)',
+        boxShadow: '0 0 20px rgba(0, 0, 0, 0.6), inset 0 0 10px rgba(0, 204, 255, 0.05)',
         zIndex: 'var(--z-tooltip)',
         pointerEvents: isLocked ? 'auto' : 'none',
+        width: 'max-content',
+        maxWidth: 'calc(100vw - 40px)',
+        maxHeight: 'calc(100vh - 40px)',
+        overflowX: 'auto',
+        overflowY: 'hidden',
+        scrollbarWidth: 'thin',
+        scrollbarColor: 'rgba(0, 204, 255, 0.5) transparent'
       }}
       onPointerLeave={() => {
         if (isLocked && onClose) {
@@ -262,19 +286,40 @@ export default function ShipInfoPanel({ target, position, onClose, onLock }: Pro
         }
       }}
     >
-      <LockIndicator progress={lockProgress} isLocked={isLocked} target={target} />
-      {target.kind === 'ship' && <ShipTooltipContent ship={target.ship} isEnemy={target.isEnemy} />}
-      {target.kind === 'station' && <StationTooltipContent station={target.station} />}
-      {target.kind === 'terrain' && <TerrainTooltipContent terrainType={target.terrainType} coord={target.coord} />}
-      {target.kind === 'objective' && <ObjectiveTooltipContent marker={target.marker} />}
-      {target.kind === 'fighter' && <FighterTooltipContent fighter={target.fighter} stackCount={target.stackCount ?? 1} />}
-      {target.kind === 'torpedo' && <TorpedoTooltipContent torpedo={target.torpedo} />}
-      {target.kind === 'hazard' && <HazardTooltipContent hazard={target.hazard} />}
+      <LockIndicator progress={lockProgress} isLocked={isLocked} target={targets[0]} targetCount={targets.length} />
+      
+      {targets.map((target, idx) => (
+        <div 
+          key={`${target.kind}-${idx}`} 
+          style={{ 
+            width: '300px', 
+            minWidth: '300px',
+            flexShrink: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            maxHeight: '100%',
+            overflowY: 'auto',
+            borderRight: idx < targets.length - 1 ? '1px solid rgba(255,255,255,0.1)' : 'none',
+            paddingRight: idx < targets.length - 1 ? 'var(--space-md)' : 0,
+            paddingBottom: 'var(--space-sm)',
+            scrollbarWidth: 'thin',
+            scrollbarColor: 'rgba(0, 204, 255, 0.3) transparent'
+          }}
+        >
+          {target.kind === 'ship' && <ShipTooltipContent ship={target.ship} isEnemy={target.isEnemy} />}
+          {target.kind === 'station' && <StationTooltipContent station={target.station} />}
+          {target.kind === 'terrain' && <TerrainTooltipContent terrainType={target.terrainType} coord={target.coord} />}
+          {target.kind === 'objective' && <ObjectiveTooltipContent marker={target.marker} />}
+          {target.kind === 'fighter' && <FighterTooltipContent fighter={target.fighter} stackCount={target.stackCount ?? 1} />}
+          {target.kind === 'torpedo' && <TorpedoTooltipContent torpedo={target.torpedo} />}
+          {target.kind === 'hazard' && <HazardTooltipContent hazard={target.hazard} />}
+        </div>
+      ))}
     </div>
   );
 }
 
-function LockIndicator({ progress, isLocked, target }: { progress: number; isLocked: boolean; target: MapHoverTarget }) {
+function LockIndicator({ progress, isLocked, target, targetCount }: { progress: number; isLocked: boolean; target: MapHoverTarget; targetCount: number }) {
   let color = 'var(--color-holo-cyan)';
   if (target.kind === 'ship') {
     color = target.isEnemy ? 'var(--color-hostile-red)' : 'var(--color-holo-cyan)';
@@ -307,27 +352,56 @@ function LockIndicator({ progress, isLocked, target }: { progress: number; isLoc
         transition: 'all 0.2s ease',
       }}
     >
-      {isLocked ? (
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-        </svg>
-      ) : (
-        <svg width="20" height="20" viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.1)" strokeWidth="2" fill="none" />
+      <svg width="24" height="24" viewBox="0 0 24 24">
+        {/* Background circle */}
+        <circle
+          cx="12"
+          cy="12"
+          r="10"
+          fill="none"
+          stroke="rgba(255, 255, 255, 0.1)"
+          strokeWidth="2"
+        />
+        {/* Progress circle */}
+        {!isLocked && (
           <circle
             cx="12"
             cy="12"
             r="10"
+            fill="none"
             stroke={color}
             strokeWidth="2"
-            fill="none"
             strokeDasharray="62.8"
             strokeDashoffset={62.8 * (1 - progress / 100)}
             transform="rotate(-90 12 12)"
+            strokeLinecap="round"
           />
-        </svg>
-      )}
+        )}
+        {/* Lock icon or count */}
+        {isLocked ? (
+          <path
+            d="M7 11V7a5 5 0 0 1 10 0v4h1v9H6v-9h1zm2 0h6V7a3 3 0 0 0-6 0v4z"
+            fill={color}
+            transform="scale(0.8) translate(3, 3)"
+          />
+        ) : (
+          targetCount > 1 && (
+            <text 
+              x="12" 
+              y="12" 
+              textAnchor="middle" 
+              dominantBaseline="central" 
+              fontSize="11" 
+              fontFamily="var(--font-display)"
+              fontWeight="bold" 
+              fill={color}
+              style={{ pointerEvents: 'none', userSelect: 'none' }}
+            >
+              {targetCount}
+            </text>
+          )
+        )}
+      </svg>
     </div>
   );
 }
@@ -340,6 +414,8 @@ function ShipTooltipContent({ ship, isEnemy }: { ship: ShipState | EnemyShipStat
   const isFlagship = isEnemy && /\(Flagship\)/i.test(rawVesselName);
   const vesselName = isEnemy ? formatEnemyVesselName(rawVesselName) : rawVesselName;
   const vesselClass = isEnemy ? (adversary?.name ?? 'Unknown Adversary Class') : (chassis?.className ?? 'Unknown Vessel Class');
+  const maxShieldValue = !isEnemy && 'maxShieldsPerSector' in ship ? (ship as ShipState).maxShieldsPerSector : (adversary?.shieldsPerSector || 0);
+  const hasShields = maxShieldValue > 0;
 
   return (
     <>
@@ -375,55 +451,141 @@ function ShipTooltipContent({ ship, isEnemy }: { ship: ShipState | EnemyShipStat
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-sm)' }}>
-        <StatCard label="Hull Integrity" value={`${ship.currentHull} / ${maxHull}`} color={ship.currentHull < maxHull / 2 ? 'var(--color-hostile-red)' : 'var(--color-holo-green)'} />
-        <StatCard label="Current Speed" value={String(ship.currentSpeed)} />
-
+        <StatCard 
+          label="Hull Integrity" 
+          value={`${ship.currentHull} / ${maxHull}`} 
+          color={ship.currentHull < maxHull / 2 ? 'var(--color-hostile-red)' : 'var(--color-holo-green)'} 
+          tooltip={
+            <div>
+              <div style={{ color: 'var(--color-holo-cyan)', fontWeight: 'bold', marginBottom: '4px' }}>Hull Integrity</div>
+              <div>Current: {ship.currentHull} / {maxHull}</div>
+              <div style={{ marginTop: '4px', fontSize: '0.7rem', opacity: 0.8 }}>
+                {ship.currentHull <= maxHull / 2 
+                  ? '⚠️ DAMAGED: Vessel is below 50% hull and may suffer critical failures.' 
+                  : 'Vessel is structurally sound.'}
+              </div>
+            </div>
+          }
+        />
+        <StatCard 
+          label="Current Speed" 
+          value={String(ship.currentSpeed)} 
+          tooltip="Tactical movement limit for the current round."
+        />
+        <StatCard 
+          label="Evasion" 
+          value={String(ship.baseEvasion + ((ship as any).evasionModifiers || 0))} 
+          color="var(--color-holo-green)"
+          tooltip="Base evasion value. Used to avoid incoming fire. Higher is better."
+        />
+        {hasShields && (
+          <StatCard 
+            label="Shield Capacity" 
+            value={String(maxShieldValue)} 
+            color="var(--color-shield-blue)"
+            tooltip="Maximum shield strength per sector."
+          />
+        )}
       </div>
 
       <ShipSchematicPreview ship={ship} isEnemy={isEnemy} />
 
-      {!isEnemy && (ship as ShipState).equippedWeapons.length > 0 && (
+      {!isEnemy && 'equippedWeapons' in ship && (ship as ShipState).equippedWeapons?.length > 0 && (
         <div style={{ marginBottom: 'var(--space-sm)' }}>
           <div className="label" style={{ marginBottom: '4px' }}>Equipped Weaponry</div>
-          { (ship as ShipState).equippedWeapons.map((weaponId, idx) => {
-            const weapon = weaponId ? getWeaponById(weaponId) : null;
+          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+          { (ship as ShipState).equippedWeapons.map((wId, index) => {
+            if (!wId) return null;
+            const weapon = getWeaponById(wId);
             if (!weapon) return null;
-            const weaponColor = WEAPON_PREVIEW_COLORS[idx % WEAPON_PREVIEW_COLORS.length];
             return (
-              <div key={`${weaponId}-${idx}`} className="panel panel--raised" style={{ padding: 'var(--space-sm)', marginBottom: '4px', borderLeft: `2px solid ${weaponColor}` }}>
-                <div className="label" style={{ color: weaponColor, fontSize: '0.75rem', marginBottom: '2px' }}>{weapon.name}</div>
-                <div className="mono flex-between" style={{ fontSize: '0.8rem' }}>
-                  <span style={{ color: 'var(--color-text-dim)' }}>Range:</span>
-                  <span>{weapon.rangeMin}-{weapon.rangeMax === Infinity ? '∞' : weapon.rangeMax}</span>
+              <Tooltip key={index} content={
+                <div>
+                  <div style={{ color: 'var(--color-holo-cyan)', fontWeight: 'bold', marginBottom: '4px' }}>{weapon.name}</div>
+                  <div>Range: {weapon.rangeMin || 0}-{weapon.rangeMax === Infinity ? '∞' : weapon.rangeMax}</div>
+                  <div>Dice: {weapon.volleyPool.join(', ')}</div>
+                  {weapon.tags && weapon.tags.length > 0 && (
+                    <div style={{ marginTop: '4px', fontSize: '0.7rem', color: 'var(--color-text-dim)' }}>
+                      {weapon.tags.join(' · ')}
+                    </div>
+                  )}
                 </div>
-                <div className="mono flex-between" style={{ fontSize: '0.8rem', marginTop: '1px' }}>
-                  <span style={{ color: 'var(--color-text-dim)' }}>Volley:</span>
-                  <span>{weapon.volleyPool.join(', ')}</span>
+              }>
+                <div style={{ padding: '4px 8px', background: 'rgba(0,204,255,0.1)', border: '1px solid rgba(0,204,255,0.3)', borderRadius: '4px', fontSize: '0.75rem', color: 'var(--color-holo-cyan)' }}>
+                  {weapon.name}
                 </div>
-              </div>
+              </Tooltip>
             );
           })}
+          </div>
+        </div>
+      )}
+
+      {!isEnemy && 'equippedSubsystems' in ship && (ship as ShipState).equippedSubsystems?.length > 0 && (
+        <div style={{ marginTop: 'var(--space-sm)' }}>
+          <div className="label" style={{ marginBottom: '4px' }}>Installed Subsystems</div>
+          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+            {(ship as ShipState).equippedSubsystems.map((sId, index) => {
+              if (!sId) return null;
+              const sub = getSubsystemById(sId);
+              if (!sub) return null;
+              return (
+                <Tooltip key={index} content={
+                  <div>
+                    <div style={{ color: 'var(--color-holo-green)', fontWeight: 'bold', marginBottom: '4px' }}>{sub.name}</div>
+                    <div>{sub.effect}</div>
+                    <div style={{ marginTop: '4px', fontSize: '0.7rem', color: 'var(--color-text-dim)' }}>
+                      {sub.station.toUpperCase()} · Cost: {sub.ctCost} CT / {sub.stressCost} Stress
+                    </div>
+                  </div>
+                }>
+                  <div style={{ padding: '4px 8px', background: 'rgba(0,255,153,0.1)', border: '1px solid rgba(0,255,153,0.3)', borderRadius: '4px', fontSize: '0.75rem', color: 'var(--color-holo-green)' }}>
+                    {sub.name}
+                  </div>
+                </Tooltip>
+              );
+            })}
+          </div>
         </div>
       )}
 
       {isEnemy && adversary && (
         <div className="panel panel--raised" style={{ padding: 'var(--space-sm)', marginBottom: 'var(--space-sm)' }}>
-          <div className="label" style={{ marginBottom: '4px' }}>Weaponry</div>
-          <div className="mono flex-between" style={{ fontSize: '0.85rem' }}>
-            <span style={{ color: 'var(--color-text-dim)' }}>Range:</span>
-            <span>{adversary.weaponRangeMin}-{adversary.weaponRangeMax}</span>
-          </div>
-          <div className="mono flex-between" style={{ fontSize: '0.85rem', marginTop: '2px' }}>
-            <span style={{ color: 'var(--color-text-dim)' }}>Volley:</span>
-            <span>{adversary.volleyPool.join(', ')}</span>
-          </div>
+          <Tooltip content={
+            <div>
+              <div style={{ color: 'var(--color-hostile-red)', fontWeight: 'bold', marginBottom: '4px' }}>Standard Armament</div>
+              <div>Range: {adversary.weaponRangeMin}-{adversary.weaponRangeMax}</div>
+              <div>Volley: {adversary.volleyPool.join(', ')}</div>
+              {adversary.weaponTags && adversary.weaponTags.length > 0 && (
+                <div style={{ marginTop: '4px', fontSize: '0.7rem', color: 'var(--color-text-dim)' }}>
+                  {adversary.weaponTags.join(' · ')}
+                </div>
+              )}
+            </div>
+          }>
+            <div className="mono flex-between" style={{ fontSize: '0.85rem', cursor: 'help' }}>
+              <span style={{ color: 'var(--color-text-dim)' }}>Range:</span>
+              <span>{adversary.weaponRangeMin}-{adversary.weaponRangeMax}</span>
+            </div>
+            <div className="mono flex-between" style={{ fontSize: '0.85rem', marginTop: '2px', cursor: 'help' }}>
+              <span style={{ color: 'var(--color-text-dim)' }}>Volley:</span>
+              <span>{adversary.volleyPool.join(', ')}</span>
+            </div>
+          </Tooltip>
           {adversary.traits && adversary.traits.length > 0 && (
             <div style={{ marginTop: '8px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '6px' }}>
               <div className="label" style={{ color: 'var(--color-alert-amber)', fontSize: '0.7rem', marginBottom: '4px' }}>Special Traits</div>
               {adversary.traits.map((trait, idx) => (
-                <div key={idx} style={{ fontSize: '0.75rem', color: 'var(--color-text-bright)', marginBottom: '2px', lineHeight: 1.3 }}>
-                  • {formatTraitDescription(trait)}
-                </div>
+                <Tooltip key={idx} content={
+                  <div>
+                    <div style={{ color: 'var(--color-alert-amber)', fontWeight: 'bold', marginBottom: '2px' }}>{formatTraitName(trait)}</div>
+                    <div>{formatTraitDescription(trait)}</div>
+                  </div>
+                }>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-bright)', marginBottom: '2px', lineHeight: 1.3, cursor: 'help' }}>
+                    • {formatTraitDescription(trait)}
+                  </div>
+                </Tooltip>
               ))}
             </div>
           )}
@@ -435,15 +597,23 @@ function ShipTooltipContent({ ship, isEnemy }: { ship: ShipState | EnemyShipStat
           <div className="label" style={{ color: 'var(--color-alert-amber)' }}>Critical Damage</div>
           <ul style={{ paddingLeft: 'var(--space-md)', marginTop: '4px' }}>
             {ship.criticalDamage.map(crit => (
-              <li key={crit.id} className="mono" style={{ color: 'var(--color-alert-amber)', fontSize: '0.8rem' }}>
-                {crit.name}
-              </li>
+              <Tooltip key={crit.id} content={
+                <div>
+                  <div style={{ color: 'var(--color-alert-amber)', fontWeight: 'bold', marginBottom: '4px' }}>{crit.name}</div>
+                  <div>{crit.effect}</div>
+                  <div style={{ marginTop: '4px', fontSize: '0.7rem', fontStyle: 'italic', color: 'var(--color-text-dim)' }}>Permanent until repaired.</div>
+                </div>
+              }>
+                <li className="mono" style={{ color: 'var(--color-alert-amber)', fontSize: '0.8rem', cursor: 'help', marginBottom: '2px' }}>
+                  {crit.name}
+                </li>
+              </Tooltip>
             ))}
           </ul>
         </div>
       )}
 
-      {!isEnemy && 'scars' in ship && (ship as ShipState).scars.length > 0 && (
+      {!isEnemy && 'scars' in ship && (ship as ShipState).scars?.length > 0 && (
         <div style={{ marginTop: 'var(--space-md)' }}>
           <div className="label" style={{ color: 'var(--color-alert-amber)', marginBottom: '6px' }}>
             Persistent Scars
@@ -460,28 +630,35 @@ function ShipTooltipContent({ ship, isEnemy }: { ship: ShipState | EnemyShipStat
                   background: 'linear-gradient(90deg, rgba(255, 170, 0, 0.12), rgba(255, 170, 0, 0.03))',
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 'var(--space-sm)' }}>
-                  <span style={{ color: 'var(--color-alert-amber)', fontWeight: 700, fontSize: '0.82rem' }}>
-                    {scar.name}
-                  </span>
-                  <span
-                    className="mono"
-                    style={{
-                      fontSize: '0.7rem',
-                      color: 'var(--color-text-bright)',
-                      border: '1px solid rgba(255, 170, 0, 0.28)',
-                      borderRadius: '999px',
-                      padding: '2px 8px',
-                      background: 'rgba(255, 170, 0, 0.08)',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {describeScarImpact(scar.fromCriticalId)}
-                  </span>
-                </div>
-                <div style={{ marginTop: '4px', color: 'var(--color-text-secondary)', fontSize: '0.8rem', lineHeight: 1.35 }}>
-                  {scar.effect}
-                </div>
+                <Tooltip content={
+                  <div>
+                    <div style={{ color: 'var(--color-alert-amber)', fontWeight: 'bold', marginBottom: '4px' }}>{scar.name}</div>
+                    <div>{scar.effect}</div>
+                  </div>
+                }>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 'var(--space-sm)' }}>
+                    <span style={{ color: 'var(--color-alert-amber)', fontWeight: 700, fontSize: '0.82rem' }}>
+                      {scar.name}
+                    </span>
+                    <span
+                      className="mono"
+                      style={{
+                        fontSize: '0.7rem',
+                        color: 'var(--color-text-bright)',
+                        border: '1px solid rgba(255, 170, 0, 0.28)',
+                        borderRadius: '999px',
+                        padding: '2px 8px',
+                        background: 'rgba(255, 170, 0, 0.08)',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {describeScarImpact(scar.fromCriticalId)}
+                    </span>
+                  </div>
+                  <div style={{ marginTop: '4px', color: 'var(--color-text-secondary)', fontSize: '0.8rem', lineHeight: 1.35 }}>
+                    {scar.effect}
+                  </div>
+                </Tooltip>
               </div>
             ))}
           </div>
@@ -507,8 +684,17 @@ function TerrainTooltipContent({ terrainType, coord }: { terrainType: TerrainTyp
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-sm)' }}>
-        <StatCard label="TN Modifier" value={`${terrain.tnModifier >= 0 ? '+' : ''}${terrain.tnModifier}`} color="var(--color-holo-cyan)" />
-        <StatCard label="Blocks LoS" value={terrain.blocksLoS ? 'Yes' : 'No'} />
+        <StatCard 
+          label="TN Modifier" 
+          value={`${terrain.tnModifier >= 0 ? '+' : ''}${terrain.tnModifier}`} 
+          color="var(--color-holo-cyan)" 
+          tooltip="Accuracy penalty applied to units inside this terrain."
+        />
+        <StatCard 
+          label="Blocks LoS" 
+          value={terrain.blocksLoS ? 'Yes' : 'No'} 
+          tooltip="Whether this terrain obstructs Line of Sight for attacks."
+        />
       </div>
 
       <div style={{ marginTop: 'var(--space-md)', display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
@@ -533,8 +719,20 @@ function ObjectiveTooltipContent({ marker }: { marker: ObjectiveMarkerState }) {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-sm)' }}>
-        <StatCard label="Hull Integrity" value={`${marker.hull} / ${marker.maxHull}`} color={hullColor} />
-        <StatCard label="Shields / Arc" value={String(marker.shieldsPerSector)} color="var(--color-shield-blue)" />
+        <StatCard 
+          label="Hull Integrity" 
+          value={`${marker.hull} / ${marker.maxHull}`} 
+          color={hullColor} 
+          tooltip="Damage this objective can sustain before destruction."
+        />
+        {marker.shieldsPerSector > 0 && (
+          <StatCard 
+            label="Shields / Arc" 
+            value={String(marker.shieldsPerSector)} 
+            color="var(--color-shield-blue)" 
+            tooltip="Active shield strength per hex face."
+          />
+        )}
       </div>
     </>
   );
@@ -543,7 +741,8 @@ function ObjectiveTooltipContent({ marker }: { marker: ObjectiveMarkerState }) {
 function StationTooltipContent({ station }: { station: StationState }) {
   const stationData = getStationById(station.stationId);
   const hullColor = station.currentHull <= Math.ceil(station.maxHull / 2) ? 'var(--color-hostile-red)' : 'var(--color-holo-green)';
-  const maxShieldValue = Math.max(1, station.maxShieldsPerSector);
+  const maxShieldValue = station.maxShieldsPerSector || 0;
+  const hasShields = maxShieldValue > 0;
 
   return (
     <>
@@ -558,22 +757,51 @@ function StationTooltipContent({ station }: { station: StationState }) {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-sm)' }}>
-        <StatCard label="Hull" value={`${station.currentHull} / ${station.maxHull}`} color={hullColor} />
-        <StatCard label="Armor" value={station.armorDie.toUpperCase()} />
-        <StatCard label="Evasion" value={String(station.baseEvasion)} />
-        <StatCard label="Max Shield" value={String(station.maxShieldsPerSector)} />
+        <StatCard 
+          label="Hull" 
+          value={`${station.currentHull} / ${station.maxHull}`} 
+          color={hullColor} 
+          tooltip="Structural integrity of the installation."
+        />
+        <StatCard 
+          label="Armor" 
+          value={station.armorDie.toUpperCase()} 
+          tooltip="Heavy plating that reduces incoming hull damage."
+        />
+        <StatCard 
+          label="Evasion" 
+          value={String(station.baseEvasion)} 
+          tooltip="Base difficulty for enemies to hit this target."
+        />
+        {hasShields && (
+          <StatCard 
+            label="Max Shield" 
+            value={String(station.maxShieldsPerSector)} 
+            tooltip="Maximum shield capacity per defensive arc."
+          />
+        )}
       </div>
 
-      <div style={{ marginTop: 'var(--space-sm)' }}>
-        <svg viewBox="0 0 120 120" width="140" height="140" style={{ display: 'block', margin: '0 auto' }}>
-          {ARC_ORDER.map((arc, index) => {
+      {hasShields && (
+        <div style={{ marginTop: 'var(--space-sm)' }}>
+          <svg viewBox="0 0 120 120" width="140" height="140" style={{ display: 'block', margin: '0 auto' }}>
+            {ARC_ORDER.map((arc, index) => {
             const startAngle = index * 60 - 30;
             const endAngle = startAngle + 60;
             const shieldValue = station.shields[arc];
             const opacity = 0.18 + (shieldValue / maxShieldValue) * 0.58;
             const labelPos = polarPoint(60, 60, 28, startAngle + 30);
             return (
-              <g key={`shield-${arc}`}>
+              <Tooltip
+                key={`shield-${arc}`}
+                tag="g"
+                content={
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ color: 'var(--color-shield-blue)', fontWeight: 'bold', marginBottom: '2px', textTransform: 'uppercase' }}>{arc} Arc</div>
+                    <div>Shields: {shieldValue} / {maxShieldValue}</div>
+                  </div>
+                }
+              >
                 <path
                   d={getArcBandPath(60, 60, 24, 38, startAngle + 2, endAngle - 2)}
                   fill={`rgba(255, 107, 107, ${opacity})`}
@@ -590,7 +818,7 @@ function StationTooltipContent({ station }: { station: StationState }) {
                 >
                   {shieldValue}
                 </text>
-              </g>
+              </Tooltip>
             );
           })}
           <circle cx="60" cy="60" r="14" fill="rgba(0,0,0,0.35)" stroke="var(--color-hostile-red)" strokeWidth="1.5" />
@@ -599,24 +827,34 @@ function StationTooltipContent({ station }: { station: StationState }) {
           </text>
         </svg>
       </div>
+      )}
 
       {stationData?.fighterHangar && (
-        <div className="panel panel--raised" style={{ padding: 'var(--space-sm)', marginTop: 'var(--space-sm)' }}>
-          <div className="label" style={{ marginBottom: '4px' }}>Fighter Hangar</div>
-          <div style={{ color: 'var(--color-text-secondary)', lineHeight: 1.4, fontSize: '0.82rem' }}>
-            {station.remainingFighters} / {stationData.fighterHangar.totalFighters} fighters remaining. 
-            Launches {stationData.fighterHangar.fightersPerLaunch} per round.
+        <Tooltip content="Current available fighters and launch capability.">
+          <div className="panel panel--raised" style={{ padding: 'var(--space-sm)', marginTop: 'var(--space-sm)', cursor: 'help' }}>
+            <div className="label" style={{ marginBottom: '4px' }}>Fighter Hangar</div>
+            <div style={{ color: 'var(--color-text-secondary)', lineHeight: 1.4, fontSize: '0.82rem' }}>
+              {station.remainingFighters} / {stationData.fighterHangar.totalFighters} fighters remaining. 
+              Launches {stationData.fighterHangar.fightersPerLaunch} per round.
+            </div>
           </div>
-        </div>
+        </Tooltip>
       )}
 
       {stationData?.traits && stationData.traits.length > 0 && (
         <div className="panel panel--raised" style={{ padding: 'var(--space-sm)', marginTop: 'var(--space-sm)' }}>
           <div className="label" style={{ color: 'var(--color-alert-amber)', marginBottom: '4px' }}>Special Traits</div>
           {stationData.traits.map((trait, idx) => (
-            <div key={idx} style={{ fontSize: '0.75rem', color: 'var(--color-text-bright)', marginBottom: '4px', lineHeight: 1.3 }}>
-              • {formatTraitDescription(trait)}
-            </div>
+            <Tooltip key={idx} content={
+              <div>
+                <div style={{ color: 'var(--color-alert-amber)', fontWeight: 'bold', marginBottom: '2px' }}>{formatTraitName(trait)}</div>
+                <div>{formatTraitDescription(trait)}</div>
+              </div>
+            }>
+              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-bright)', marginBottom: '4px', lineHeight: 1.3, cursor: 'help' }}>
+                • {formatTraitDescription(trait)}
+              </div>
+            </Tooltip>
           ))}
         </div>
       )}
@@ -672,9 +910,22 @@ function TorpedoTooltipContent({ torpedo }: { torpedo: TorpedoToken }) {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-sm)' }}>
-        <StatCard label="Hull" value={`${torpedo.currentHull} / ${torpedo.maxHull}`} color="var(--color-holo-green)" />
-        <StatCard label="Speed" value={String(torpedo.speed)} />
-        <StatCard label="Evasion" value={String(torpedo.baseEvasion)} />
+        <StatCard 
+          label="Hull" 
+          value={`${torpedo.currentHull} / ${torpedo.maxHull}`} 
+          color="var(--color-holo-green)" 
+          tooltip="Damage needed to destroy this torpedo before impact."
+        />
+        <StatCard 
+          label="Speed" 
+          value={String(torpedo.speed)} 
+          tooltip="Movement distance per activation phase."
+        />
+        <StatCard 
+          label="Evasion" 
+          value={String(torpedo.baseEvasion)} 
+          tooltip="Difficulty for PDCs and fighters to intercept."
+        />
       </div>
     </>
   );
@@ -706,15 +957,17 @@ function HazardTooltipContent({ hazard }: { hazard: TacticHazardState }) {
   );
 }
 
-function StatCard({ label, value, color }: { label: string; value: string; color?: string }) {
-  return (
-    <div className="panel panel--raised" style={{ padding: 'var(--space-sm)' }}>
+function StatCard({ label, value, color, tooltip }: { label: string; value: string; color?: string; tooltip?: React.ReactNode }) {
+  const card = (
+    <div className="panel panel--raised" style={{ padding: 'var(--space-sm)', cursor: tooltip ? 'help' : 'default' }}>
       <div className="label">{label}</div>
       <div className="mono" style={{ fontSize: '1.05rem', color: color ?? 'var(--color-text-primary)' }}>
         {value}
       </div>
     </div>
   );
+  if (tooltip) return <Tooltip content={tooltip}>{card}</Tooltip>;
+  return card;
 }
 
 function DetailBlock({ label, value }: { label: string; value: string }) {
@@ -759,6 +1012,22 @@ function formatEnemyVesselName(name: string) {
   }
 
   return withoutFlagship;
+}
+
+function formatTraitName(trait: any): string {
+  switch (trait.type) {
+    case 'aura': return 'Tactical Aura';
+    case 'rangeConditional': return 'Precision Calibration';
+    case 'flankingConditional': return 'Exploitative Volley';
+    case 'terrainConditional': return 'Environmental Adaptation';
+    case 'spawner': return 'Hangar Operations';
+    case 'movementConditional': return 'High-Speed Maneuvering';
+    case 'hullThresholdConditional': return 'Enrage Protocol';
+    case 'stationaryConditional': return 'Siege Configuration';
+    case 'isolationConditional': return 'Stealth Systems';
+    case 'shieldBreaker': return 'Ionized Volley';
+    default: return 'Special Capability';
+  }
 }
 
 function formatTraitDescription(trait: any): string {

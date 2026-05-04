@@ -90,7 +90,7 @@ export default function HexMap() {
   const [isPanning, setIsPanning] = useState(false);
   const [lastMouse, setLastMouse] = useState({ x: 0, y: 0 });
   const [pointerDown, setPointerDown] = useState({ x: 0, y: 0 });
-  const [hoverTooltip, setHoverTooltip] = useState<{ target: MapHoverTarget; position: { x: number; y: number } } | null>(null);
+  const [hoverTooltip, setHoverTooltip] = useState<{ targets: MapHoverTarget[]; position: { x: number; y: number } } | null>(null);
   const [isTooltipLocked, setIsTooltipLocked] = useState(false);
   const isLockedRef = useRef(false);
 
@@ -1216,10 +1216,12 @@ export default function HexMap() {
 
     if (!isLockedRef.current) {
       useUIStore.getState().hoverHex(hoverState?.hex ?? null);
-      useUIStore.getState().hoverShip(hoverState?.target?.kind === 'ship' ? hoverState.target.ship.id : null);
+      
+      const firstShip = hoverState?.targets.find(t => t.kind === 'ship');
+      useUIStore.getState().hoverShip(firstShip?.kind === 'ship' ? firstShip.ship.id : null);
 
-      if (hoverState?.target && hoverState.position) {
-        setHoverTooltip({ target: hoverState.target, position: hoverState.position });
+      if (hoverState?.targets.length && hoverState.position) {
+        setHoverTooltip({ targets: hoverState.targets, position: hoverState.position });
       } else {
         setHoverTooltip(null);
       }
@@ -1501,7 +1503,6 @@ export default function HexMap() {
 
   const getHoverTarget = (clientX: number, clientY: number) => {
     if (!containerRef.current) return null;
-
     const bounds = containerRef.current.getBoundingClientRect();
     const screenX = clientX - bounds.left;
     const screenY = clientY - bounds.top;
@@ -1510,88 +1511,55 @@ export default function HexMap() {
     const hoveredHexCoord = pixelToHex(worldX, worldY);
     const hoveredKey = hexKey(hoveredHexCoord);
 
-    const allShips = [
-      ...playerShips.filter(ship => !ship.isDestroyed).map(ship => ({ ship, isEnemy: false })),
-      ...enemyShips.filter(ship => !ship.isDestroyed).map(ship => ({ ship, isEnemy: true })),
-    ];
+    const results: MapHoverTarget[] = [];
 
-    for (const entry of allShips) {
-      const center = hexToPixel(entry.ship.position);
-      if (Math.hypot(worldX - center.x, worldY - center.y) <= 26) {
-        return {
-          hex: hoveredHexCoord,
-          target: { kind: 'ship', ship: entry.ship, isEnemy: entry.isEnemy } satisfies MapHoverTarget,
-          position: getTooltipPosition(screenX, screenY, bounds),
-        };
-      }
-    }
+    // Ships
+    playerShips.filter(ship => !ship.isDestroyed && hexKey(ship.position) === hoveredKey)
+      .forEach(ship => results.push({ kind: 'ship', ship, isEnemy: false }));
+    
+    enemyShips.filter(ship => !ship.isDestroyed && hexKey(ship.position) === hoveredKey)
+      .forEach(ship => results.push({ kind: 'ship', ship, isEnemy: !ship.isAllied }));
 
-    for (const station of stations) {
-      if (station.isDestroyed) continue;
-      const center = hexToPixel(station.position);
-      if (Math.hypot(worldX - center.x, worldY - center.y) <= 24) {
-        return {
-          hex: hoveredHexCoord,
-          target: { kind: 'station', station } satisfies MapHoverTarget,
-          position: getTooltipPosition(screenX, screenY, bounds),
-        };
-      }
-    }
+    // Stations
+    stations.filter(station => !station.isDestroyed && hexKey(station.position) === hoveredKey)
+      .forEach(station => results.push({ kind: 'station', station }));
 
-    for (const marker of objectiveMarkers) {
-      if (marker.isDestroyed || marker.isCollected) continue;
-      const center = hexToPixel(marker.position);
-      if (Math.hypot(worldX - center.x, worldY - center.y) <= 16) {
-        return {
-          hex: hoveredHexCoord,
-          target: { kind: 'objective', marker } satisfies MapHoverTarget,
-          position: getTooltipPosition(screenX, screenY, bounds),
-        };
-      }
-    }
+    // Objectives
+    objectiveMarkers.filter(marker => !marker.isDestroyed && !marker.isCollected && hexKey(marker.position) === hoveredKey)
+      .forEach(marker => results.push({ kind: 'objective', marker }));
 
-    for (const hazard of tacticHazards) {
-      const center = hexToPixel(hazard.position);
-      if (Math.hypot(worldX - center.x, worldY - center.y) <= 18) {
-        return {
-          hex: hoveredHexCoord,
-          target: { kind: 'hazard', hazard } satisfies MapHoverTarget,
-          position: getTooltipPosition(screenX, screenY, bounds),
-        };
-      }
-    }
+    // Hazards
+    tacticHazards.filter(hazard => hexKey(hazard.position) === hoveredKey)
+      .forEach(hazard => results.push({ kind: 'hazard', hazard }));
 
-    const hoveredFighters = fighterTokens.filter(token => !token.isDestroyed && hexKey(token.position) === hoveredKey);
-    if (hoveredFighters.length > 0) {
-      return {
-        hex: hoveredHexCoord,
-        target: { kind: 'fighter', fighter: hoveredFighters[0], stackCount: hoveredFighters.length } satisfies MapHoverTarget,
-        position: getTooltipPosition(screenX, screenY, bounds),
-      };
-    }
+    // Fighters (Individual cards)
+    fighterTokens.filter(token => !token.isDestroyed && hexKey(token.position) === hoveredKey)
+      .forEach(fighter => results.push({ kind: 'fighter', fighter, stackCount: 1 }));
 
-    const hoveredTorpedo = torpedoTokens.find(token => !token.isDestroyed && hexKey(token.position) === hoveredKey);
-    if (hoveredTorpedo) {
-      return {
-        hex: hoveredHexCoord,
-        target: { kind: 'torpedo', torpedo: hoveredTorpedo } satisfies MapHoverTarget,
-        position: getTooltipPosition(screenX, screenY, bounds),
-      };
-    }
+    // Torpedoes
+    torpedoTokens.filter(token => !token.isDestroyed && hexKey(token.position) === hoveredKey)
+      .forEach(torpedo => results.push({ kind: 'torpedo', torpedo }));
 
+    // Terrain
     const terrainType = terrainMap.get(hoveredKey);
     if (terrainType && terrainType !== 'open') {
-      return {
-        hex: hoveredHexCoord,
-        target: { kind: 'terrain', terrainType, coord: hoveredHexCoord } satisfies MapHoverTarget,
-        position: getTooltipPosition(screenX, screenY, bounds),
-      };
+      results.push({ kind: 'terrain', terrainType, coord: hoveredHexCoord } satisfies MapHoverTarget);
     }
+
+    if (results.length === 0) {
+      return { hex: hoveredHexCoord, targets: [], position: null };
+    }
+
+    // Priority sorting: Ship > Station > Objective > Fighter > Torpedo > Hazard > Terrain
+    const PRIORITY: Record<string, number> = {
+      'ship': 0, 'station': 1, 'objective': 2, 'fighter': 3, 'torpedo': 4, 'hazard': 5, 'terrain': 6
+    };
+    results.sort((a, b) => (PRIORITY[a.kind] ?? 9) - (PRIORITY[b.kind] ?? 9));
 
     return {
       hex: hoveredHexCoord,
-      target: null,
-      position: null,
+      targets: results,
+      position: getTooltipPosition(screenX, screenY, bounds),
     };
   };
 
@@ -1613,8 +1581,8 @@ export default function HexMap() {
       <div className="scanline-overlay" />
       <TerrainLegend />
       <ShipInfoPanel 
-        key={getMapHoverTargetId(hoverTooltip?.target ?? null)}
-        target={hoverTooltip?.target ?? null} 
+        key={hoverTooltip?.targets.map(t => getMapHoverTargetId(t)).join('|') ?? 'none'}
+        targets={hoverTooltip?.targets ?? []} 
         position={hoverTooltip?.position ?? null} 
         onLock={() => {
           isLockedRef.current = true;

@@ -28,8 +28,8 @@ describe('ShipInfoPanel', () => {
     vi.useRealTimers();
   });
 
-  it('renders nothing when no target is provided', () => {
-    const { container } = render(<ShipInfoPanel target={null} position={null} />);
+  it('renders nothing when no targets are provided', () => {
+    const { container } = render(<ShipInfoPanel targets={[]} position={null} />);
     expect(container).toBeEmptyDOMElement();
   });
 
@@ -48,7 +48,7 @@ describe('ShipInfoPanel', () => {
       } as any,
     };
 
-    render(<ShipInfoPanel target={target} position={position} />);
+    render(<ShipInfoPanel targets={[target]} position={position} />);
 
     expect(screen.getByText('ISS Resolute')).toBeInTheDocument();
     expect(screen.getByText('Test-Class Cruiser')).toBeInTheDocument();
@@ -72,7 +72,7 @@ describe('ShipInfoPanel', () => {
       } as any,
     };
 
-    render(<ShipInfoPanel target={target} position={position} />);
+    render(<ShipInfoPanel targets={[target]} position={position} />);
 
     expect(screen.getByText('HEG Final Proclamation')).toBeInTheDocument();
     expect(screen.getByText('Flagship')).toBeInTheDocument();
@@ -95,7 +95,7 @@ describe('ShipInfoPanel', () => {
       } as any,
     };
 
-    render(<ShipInfoPanel target={target} position={position} />);
+    render(<ShipInfoPanel targets={[target]} position={position} />);
 
     expect(screen.getByText('HEG Dread Herald')).toBeInTheDocument();
     expect(screen.queryByText(/Hegemony Corvette \(Fast Flanker\) «Dread Herald»/)).not.toBeInTheDocument();
@@ -108,7 +108,7 @@ describe('ShipInfoPanel', () => {
       coord: { q: 2, r: -1 },
     };
 
-    render(<ShipInfoPanel target={target} position={position} />);
+    render(<ShipInfoPanel targets={[target]} position={position} />);
 
     expect(screen.getByText('Asteroid Field')).toBeInTheDocument();
     expect(screen.getByText('Hex 2, -1')).toBeInTheDocument();
@@ -142,7 +142,7 @@ describe('ShipInfoPanel', () => {
 
     const { getByTestId } = render(
       <div style={{ position: 'relative', width: '400px', height: '300px' }}>
-        <ShipInfoPanel target={target} position={{ x: 340, y: 280 }} />
+        <ShipInfoPanel targets={[target]} position={{ x: 340, y: 280 }} />
       </div>,
     );
 
@@ -176,7 +176,7 @@ describe('ShipInfoPanel', () => {
       } as any,
     };
 
-    const { container } = render(<ShipInfoPanel target={target} position={position} />);
+    const { container } = render(<ShipInfoPanel targets={[target]} position={position} />);
 
     // Check for station name
     expect(screen.getByText('Mining Outpost')).toBeInTheDocument();
@@ -208,7 +208,7 @@ describe('ShipInfoPanel', () => {
     };
 
     it('starts with pointer-events: none and transitions to auto after 1 second', () => {
-      const { getByTestId } = render(<ShipInfoPanel target={target} position={position} />);
+      const { getByTestId } = render(<ShipInfoPanel targets={[target]} position={position} />);
       const panel = getByTestId('ship-info-panel');
 
       expect(panel).toHaveStyle({ pointerEvents: 'none' });
@@ -223,7 +223,7 @@ describe('ShipInfoPanel', () => {
 
     it('calls onClose when mouse leaves after locking', () => {
       const onClose = vi.fn();
-      const { getByTestId } = render(<ShipInfoPanel target={target} position={position} onClose={onClose} />);
+      const { getByTestId } = render(<ShipInfoPanel targets={[target]} position={position} onClose={onClose} />);
       const panel = getByTestId('ship-info-panel');
 
       // Move mouse out before locking
@@ -244,8 +244,8 @@ describe('ShipInfoPanel', () => {
       expect(onClose).toHaveBeenCalled();
     });
 
-    it('resets progress when target changes', () => {
-      const { getByTestId, rerender } = render(<ShipInfoPanel target={target} position={position} />);
+    it('reset progress when target changes', () => {
+      const { getByTestId, rerender } = render(<ShipInfoPanel targets={[target]} position={position} />);
       const panel = getByTestId('ship-info-panel');
 
       act(() => {
@@ -256,7 +256,7 @@ describe('ShipInfoPanel', () => {
       const newTarget = { ...target, ship: { ...target.ship, id: 'ship-2' } };
       // Simulate remount via key change in parent (HexMap)
       act(() => {
-        rerender(<ShipInfoPanel key="ship-2" target={newTarget} position={position} />);
+        rerender(<ShipInfoPanel key="ship-2" targets={[newTarget]} position={position} />);
       });
       
       const newPanel = getByTestId('ship-info-panel');
@@ -278,11 +278,11 @@ describe('ShipInfoPanel', () => {
       const clientWidthSpy = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(800);
       const clientHeightSpy = vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(600);
 
-      const { getByTestId, rerender } = render(<ShipInfoPanel target={target} position={{ x: 100, y: 100 }} />);
+      const { getByTestId, rerender } = render(<ShipInfoPanel targets={[target]} position={{ x: 100, y: 100 }} />);
       const panel = getByTestId('ship-info-panel');
 
       // Initially moves
-      rerender(<ShipInfoPanel target={target} position={{ x: 120, y: 120 }} />);
+      rerender(<ShipInfoPanel targets={[target]} position={{ x: 120, y: 120 }} />);
       expect(panel).toHaveStyle({ left: '120px', top: '120px' });
 
       // Lock it
@@ -292,7 +292,7 @@ describe('ShipInfoPanel', () => {
       expect(panel).toHaveStyle({ pointerEvents: 'auto' });
 
       // Try to move it
-      rerender(<ShipInfoPanel target={target} position={{ x: 200, y: 200 }} />);
+      rerender(<ShipInfoPanel targets={[target]} position={{ x: 200, y: 200 }} />);
       // Should still be at 120, 120
       expect(panel).toHaveStyle({ left: '120px', top: '120px' });
 
@@ -303,7 +303,7 @@ describe('ShipInfoPanel', () => {
     });
 
     it('does not reset progress when target object identity changes but ID is same', () => {
-      const { getByTestId, rerender } = render(<ShipInfoPanel target={target} position={position} />);
+      const { getByTestId, rerender } = render(<ShipInfoPanel targets={[target]} position={position} />);
       
       act(() => {
         vi.advanceTimersByTime(500);
@@ -311,7 +311,7 @@ describe('ShipInfoPanel', () => {
 
       // Pass a new object literal with same content
       const targetClone = { ...target, ship: { ...target.ship } };
-      rerender(<ShipInfoPanel target={targetClone} position={position} />);
+      rerender(<ShipInfoPanel targets={[targetClone]} position={position} />);
       
       // Advance remaining 500ms
       act(() => {
@@ -320,6 +320,17 @@ describe('ShipInfoPanel', () => {
 
       const panel = getByTestId('ship-info-panel');
       expect(panel).toHaveStyle({ pointerEvents: 'auto' });
+    });
+    it('shows tooltips for hull and speed when hovered', async () => {
+      const { getByText, queryByText } = render(<ShipInfoPanel targets={[target]} position={position} />);
+      
+      // Initially not visible
+      expect(queryByText(/Tactical movement limit/i)).not.toBeInTheDocument();
+
+      const speedLabel = getByText('Current Speed');
+      fireEvent.mouseEnter(speedLabel.parentElement!);
+      
+      expect(getByText(/Tactical movement limit/i)).toBeInTheDocument();
     });
   });
 });
