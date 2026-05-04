@@ -1573,6 +1573,8 @@ export default function HexMap() {
       onPointerLeave={(e) => {
         handlePointerUp(e);
         setHoverTooltip(null);
+        isLockedRef.current = false;
+        setIsTooltipLocked(false);
         useUIStore.getState().hoverHex(null);
         useUIStore.getState().hoverShip(null);
       }}
