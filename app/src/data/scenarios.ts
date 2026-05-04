@@ -46,10 +46,10 @@ export const SCENARIOS: ScenarioData[] = [
         shieldsPerSector: 4,
       },
     ],
-    victoryCondition: 'Destroy the Hegemony Comms Array (Hull 15, Shields 4 per sector) before the end of Round 8.',
+    victoryCondition: 'Destroy the Hegemony Comms Array (Hull 15, Shields 4 per sector).',
     defeatCondition:
-      'Round 8 ends (A Hegemony Dreadnought arrives and annihilates the sector), OR standard Fleet Defeat conditions.',
-    maxRounds: 8,
+      'The Hegemony fleet overwhelms you, OR standard Fleet Defeat conditions.',
+    maxRounds: null,
     victoryRewardFF: 3,
   },
 ];

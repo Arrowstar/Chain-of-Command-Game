@@ -71,7 +71,7 @@ export default function NodeResolutionModal({ onStartCombat }: Props) {
 
     initializeGame({
       scenarioId: `campaign-${currentNode.id}`,
-      maxRounds: 8,
+      maxRounds: null,
       terrain: generated.terrain,
       players: persistedPlayers,
       playerShips: persistedShips,

@@ -46,6 +46,8 @@ export function planAIMovement(
       return planSwarm(aiPos, aiFacing, effectiveSpeed, targetPos, terrainMap, isFighter);
     case 'support':
       return planSupport(aiPos, aiFacing, effectiveSpeed, targetPos, occupiedHexes, terrainMap, isFighter);
+    case 'escort':
+      return planEscort(aiPos, aiFacing, effectiveSpeed, targetPos, occupiedHexes, terrainMap, isFighter);
     default:
       return { targetHex: aiPos, newFacing: aiFacing, path: [] };
   }
@@ -143,6 +145,28 @@ function planSupport(
     const distA = hexDistance(a.hex, targetPos);
     const distB = hexDistance(b.hex, targetPos);
     if (distA !== distB) return distB - distA; // Maximize distance
+    return scoreFacing(a, targetPos) - scoreFacing(b, targetPos);
+  });
+  const best = candidates[0] ?? { hex: aiPos, facing: aiFacing, path: [] };
+  return { targetHex: best.hex, newFacing: best.facing, path: best.path };
+}
+
+/** Escort: maintain medium range (2-3), avoid closing to point blank unless necessary */
+function planEscort(
+  aiPos: HexCoord, aiFacing: HexFacing, speed: number,
+  targetPos: HexCoord, occupied: Set<string>, terrain: Map<string, TerrainType>,
+  isFighter: boolean,
+): AIMovePlan {
+  const candidates = getReachableStates(aiPos, aiFacing, speed, occupied, terrain, isFighter);
+  candidates.sort((a, b) => {
+    const distA = hexDistance(a.hex, targetPos);
+    const distB = hexDistance(b.hex, targetPos);
+    
+    // Ideal range is 2.5 (minimizes difference from 2 or 3)
+    const scoreA = Math.abs(distA - 2.5);
+    const scoreB = Math.abs(distB - 2.5);
+    
+    if (scoreA !== scoreB) return scoreA - scoreB;
     return scoreFacing(a, targetPos) - scoreFacing(b, targetPos);
   });
   const best = candidates[0] ?? { hex: aiPos, facing: aiFacing, path: [] };

@@ -93,6 +93,28 @@ describe('GameStateMachine — checkGameOverConditions', () => {
       expect(res.victory).toBe(false);
       expect(res.reason).toContain('retreated to warp without completing the objective');
     });
+
+    describe('Round Limit', () => {
+      it('triggers defeat when round exceeds maxRounds', () => {
+        const state = { ...makeInitialState(), maxRounds: 8, round: 9 } as GameState;
+        const res = checkGameOverConditions(state);
+        expect(res.gameOver).toBe(true);
+        expect(res.victory).toBe(false);
+        expect(res.reason).toContain('Tactical window expired');
+      });
+
+      it('does NOT trigger defeat if maxRounds is null (infinite rounds)', () => {
+        const state = { ...makeInitialState(), maxRounds: null, round: 99, playerShips: [makeShip('s1')] } as GameState;
+        const res = checkGameOverConditions(state);
+        expect(res.gameOver).toBe(false);
+      });
+
+      it('does NOT trigger defeat if round is exactly maxRounds', () => {
+        const state = { ...makeInitialState(), maxRounds: 8, round: 8, playerShips: [makeShip('s1')] } as GameState;
+        const res = checkGameOverConditions(state);
+        expect(res.gameOver).toBe(false);
+      });
+    });
   });
 
   describe('Search & Destroy', () => {

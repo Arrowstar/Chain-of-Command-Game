@@ -512,7 +512,7 @@ export interface FumbleMechanicalEffect {
 
 // ─── Adversary (Enemy) ──────────────────────────────────────────
 
-export type AIBehaviorTag = 'aggressive' | 'artillery' | 'hunter' | 'swarm' | 'support';
+export type AIBehaviorTag = 'aggressive' | 'artillery' | 'hunter' | 'swarm' | 'support' | 'escort';
 
 /**
  * A parameterised, data-driven special ability attached to an adversary.
@@ -802,7 +802,7 @@ export interface ScenarioData {
   objectiveMarkers?: ObjectiveMarkerState[];
   victoryCondition: string;
   defeatCondition: string;
-  maxRounds?: number;
+  maxRounds?: number | null;
   victoryRewardFF: number;
 }
 

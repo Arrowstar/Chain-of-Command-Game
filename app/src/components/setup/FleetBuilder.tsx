@@ -526,7 +526,7 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
 
       config = { 
         scenarioId: 'custom-scenario', 
-        maxRounds: 8, 
+        maxRounds: null, 
         terrain: scenarioConfig.terrain, 
         players: finalPlayers, 
         playerShips: finalShips, 
@@ -546,7 +546,7 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
         maxShieldsPerSector: enemy.shieldsPerSector, criticalDamage: [],
         isDestroyed: false, hasDroppedBelow50: false, hasDrifted: false, targetLocks: [],
       };
-      config = { scenarioId: 'skirmish-1', maxRounds: 8, terrain: [], players: finalPlayers, playerShips: finalShips, enemyShips: [enemyShip] };
+      config = { scenarioId: 'skirmish-1', maxRounds: null, terrain: [], players: finalPlayers, playerShips: finalShips, enemyShips: [enemyShip] };
     }
 
     initializeGame(config);

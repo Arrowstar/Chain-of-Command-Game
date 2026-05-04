@@ -168,7 +168,7 @@ export const ADVERSARIES: AdversaryData[] = [
     volleyPool: ['d8', 'd8', 'd6'],
     weaponRangeMin: 2,
     weaponRangeMax: 5,
-    aiTag: 'support',
+    aiTag: 'escort',
     special: 'AI Archetype: Escort. Maintains formation and draws fire using high shields.',
     traits: [],
   },
@@ -202,7 +202,7 @@ export const ADVERSARIES: AdversaryData[] = [
     volleyPool: ['d8', 'd6', 'd6'],
     weaponRangeMin: 3,
     weaponRangeMax: 6,
-    aiTag: 'support',
+    aiTag: 'escort',
     special: 'Advanced sensors and jamming equipment. High evasion but fragile.',
     traits: [
       // Electronic Jamming: +1 TN on player attacks against targets within radius 3
@@ -242,7 +242,7 @@ export const ADVERSARIES: AdversaryData[] = [
     volleyPool: ['d6', 'd6'],
     weaponRangeMin: 1,
     weaponRangeMax: 3,
-    aiTag: 'support',
+    aiTag: 'escort',
     special: 'Heavy shielding for its size. Often deployed to absorb fire meant for larger vessels.',
     traits: [
       // Bulwark: adjacent allied enemies gain +1 Evasion
