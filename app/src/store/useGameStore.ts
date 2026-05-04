@@ -239,7 +239,7 @@ export interface GameInitConfig {
 }
 
 function hasScar(ship: Pick<ShipState, 'scars'>, scarId: string): boolean {
-  return ship.scars.some(scar => scar.fromCriticalId === scarId);
+  return ship.scars?.some(scar => scar.fromCriticalId === scarId) ?? false;
 }
 
 function getSpeedCapFromScars(ship: Pick<ShipState, 'scars'>): number | null {
@@ -262,7 +262,7 @@ function getNextExecutionStepForScenario(
 }
 
 function hasActiveTech(tech: ExperimentalTech[], techId: string): boolean {
-  return tech.some(item => item.id === techId && !item.isConsumed);
+  return tech?.some(item => item.id === techId && !item.isConsumed) ?? false;
 }
 
 function getCombatMaxStress(
@@ -2064,22 +2064,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
         if (context?.discharge) {
           const allShips = [...state.playerShips, ...state.enemyShips].filter(s => s.id !== ship.id);
           const validTargets = getValidTargetsForWeapon(ship.position, ship.facing, weapon, allShips, state.terrainMap);
-          if (validTargets.length === 0) {
-            get().addLog('combat', `🌌 ${ship.name} discharged ${weapon.name} into deep space (no valid targets).`);
-            updates.firedWeaponThisRound = true;
-            if (isOrdnanceWeapon) {
-              updates.ordnanceLoadedStatus = {
-                ...(ship.ordnanceLoadedStatus ?? {}),
-                [weaponIndex]: false,
-              };
-            }
-            const currentFired = ship.firedWeaponIndicesThisRound || [];
-            updates.firedWeaponIndicesThisRound = [...currentFired, weaponIndex];
-            break; // Stop evaluating targets, action is resolved
-          } else {
-             get().addLog('system', `Cannot discharge weapon; valid targets exist.`);
-             break;
+          const reason = validTargets.length === 0 ? '(no valid targets)' : '(manual bypass)';
+          
+          get().addLog('combat', `🌌 ${ship.name} discharged ${weapon.name} into deep space ${reason}.`);
+          updates.firedWeaponThisRound = true;
+          if (isOrdnanceWeapon) {
+            updates.ordnanceLoadedStatus = {
+              ...(ship.ordnanceLoadedStatus ?? {}),
+              [weaponIndex]: false,
+            };
           }
+          const currentFired = ship.firedWeaponIndicesThisRound || [];
+          updates.firedWeaponIndicesThisRound = [...currentFired, weaponIndex];
+          break; // Stop evaluating targets, action is resolved
         }
 
         if (!isAoE && !initialTarget) break;

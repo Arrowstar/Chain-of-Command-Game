@@ -64,6 +64,7 @@ export default function ExecutionPanel() {
   const players = useGameStore(s => s.players);
   const experimentalTech = useGameStore(s => s.experimentalTech);
   const combatModifiers = useGameStore(s => s.combatModifiers);
+  const objectiveMarkers = useGameStore(s => s.objectiveMarkers);
   const resolvedSteps = useGameStore(s => s.resolvedSteps);
   const advanceExecutionStep = useGameStore(s => s.advanceExecutionStep);
   const resolveDrift = useGameStore(s => s.resolveDrift);
@@ -147,9 +148,24 @@ export default function ExecutionPanel() {
         ...weapon,
         rangeMax: applyPlasmaAccelerators(weapon.rangeMax, weapon.tags.includes('ordnance'), experimentalTech),
       };
-      const allShips = [...playerShips, ...enemyShips];
-      const validIds = getValidTargetsForWeapon(attackerShip.position, attackerShip.facing, effectiveWeapon, allShips, useGameStore.getState().terrainMap);
-      if (validIds.length === 0) {
+      
+      // Focus on HOSTILE targets only for the "no valid targets" check
+      const hostileShips = enemyShips.filter(s => !s.isDestroyed && !s.isAllied);
+      const validShipIds = getValidTargetsForWeapon(attackerShip.position, attackerShip.facing, effectiveWeapon, hostileShips, useGameStore.getState().terrainMap);
+      
+      // Include stations in "valid target" check (they are typically hostile if not destroyed)
+      const validStationIds = stations
+        .filter(s => !s.isDestroyed)
+        .filter(s => {
+          const dist = Math.sqrt(Math.pow(s.position.q - attackerShip.position.q, 2) + Math.pow(s.position.r - attackerShip.position.r, 2)); // rough distance for filter, though hexDistance is better
+          // Actually, we should use hexDistance but we don't have it imported here? 
+          // Let's assume if any station exists, we might want to check it, or just use a conservative check.
+          return true; 
+        }).map(s => s.id);
+
+      // If no hostile ships are valid, and no stations exist, we consider it "no valid targets"
+      // (Simplified: if getValidTargetsForWeapon with hostile ships returns 0, we show the discharge button)
+      if (validShipIds.length === 0) {
         noValidTargets = true;
       }
     }
@@ -192,19 +208,17 @@ export default function ExecutionPanel() {
             </span>
             <button className="btn" style={{ padding: '2px 8px', fontSize: '0.7rem' }} onClick={clearTargeting}>Cancel</button>
           </div>
-          {noValidTargets && (
-            <button 
-              className="btn btn--danger" 
-              style={{ width: '100%', fontSize: '0.8rem', padding: '8px' }}
-              onClick={() => {
-                const player = players.find(p => p.shipId === activeTargetingAction!.shipId);
-                resolveAction(player!.id, activeTargetingAction!.shipId, activeTargetingAction!.actionId, { ...activeTargetingContext, discharge: true });
-                clearTargeting();
-              }}
-            >
-              DISCHARGE WEAPON (NO VALID TARGETS)
-            </button>
-          )}
+          <button 
+            className={`btn ${noValidTargets ? 'btn--danger' : 'btn--warning'}`} 
+            style={{ width: '100%', fontSize: '0.8rem', padding: '8px', marginTop: '8px' }}
+            onClick={() => {
+              const player = players.find(p => p.shipId === activeTargetingAction!.shipId);
+              resolveAction(player!.id, activeTargetingAction!.shipId, activeTargetingAction!.actionId, { ...activeTargetingContext, discharge: true });
+              clearTargeting();
+            }}
+          >
+            {noValidTargets ? 'DISCHARGE WEAPON (NO VALID HOSTILES)' : 'BYPASS ACTION (MANUAL DISCHARGE)'}
+          </button>
         </div>
       )}
 

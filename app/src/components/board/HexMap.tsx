@@ -1379,8 +1379,7 @@ export default function HexMap() {
                     validIds.push(...validStationIds);
                     
                     if (!validIds.includes(target.id)) {
-                      useGameStore.getState().addLog('system', `🚫 Invalid target: unit is out of range or firing arc.`);
-                      return; // Block execution
+                      useGameStore.getState().addLog('system', `⚠️ Target is outside optimal parameters; firing anyway.`);
                     }
                   }
                 }
