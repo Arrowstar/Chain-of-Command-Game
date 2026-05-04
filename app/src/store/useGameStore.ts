@@ -23,6 +23,7 @@ import { useUIStore } from './useUIStore';
 import { getAdversaryById, ADVERSARIES } from '../data/adversaries';
 import { getStationById } from '../data/stations';
 import { getFighterClassById } from '../data/fighters';
+import { fireCombatToast } from '../components/board/CombatToastContainer';
 import { executeAITier } from '../engine/ai/aiTurn';
 import { executeStationTurn } from '../engine/ai/stationAI';
 import { applyDefensiveTraits, applyAuraTNPenalty } from '../engine/ai/traitEffects';
@@ -952,6 +953,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         recycledCoolantUsedThisRound: false,
         shipsWithHullDamageThisRound: [],
       });
+      fireCombatToast({ type: 'phase', message: `⊡ ROUND ${state.round + 1} BEGINS` });
       get().executeBriefingPhase();
     } else if (nextPhase === 'execution') {
       set({ phase: nextPhase, executionStep: null, resolvedSteps: [] });
@@ -1019,6 +1021,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           if (card) {
             useUIStore.getState().queueModal('fumble', { card });
             get().addLog('fumble', `═a═ FUMBLE RUN: ${officerData.name} ═  ${card.name}: ${card.effect}`);
+            fireCombatToast({ type: 'fumble', message: `⚡ FUMBLE — ${officerData.name}: ${card.name}` });
 
             const mech = card.mechanicalEffect;
             if (mech.stressToOthers) {
@@ -2483,6 +2486,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                         hasDroppedBelow50: stationTarget.currentHull > stationTarget.maxHull / 2 && (targetUpdates.currentHull ?? 0) <= stationTarget.maxHull / 2
                     });
                     get().addLog('critical', `══& CRITICAL HIT! ${stationTarget.name} suffered: ${critCard.name}!`);
+                    fireCombatToast({ type: 'critical', message: `★ CRITICAL HIT — ${stationTarget.name}: ${critCard.name}!` });
                     useUIStore.getState().queueModal('critical', { card: critCard });
                 }
             } else {
@@ -2507,6 +2511,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                             hasDroppedBelow50: (target as any).currentHull > targetMaxHull / 2 && (targetUpdates.currentHull ?? 0) <= targetMaxHull / 2
                         });
                         get().addLog('critical', `══& CRITICAL HIT! ${target.name} suffered: ${critCard.name}!`);
+                        fireCombatToast({ type: 'critical', message: `★ CRITICAL HIT — ${target.name}: ${critCard.name}!` });
                         useUIStore.getState().queueModal('critical', { card: critCard });
                     }
                 } else {
@@ -2612,6 +2617,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                         });
                         set({ playerCritDeck: get().playerCritDeck.slice(1) });
                         get().addLog('roe', `⚡ OVERCLOCKED REACTORS: ${defenderName} took hull damage — forced Critical Draw! [${critCard.name}]`);
+                        fireCombatToast({ type: 'critical', message: `★ OVERCLOCKED: ${defenderName} suffered ${critCard.name}!` });
                         useUIStore.getState().queueModal('critical', { card: critCard });
                     }
                 }
@@ -3741,6 +3747,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             };
           }
           get().addLog('system', `☠ ${fighter.name} was shredded by point defense fire.`);
+          fireCombatToast({ type: 'fighter-destroyed', message: `☠ ${fighter.name} intercepted` });
           return;
         }
       }
@@ -3774,8 +3781,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
             if (newCount % 2 !== 0) {
               get().adjustFleetFavor(1);
               get().addLog('system', `☠ ${targetFighter.name} destroyed ═  High Command is pleased (+1 Fleet Favor)`);
+              fireCombatToast({ type: 'fighter-destroyed', message: `☠ ${targetFighter.name} destroyed (+1 Fleet Favor)` });
             } else {
               get().addLog('system', `☠ ${targetFighter.name} destroyed`);
+              fireCombatToast({ type: 'fighter-destroyed', message: `☠ ${targetFighter.name} destroyed` });
             }
           }
         } else if (allegiance === 'allied') {
@@ -4049,9 +4058,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
       if (destroyedFFOverride !== undefined) {
         get().adjustFleetFavor(destroyedFFOverride);
         get().addLog('roe', `☠ ACCEPTABLE LOSSES: ${ship.name} destroyed — ${destroyedFFOverride >= 0 ? '+' : ''}${destroyedFFOverride} FF (High Command notes the sacrifice).`);
+        fireCombatToast({ type: 'player-destroyed', message: `☠ ${ship.name} DESTROYED — ${destroyedFFOverride >= 0 ? '+' : ''}${destroyedFFOverride} Fleet Favor` });
       } else {
         get().adjustFleetFavor(-1);
         get().addLog('roe', `☠ ${ship.name} destroyed — -1 Fleet Favor.`);
+        fireCombatToast({ type: 'player-destroyed', message: `☠ ${ship.name} DESTROYED — -1 Fleet Favor` });
       }
     }
 
@@ -4122,15 +4133,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
           if (newCount % 2 !== 0) {
             get().adjustFleetFavor(1);
             get().addLog('system', `☠ ${ship.name} destroyed ═  High Command is pleased (+1 Fleet Favor)`);
+            fireCombatToast({ type: 'enemy-destroyed', message: `☠ ${ship.name} destroyed (+1 Fleet Favor)` });
           } else {
             get().addLog('system', `☠ ${ship.name} destroyed`);
+            fireCombatToast({ type: 'enemy-destroyed', message: `☠ ${ship.name} destroyed` });
           }
         } else if (adv.size === 'medium') {
           get().adjustFleetFavor(1);
           get().addLog('system', `☠ ${ship.name} destroyed ═  High Command is pleased (+1 Fleet Favor)`);
+          fireCombatToast({ type: 'enemy-destroyed', message: `☠ ${ship.name} destroyed (+1 Fleet Favor)` });
         } else if (adv.size === 'large') {
           get().adjustFleetFavor(2);
           get().addLog('system', `☠ ${ship.name} destroyed ═  High Command is ecstatic (+2 Fleet Favor)`);
+          fireCombatToast({ type: 'enemy-destroyed', message: `☠ ${ship.name} destroyed (+2 Fleet Favor)` });
         }
       }
     }
@@ -4167,15 +4182,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
           if (newCount % 2 !== 0) {
             get().adjustFleetFavor(1);
             get().addLog('system', `☠ ${station.name} destroyed ═  High Command is pleased (+1 Fleet Favor)`);
+            fireCombatToast({ type: 'enemy-destroyed', message: `☠ ${station.name} destroyed (+1 Fleet Favor)` });
           } else {
             get().addLog('system', `☠ ${station.name} destroyed`);
+            fireCombatToast({ type: 'enemy-destroyed', message: `☠ ${station.name} destroyed` });
           }
         } else if (stationData.size === 'medium') {
           get().adjustFleetFavor(1);
           get().addLog('system', `☠ ${station.name} destroyed ═  High Command is pleased (+1 Fleet Favor)`);
+          fireCombatToast({ type: 'enemy-destroyed', message: `☠ ${station.name} destroyed (+1 Fleet Favor)` });
         } else if (stationData.size === 'large') {
           get().adjustFleetFavor(2);
           get().addLog('system', `☠ ${station.name} destroyed ═  High Command is ecstatic (+2 Fleet Favor)`);
+          fireCombatToast({ type: 'enemy-destroyed', message: `☠ ${station.name} destroyed (+2 Fleet Favor)` });
         }
       }
     }
@@ -4550,6 +4569,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         };
         get().addLog('system',
           `⚡ ION NEBULA: ${s.name} shields stripped to 0 by electrostatic interference!`);
+        fireCombatToast({ type: 'warning', message: `⚡ ION NEBULA — ${s.name} shields stripped!` });
         return { ...s, shields: zeroShields };
       });
 
@@ -4682,6 +4702,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     // ═ ══ ═ Tactic card ═ ══ ═
     get().addLog('tactic', `═x}═ ENEMY TACTIC: ${newTactic.name} ═  ${newTactic.effect}`);
+    fireCombatToast({ type: 'tactic', message: `🎯 Enemy Tactic: ${newTactic.name}` });
 
     // ═ ══ ═ RoE Reminder ═ ══ ═
     if (newTactic.mechanicalEffect.shieldRestore) {

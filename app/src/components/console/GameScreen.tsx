@@ -14,6 +14,7 @@ import RoEPanel from './RoEPanel';
 import CombatScenarioProgressTracker from '../combat/CombatScenarioProgressTracker';
 import TechBadge from '../campaign/TechBadge';
 import TutorialOverlay from '../tutorial/TutorialOverlay';
+import CombatToastContainer from '../board/CombatToastContainer';
 import { useGameStore } from '../../store/useGameStore';
 import { useCampaignStore } from '../../store/useCampaignStore';
 import { useTutorialStore } from '../../store/useTutorialStore';
@@ -122,6 +123,7 @@ export default function GameScreen() {
       {/* Game-wide overlays */}
       {phase === 'briefing' && <BriefingOverlay />}
       <GameLog />
+      <CombatToastContainer />
       {tutorialActive && <TutorialOverlay />}
 
       {/* Debug Menu */}
