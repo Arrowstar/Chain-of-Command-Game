@@ -1,6 +1,11 @@
 import { TerrainType, type HexCoord, type HexFacing, type AIBehaviorTag } from '../../types/game';
 import { hexDistance, hexNeighbors, hexKey, hexNeighbor, isInFiringArc } from '../hexGrid';
 
+export interface AlliedDetails {
+  pos: HexCoord;
+  tag: AIBehaviorTag;
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // AI Movement Behaviors
 // ═══════════════════════════════════════════════════════════════════
@@ -32,6 +37,7 @@ export function planAIMovement(
   terrainMap: Map<string, TerrainType>,
   extraMovement: number = 0,
   isFighter: boolean = false,
+  alliedDetails: AlliedDetails[] = [],
 ): AIMovePlan {
   const effectiveSpeed = Math.max(0, aiSpeed + extraMovement);
 
@@ -45,7 +51,7 @@ export function planAIMovement(
     case 'swarm':
       return planSwarm(aiPos, aiFacing, effectiveSpeed, targetPos, terrainMap, isFighter);
     case 'support':
-      return planSupport(aiPos, aiFacing, effectiveSpeed, targetPos, occupiedHexes, terrainMap, isFighter);
+      return planSupport(aiPos, aiFacing, effectiveSpeed, targetPos, occupiedHexes, terrainMap, isFighter, alliedDetails);
     case 'escort':
       return planEscort(aiPos, aiFacing, effectiveSpeed, targetPos, occupiedHexes, terrainMap, isFighter);
     default:
@@ -134,19 +140,45 @@ function planSwarm(
   return { targetHex: best.hex, newFacing: best.facing, path: best.path };
 }
 
-/** Support: retreat from combat, stay far */
+/** Support (Anchored): stay near the nearest non-support ally (Guardian), while maximizing distance from player. */
 function planSupport(
   aiPos: HexCoord, aiFacing: HexFacing, speed: number,
   targetPos: HexCoord, occupied: Set<string>, terrain: Map<string, TerrainType>,
-  isFighter: boolean,
+  isFighter: boolean, alliedDetails: AlliedDetails[],
 ): AIMovePlan {
   const candidates = getReachableStates(aiPos, aiFacing, speed, occupied, terrain, isFighter);
+
+  // Find a "Guardian": nearest non-support, non-artillery ally
+  const guardians = alliedDetails
+    .filter(a => a.tag !== 'support' && a.tag !== 'artillery')
+    .sort((a, b) => hexDistance(aiPos, a.pos) - hexDistance(aiPos, b.pos));
+  
+  const guardian = guardians[0];
+
   candidates.sort((a, b) => {
-    const distA = hexDistance(a.hex, targetPos);
-    const distB = hexDistance(b.hex, targetPos);
-    if (distA !== distB) return distB - distA; // Maximize distance
+    const distToPlayerA = hexDistance(a.hex, targetPos);
+    const distToPlayerB = hexDistance(b.hex, targetPos);
+
+    if (guardian) {
+      const distToGuardianA = hexDistance(a.hex, guardian.pos);
+      const distToGuardianB = hexDistance(b.hex, guardian.pos);
+
+      // Ideal range to guardian is 2.5
+      const guardianScoreA = Math.abs(distToGuardianA - 2.5);
+      const guardianScoreB = Math.abs(distToGuardianB - 2.5);
+
+      // We want to be far from player, but close to guardian.
+      // Combined score: lower is better. 
+      // Proximity to guardian is primary, but we break ties with distance from player.
+      if (guardianScoreA !== guardianScoreB) return guardianScoreA - guardianScoreB;
+      return distToPlayerB - distToPlayerA; // Maximize player distance
+    }
+
+    // No guardian? Just maximize distance from player.
+    if (distToPlayerA !== distToPlayerB) return distToPlayerB - distToPlayerA;
     return scoreFacing(a, targetPos) - scoreFacing(b, targetPos);
   });
+
   const best = candidates[0] ?? { hex: aiPos, facing: aiFacing, path: [] };
   return { targetHex: best.hex, newFacing: best.facing, path: best.path };
 }

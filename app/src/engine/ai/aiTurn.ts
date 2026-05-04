@@ -102,11 +102,21 @@ export function previewAITierMovement(
     const extraMove = getTacticMovementBonus(aiShip, target, adversary.size, tacticCard);
 
     const isFighter = isSmallCraftSize(adversary.size);
+    
+    // Collect allied details for Support behavior
+    const alliedDetails = simulatedEnemies
+      .filter(s => s.id !== aiShip.id && !s.isDestroyed)
+      .map(s => {
+        const adv = getAdversaryById(s.adversaryId);
+        return { pos: s.position, tag: adv?.aiTag || 'aggressive' as any };
+      });
+
     const movePlan = planAIMovement(
       aiShip.position, aiShip.facing, adversary.speed,
       target.position, adversary.aiTag, adversary.weaponRangeMax,
       occupiedHexes, terrainMap, extraMove > 0 ? extraMove : 0,
       isFighter,
+      alliedDetails,
     );
 
     occupiedHexes.delete(hexKey(aiShip.position));
@@ -171,11 +181,21 @@ export function executeAITier(
     // 3. Move
     if (!noMovement && !aiShip.navLockout) {
       const isFighter = isSmallCraftSize(adversary.size);
+
+      // Collect allied details for Support behavior
+      const alliedDetails = allEnemyShips
+        .filter(s => s.id !== aiShip.id && !s.isDestroyed)
+        .map(s => {
+          const adv = getAdversaryById(s.adversaryId);
+          return { pos: s.position, tag: adv?.aiTag || 'aggressive' as any };
+        });
+
       const movePlan = planAIMovement(
         aiShip.position, aiShip.facing, adversary.speed,
         target.position, adversary.aiTag, adversary.weaponRangeMax,
         occupiedHexes, terrainMap, extraMove > 0 ? extraMove : 0,
         isFighter,
+        alliedDetails,
       );
 
       occupiedHexes.delete(hexKey(aiShip.position));
