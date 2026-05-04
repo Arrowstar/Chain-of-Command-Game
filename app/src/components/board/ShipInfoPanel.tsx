@@ -9,6 +9,7 @@ import { getStationById } from '../../data/stations';
 import { getTerrainData } from '../../data/terrain';
 import { ASSET_MAP } from '../../engine/pixiGraphics';
 import { useGameStore } from '../../store/useGameStore';
+import { getFighterClassById } from '../../data/fighters';
 
 export function describeScarImpact(fromCriticalId: string): string {
   switch (fromCriticalId) {
@@ -822,9 +823,17 @@ function StationTooltipContent({ station }: { station: StationState }) {
             );
           })}
           <circle cx="60" cy="60" r="14" fill="rgba(0,0,0,0.35)" stroke="var(--color-hostile-red)" strokeWidth="1.5" />
-          <text x="60" y="60" fill="white" fontSize="8" textAnchor="middle" dominantBaseline="middle">
-            {stationData?.type === 'turret' ? 'TUR' : 'STN'}
-          </text>
+          {stationData?.imageKey ? (
+            <image 
+              href={ASSET_MAP[stationData.imageKey as keyof typeof ASSET_MAP]} 
+              x="49" y="49" width="22" height="22" 
+              style={{ opacity: 0.8 }}
+            />
+          ) : (
+            <text x="60" y="60" fill="white" fontSize="8" textAnchor="middle" dominantBaseline="middle">
+              {stationData?.type === 'turret' ? 'TUR' : 'STN'}
+            </text>
+          )}
         </svg>
       </div>
       )}
@@ -841,21 +850,68 @@ function StationTooltipContent({ station }: { station: StationState }) {
         </Tooltip>
       )}
 
-      {stationData?.traits && stationData.traits.length > 0 && (
+      {stationData && (
         <div className="panel panel--raised" style={{ padding: 'var(--space-sm)', marginTop: 'var(--space-sm)' }}>
-          <div className="label" style={{ color: 'var(--color-alert-amber)', marginBottom: '4px' }}>Special Traits</div>
-          {stationData.traits.map((trait, idx) => (
-            <Tooltip key={idx} content={
+          <Tooltip content={
+            <div>
+              <div style={{ color: 'var(--color-hostile-red)', fontWeight: 'bold', marginBottom: '4px' }}>Standard Armament</div>
+              <div>Range: {stationData.weaponRangeMin}-{stationData.weaponRangeMax}</div>
+              <div>Volley: {stationData.volleyPool.join(', ')}</div>
+              {stationData.weaponTags && stationData.weaponTags.length > 0 && (
+                <div style={{ marginTop: '4px', fontSize: '0.7rem', color: 'var(--color-text-dim)' }}>
+                  {stationData.weaponTags.join(' · ')}
+                </div>
+              )}
+            </div>
+          }>
+            <div className="mono flex-between" style={{ fontSize: '0.82rem', cursor: 'help' }}>
+              <span style={{ color: 'var(--color-text-dim)' }}>Range:</span>
+              <span>{stationData.weaponRangeMin}-{stationData.weaponRangeMax}</span>
+            </div>
+            <div className="mono flex-between" style={{ fontSize: '0.82rem', marginTop: '2px', cursor: 'help' }}>
+              <span style={{ color: 'var(--color-text-dim)' }}>Volley:</span>
+              <span>{stationData.volleyPool.join(', ')}</span>
+            </div>
+          </Tooltip>
+
+          {stationData.heavyVolleyPool && (
+            <Tooltip content={
               <div>
-                <div style={{ color: 'var(--color-alert-amber)', fontWeight: 'bold', marginBottom: '2px' }}>{formatTraitName(trait)}</div>
-                <div>{formatTraitDescription(trait)}</div>
+                <div style={{ color: 'var(--color-hostile-red)', fontWeight: 'bold', marginBottom: '4px' }}>Heavy Battery (Forward Arcs)</div>
+                <div>Range: {stationData.heavyWeaponRangeMin}-{stationData.heavyWeaponRangeMax}</div>
+                <div>Volley: {stationData.heavyVolleyPool.join(', ')}</div>
               </div>
             }>
-              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-bright)', marginBottom: '4px', lineHeight: 1.3, cursor: 'help' }}>
-                • {formatTraitDescription(trait)}
+              <div style={{ marginTop: '8px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '6px', cursor: 'help' }}>
+                <div className="mono flex-between" style={{ fontSize: '0.82rem' }}>
+                  <span style={{ color: 'var(--color-text-dim)' }}>Heavy Range:</span>
+                  <span>{stationData.heavyWeaponRangeMin}-{stationData.heavyWeaponRangeMax}</span>
+                </div>
+                <div className="mono flex-between" style={{ fontSize: '0.82rem', marginTop: '2px' }}>
+                  <span style={{ color: 'var(--color-text-dim)' }}>Heavy Volley:</span>
+                  <span>{stationData.heavyVolleyPool.join(', ')}</span>
+                </div>
               </div>
             </Tooltip>
-          ))}
+          )}
+
+          {stationData.traits && stationData.traits.length > 0 && (
+            <div style={{ marginTop: '8px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '6px' }}>
+              <div className="label" style={{ color: 'var(--color-alert-amber)', fontSize: '0.7rem', marginBottom: '4px' }}>Special Traits</div>
+              {stationData.traits.map((trait, idx) => (
+                <Tooltip key={idx} content={
+                  <div>
+                    <div style={{ color: 'var(--color-alert-amber)', fontWeight: 'bold', marginBottom: '2px' }}>{formatTraitName(trait)}</div>
+                    <div>{formatTraitDescription(trait)}</div>
+                  </div>
+                }>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-bright)', marginBottom: '4px', lineHeight: 1.3, cursor: 'help' }}>
+                    • {formatTraitDescription(trait)}
+                  </div>
+                </Tooltip>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </>
@@ -876,7 +932,7 @@ function FighterTooltipContent({ fighter, stackCount }: { fighter: FighterToken;
           {fighter.name}
         </h3>
         <div className="label" style={{ color: 'var(--color-text-dim)' }}>
-          Fighter Wing
+          {getFighterClassById(fighter.classId)?.name ?? 'Fighter Wing'}
         </div>
       </div>
 
@@ -890,6 +946,34 @@ function FighterTooltipContent({ fighter, stackCount }: { fighter: FighterToken;
             <StatCard label="Behavior" value={fighter.behavior.replace('_', ' ').toUpperCase()} />
             <StatCard label="Target" value={targetName} />
           </>
+        )}
+      </div>
+
+      <div className="panel panel--raised" style={{ padding: 'var(--space-sm)', marginTop: 'var(--space-sm)' }}>
+        <Tooltip content={
+          <div>
+            <div style={{ color: fighter.allegiance === 'enemy' ? 'var(--color-hostile-red)' : 'var(--color-holo-cyan)', fontWeight: 'bold', marginBottom: '4px' }}>Standard Armament</div>
+            <div>Max Range: {fighter.weaponRangeMax}</div>
+            <div>Volley: {fighter.volleyPool.join(', ')}</div>
+          </div>
+        }>
+          <div className="mono flex-between" style={{ fontSize: '0.82rem', cursor: 'help' }}>
+            <span style={{ color: 'var(--color-text-dim)' }}>Range:</span>
+            <span>0-{fighter.weaponRangeMax}</span>
+          </div>
+          <div className="mono flex-between" style={{ fontSize: '0.82rem', marginTop: '2px', cursor: 'help' }}>
+            <span style={{ color: 'var(--color-text-dim)' }}>Volley:</span>
+            <span>{fighter.volleyPool.join(', ')}</span>
+          </div>
+        </Tooltip>
+        
+        {getFighterClassById(fighter.classId)?.specialRules && (
+          <div style={{ marginTop: '8px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '6px' }}>
+            <div className="label" style={{ color: 'var(--color-alert-amber)', fontSize: '0.7rem', marginBottom: '4px' }}>Special Rules</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-bright)', lineHeight: 1.3 }}>
+              • {getFighterClassById(fighter.classId)?.specialRules}
+            </div>
+          </div>
         )}
       </div>
     </>
