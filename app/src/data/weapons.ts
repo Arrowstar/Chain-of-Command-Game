@@ -186,3 +186,7 @@ export function getWeaponById(id: string): WeaponModule | undefined {
 export function getPurchasableWeapons(): WeaponModule[] {
   return WEAPONS.filter(weapon => (weapon.availability ?? 'standard') === 'standard');
 }
+
+export function getEventWeapons(): WeaponModule[] {
+  return WEAPONS.filter(weapon => weapon.availability === 'event');
+}

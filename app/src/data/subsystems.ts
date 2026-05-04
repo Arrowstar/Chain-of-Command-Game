@@ -154,3 +154,7 @@ export function getSubsystemById(id: string): Subsystem | undefined {
 export function getPurchasableSubsystems(): Subsystem[] {
   return SUBSYSTEMS.filter(subsystem => (subsystem.availability ?? 'standard') === 'standard');
 }
+
+export function getEventSubsystems(): Subsystem[] {
+  return SUBSYSTEMS.filter(subsystem => subsystem.availability === 'event');
+}

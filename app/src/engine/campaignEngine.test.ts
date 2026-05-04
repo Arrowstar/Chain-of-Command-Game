@@ -566,12 +566,25 @@ describe('generateMarketInventory', () => {
     }
   });
 
-  it('never includes event-exclusive items in the standard market', () => {
+  it('includes 1 or 2 event items in the standard market', () => {
     const market = generateMarketInventory();
-    expect(market.weapons).not.toContain('experimental-plasma-lance');
-    expect(market.weapons).not.toContain('illegal-rail-accelerator');
-    expect(market.subsystems).not.toContain('salvaged-ai-coprocessor');
-    expect(market.subsystems).not.toContain('alien-phase-vanes');
+    const eventIds = [
+      'experimental-plasma-lance',
+      'illegal-rail-accelerator',
+      'defense-platform-laser',
+      'phase-disruptor-array',
+      'black-market-targeting-suite',
+      'hermit-reactor-baffles',
+      'remote-disarm-drone-rig',
+      'salvaged-ai-coprocessor',
+      'alien-phase-vanes'
+    ];
+    
+    const items = [...market.weapons, ...market.subsystems];
+    const eventItemsFound = items.filter(id => eventIds.includes(id));
+    
+    expect(eventItemsFound.length).toBeGreaterThanOrEqual(1);
+    expect(eventItemsFound.length).toBeLessThanOrEqual(2);
   });
 });
 

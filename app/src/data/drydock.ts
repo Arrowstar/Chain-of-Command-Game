@@ -1,6 +1,6 @@
 import type { DrydockService, MarketInventory } from '../types/campaignTypes';
-import { getPurchasableWeapons } from './weapons';
-import { getPurchasableSubsystems } from './subsystems';
+import { getPurchasableWeapons, getEventWeapons } from './weapons';
+import { getPurchasableSubsystems, getEventSubsystems } from './subsystems';
 
 // ══════════════════════════════════════════════════════════════════
 // Drydock Services — Hidden Drydock (Haven) Node
@@ -73,24 +73,58 @@ export const OFFICER_TRAINING: DrydockService[] = [
 
 /**
  * Generate a randomly-stocked market inventory for the Drydock.
- * Draws 3 weapon cards and 3 subsystem cards from the available pools.
+ * Draws a baseline of 3 weapon cards and 3 subsystem cards, then
+ * replaces 1-2 of those with random "Event" availability items.
  *
- * Optionally exclude specific item IDs (e.g., already-equipped items
- * to keep the market feeling fresh — optional filter).
+ * Total inventory remains 6 items (3 weapons, 3 subsystems).
  */
 export function generateMarketInventory(
   excludeWeaponIds: string[] = [],
   excludeSubsystemIds: string[] = [],
 ): MarketInventory {
+  // 1. Generate baseline pools (3 weapons, 3 subsystems)
   const weaponPool = getPurchasableWeapons().filter(w => !excludeWeaponIds.includes(w.id));
   const subsystemPool = getPurchasableSubsystems().filter(s => !excludeSubsystemIds.includes(s.id));
 
   const shuffledWeapons = [...weaponPool].sort(() => Math.random() - 0.5);
   const shuffledSubsystems = [...subsystemPool].sort(() => Math.random() - 0.5);
 
+  const marketWeapons = shuffledWeapons.slice(0, 3).map(w => w.id);
+  const marketSubsystems = shuffledSubsystems.slice(0, 3).map(s => s.id);
+
+  // 2. Identify Event items
+  const eventWeaponPool = getEventWeapons().filter(w => !excludeWeaponIds.includes(w.id));
+  const eventSubsystemPool = getEventSubsystems().filter(s => !excludeSubsystemIds.includes(s.id));
+
+  const combinedEventPool = [
+    ...eventWeaponPool.map(w => ({ id: w.id, isWeapon: true })),
+    ...eventSubsystemPool.map(s => ({ id: s.id, isWeapon: false })),
+  ];
+
+  // 3. Replace 1-2 slots with Events
+  if (combinedEventPool.length > 0) {
+    const numEvents = Math.floor(Math.random() * 2) + 1; // 1 or 2
+    const shuffledEvents = [...combinedEventPool].sort(() => Math.random() - 0.5);
+    const selectedEvents = shuffledEvents.slice(0, numEvents);
+
+    // Track replacements
+    let weaponsReplaced = 0;
+    let subsystemsReplaced = 0;
+
+    selectedEvents.forEach((event) => {
+      if (event.isWeapon && weaponsReplaced < 3) {
+        marketWeapons[weaponsReplaced] = event.id;
+        weaponsReplaced++;
+      } else if (!event.isWeapon && subsystemsReplaced < 3) {
+        marketSubsystems[subsystemsReplaced] = event.id;
+        subsystemsReplaced++;
+      }
+    });
+  }
+
   return {
-    weapons: shuffledWeapons.slice(0, 3).map(w => w.id),
-    subsystems: shuffledSubsystems.slice(0, 3).map(s => s.id),
+    weapons: marketWeapons,
+    subsystems: marketSubsystems,
     techOffer: null,
   };
 }
