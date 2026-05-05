@@ -422,7 +422,9 @@ function ShipTooltipContent({ ship, isEnemy }: { ship: ShipState | EnemyShipStat
     <>
       <div style={{ marginBottom: 'var(--space-sm)' }}>
         <div className="label" style={{ color: isEnemy ? 'var(--color-hostile-red)' : 'var(--color-holo-cyan)' }}>
-          {isEnemy ? 'Enemy Vessel' : 'Allied Vessel'}
+          {isEnemy
+            ? (adversary?.size === 'fighter' ? 'Enemy Small Craft' : 'Enemy Vessel')
+            : 'Allied Vessel'}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
           <h3 style={{ margin: 0, color: isEnemy ? 'var(--color-hostile-red)' : 'var(--color-holo-cyan)' }}>

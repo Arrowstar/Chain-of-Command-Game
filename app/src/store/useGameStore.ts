@@ -450,8 +450,11 @@ function resolveFlakAgainstFighter(
   weapon: NonNullable<ReturnType<typeof getWeaponById>>,
   fighter: FighterToken,
   volleyPool: ReturnType<typeof assembleVolleyPool>,
+  attackerSize?: ShipSize,
 ): FighterFlakAttempt {
-  const targetNumber = Math.max(1, fighter.baseEvasion + getAntiSmallCraftTNModifier(weapon, ShipSize.Fighter));
+  // Dogfighting Rule: -3 TN when both attacker and defender are fighters/small craft
+  const dogfightBonus = isSmallCraftSize(attackerSize) ? -3 : 0;
+  const targetNumber = Math.max(1, fighter.baseEvasion + getAntiSmallCraftTNModifier(weapon, ShipSize.Fighter) + dogfightBonus);
   const volley = rollVolley(volleyPool, targetNumber);
   const hits = volley.totalHits;
 
@@ -2194,7 +2197,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
             if (isFighter) {
                 const fighterTarget = target as FighterToken;
-                const flakResult = resolveFlakAgainstFighter(weapon, fighterTarget, pool);
+                const attackerSize = chassis?.size as ShipSize | undefined;
+                const flakResult = resolveFlakAgainstFighter(weapon, fighterTarget, pool, attackerSize);
 
                 if (flakResult.destroyed) {
                     set(s => ({
@@ -2338,6 +2342,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
             if (ship.isJammed) {
               namedModifiers.push({ name: 'Jammed', value: 2 });
+            }
+
+            // Dogfighting Rule: -3 TN when both attacker and defender are fighters/small craft
+            if (isSmallCraftSize(targetSize as ShipSize) && isSmallCraftSize(chassis?.size as ShipSize)) {
+              namedModifiers.push({ name: 'Dogfighting', value: -3 });
             }
 
             const damageResult = resolveAttack(
