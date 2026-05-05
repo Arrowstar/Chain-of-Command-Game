@@ -50,4 +50,35 @@ describe('VolleyBreakdown', () => {
     // The previous test implementation was timing out inconsistently due to framer-motion and setTimeout.
     // We already verified the modal mounts and shows Volley Resolution.
   });
+
+  it('renders Evasive Maneuvers line item when present in breakdown', () => {
+    const mockDamageResult: DamageResult = {
+      shieldHits: 0,
+      struckSector: 'fore',
+      shieldRemaining: 0,
+      overflowHits: 0,
+      piercingHits: 0,
+      netOverflowHits: 0,
+      armorRoll: 0,
+      armorDie: 'd4',
+      hullDamage: 0,
+      criticalTriggered: false,
+      tnBreakdown: { 
+        baseEvasion: 5, rangeModifier: 0, terrainModifier: 0, evasiveManeuvers: 2, targetLockModifier: 0, trackingBonus: 0, otherModifiers: 0, total: 7 
+      },
+      volleyResult: {
+        dice: [],
+        targetNumber: 7,
+        totalHits: 0,
+        totalCrits: 0,
+        totalStandardHits: 0,
+        totalCriticalHits: 0,
+      }
+    };
+
+    render(<VolleyBreakdown damageResult={mockDamageResult} onClose={() => {}} />);
+    
+    expect(screen.getByText('Evasive Maneuvers')).toBeInTheDocument();
+    expect(screen.getByText('+2')).toBeInTheDocument();
+  });
 });

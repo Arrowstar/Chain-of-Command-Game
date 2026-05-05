@@ -284,7 +284,7 @@ export interface ShipState {
   armorDie: DieType;
   baseEvasion: number;
   evasionModifiers: number;              // temporary modifiers this round
-  evasiveManeuvers?: number;             // legacy alias used by combat TN breakdown/UI
+  evasiveManeuvers?: number;             // explicit bonus from Evasive Pattern action
   isDestroyed: boolean;
   hasDroppedBelow50: boolean;            // tracks first-time 50% trigger
   hasDrifted: boolean;
@@ -583,6 +583,7 @@ export interface EnemyShipState {
   baseEvasion: number;
   armorDie: DieType;
   evasionModifiers?: number;       // temporary modifiers this round
+  evasiveManeuvers?: number;       // explicit bonus from Evasive Pattern action
   isAllied?: boolean;              // true if this AI ship fights for the players
   isJammed?: boolean;              // true if affected by ECM Active Jamming this round
   predictiveVolleyActive?: boolean;
@@ -635,6 +636,8 @@ export interface FighterToken {
   maxHull: number;
   speed: number;            // hexes moved per activation
   baseEvasion: number;      
+  evasiveManeuvers?: number;
+
   volleyPool: DieType[];    
   weaponRangeMax: number;   
   behavior: FighterBehavior;
@@ -748,6 +751,8 @@ export interface StationState {
   maxShieldsPerSector: number;
   armorDie: DieType;
   baseEvasion: number;
+  evasiveManeuvers?: number;
+
   isDestroyed: boolean;
   hasDroppedBelow50: boolean;
   /** Whether this station has fired this round */

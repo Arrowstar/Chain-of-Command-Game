@@ -136,7 +136,7 @@ describe('Trauma Effects', () => {
     const ship = useGameStore.getState().playerShips[0];
     const helmOfficer = useGameStore.getState().players[0].officers[1];
     const modal = useUIStore.getState();
-    expect(ship.evasionModifiers).toBe(3);
+    expect(ship.evasiveManeuvers).toBe(3);
     expect(helmOfficer.currentStress).toBe(0);
     expect(modal.activeModal).toBe('skill-proc');
     expect(modal.modalData?.data?.title).toBe('Precision Maneuvering');

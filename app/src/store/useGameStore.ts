@@ -1791,7 +1791,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         const procResult = officer ? rollOfficerSkillProc(officer.currentTier) : null;
         const precisionSucceeded = !!procResult?.isSuccess;
         const evasionBonus = officerData?.traitName === 'Paranoia' || precisionSucceeded ? 3 : 2;
-        updates.evasionModifiers = ship.evasionModifiers + evasionBonus;
+        updates.evasiveManeuvers = (ship.evasiveManeuvers ?? 0) + evasionBonus;
         get().addLog('system', `${officerData?.name ?? 'Helm'} executed Evasive Pattern on ${get().getShipName(shipId)} (+${evasionBonus} Evasion TN)`);
         if (procResult) {
           const outcome = procResult.isCritical ? 'CRITICAL' : procResult.isSuccess ? 'SUCCESS' : 'FAIL';
@@ -3837,10 +3837,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 criticalTriggered: false,
                 volleyResult: attackResult.volleyResult,
                 tnBreakdown: {
-                  baseEvasion: attackResult.targetNumber,
+                  baseEvasion: attackResult.targetNumber - attackResult.evasiveManeuvers,
                   rangeModifier: 0,
                   terrainModifier: 0,
-                  evasiveManeuvers: 0,
+                  evasiveManeuvers: attackResult.evasiveManeuvers,
                   targetLockModifier: 0,
                   trackingBonus: 0,
                   otherModifiers: 0,
@@ -5171,7 +5171,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return {
         ...ship,
         shields: newShields,
-        evasionModifiers: 0, // reset evasion modifiers
+        evasionModifiers: 0,
+        evasiveManeuvers: 0, // reset evasive maneuvers
         targetLocks: [],
         targetLocksRerolls: 0,
         targetLockArmorPiercingShots: 0,
@@ -5193,6 +5194,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         targetLocksRerolls: 0,
         targetLockArmorPiercingShots: 0,
         evasionModifiers: 0,
+        evasiveManeuvers: 0,
       };
     });
 

@@ -40,6 +40,8 @@ export interface FighterAttackResult {
   overflowHits: number;
   /** Overflow damage remaining after mitigation (fighters cap this at 1) */
   netOverflowHits: number;
+  /** TN bonus from Evasive Maneuvers */
+  evasiveManeuvers: number;
 }
 
 // ─── BFS Pathfinding ────────────────────────────────────────────
@@ -393,8 +395,14 @@ export function resolveFighterAttack(
   if (shipTarget) {
     const isPlayerShip = 'chassisId' in shipTarget;
     const baseEvasion = isPlayerShip
-      ? (shipTarget as ShipState).baseEvasion + (shipTarget as ShipState).evasionModifiers
-      : (shipTarget as EnemyShipState & { baseEvasion?: number }).baseEvasion ?? 5;
+      ? (shipTarget as ShipState).baseEvasion + ((shipTarget as ShipState).evasionModifiers ?? 0)
+      : (shipTarget as EnemyShipState).baseEvasion + ((shipTarget as EnemyShipState).evasionModifiers ?? 0);
+    
+    const evasiveManeuvers = (shipTarget as ShipState).evasiveManeuvers ?? 0;
+    const currentBaseEvasion = baseEvasion;
+    
+    // Total TN includes evasive maneuvers
+    const totalBaseEvasion = currentBaseEvasion + evasiveManeuvers;
     
     // Expand Dogfight Rule to ship-based fighters (e.g. Hegemony Strike Fighters)
     const targetSize = isPlayerShip
@@ -402,9 +410,9 @@ export function resolveFighterAttack(
       : getAdversaryById((shipTarget as EnemyShipState).adversaryId)?.size;
 
     if (isSmallCraftSize(targetSize as ShipSize)) {
-      tn = Math.max(1, baseEvasion - 3); // Dogfight Rule
+      tn = Math.max(1, totalBaseEvasion - 3); // Dogfight Rule
     } else {
-      tn = baseEvasion;
+      tn = totalBaseEvasion;
     }
   } else if (fighterTarget) {
     tn = Math.max(1, fighterTarget.baseEvasion - 3); // Dogfight Rule
@@ -429,6 +437,7 @@ export function resolveFighterAttack(
       piercingHits: 0,
       overflowHits: 0,
       netOverflowHits: 0,
+      evasiveManeuvers: (shipTarget as any)?.evasiveManeuvers ?? 0,
     };
   }
 
@@ -448,6 +457,7 @@ export function resolveFighterAttack(
       piercingHits: volley.totalCriticalHits,
       overflowHits: volley.totalStandardHits,
       netOverflowHits: volley.totalStandardHits, // 1:1 for fighters vs fighters
+      evasiveManeuvers: fighterTarget.evasiveManeuvers ?? 0,
     };
   } else if (shipTarget) {
     // Capital Ship Attack
@@ -490,6 +500,7 @@ export function resolveFighterAttack(
       piercingHits: volley.totalCriticalHits,
       overflowHits: overflow,
       netOverflowHits: overflow > 0 ? 1 : 0,
+      evasiveManeuvers: (shipTarget as any)?.evasiveManeuvers ?? 0,
     };
   }
 
