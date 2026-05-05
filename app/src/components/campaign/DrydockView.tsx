@@ -488,7 +488,7 @@ export default function DrydockView() {
                               }}
                               onClick={() => {
                                 if (isTargetable && canAfford) {
-                                  const baseItemId = selectedItem.source === 'stash' ? selectedItem.id.split('-')[0] : selectedItem.id;
+                                  const baseItemId = selectedItem.source === 'stash' ? selectedItem.id.substring(0, selectedItem.id.lastIndexOf('-')) : selectedItem.id;
                                   if (selectedItem.source === 'market') {
                                     purchaseMarketItem(baseItemId, ship.id, true, i);
                                   } else {
@@ -540,7 +540,7 @@ export default function DrydockView() {
                               }}
                               onClick={() => {
                                 if (isTargetable && canAfford) {
-                                  const baseItemId = selectedItem.source === 'stash' ? selectedItem.id.split('-')[0] : selectedItem.id;
+                                  const baseItemId = selectedItem.source === 'stash' ? selectedItem.id.substring(0, selectedItem.id.lastIndexOf('-')) : selectedItem.id;
                                   if (selectedItem.source === 'market') {
                                     purchaseMarketItem(baseItemId, ship.id, false, i);
                                   } else {

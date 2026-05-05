@@ -1,8 +1,11 @@
-import type { FighterToken, TorpedoToken, HexCoord, HexFacing, TerrainType, ShipState, EnemyShipState, DieType, VolleyResult, StationState } from '../../types/game';
+import type { FighterToken, TorpedoToken, HexCoord, HexFacing, TerrainType, ShipState, EnemyShipState, DieType, VolleyResult, StationState, ShipSize } from '../../types/game';
+import { isSmallCraftSize } from '../../types/game';
 import { hexDistance, hexNeighbors, hexKey, getHexFacing } from '../hexGrid';
 import { rollVolley } from '../../utils/diceRoller';
 import { determineStruckShieldSector } from '../hexGrid';
 import { getFighterClassById, pickEnemyFighterClass } from '../../data/fighters';
+import { getAdversaryById } from '../../data/adversaries';
+import { getChassisById } from '../../data/shipChassis';
 import { generateSquadronName } from '../../utils/nameGenerator';
 
 // ═══════════════════════════════════════════════════════════════════
@@ -388,9 +391,21 @@ export function resolveFighterAttack(
   // 2. Roll Attack
   let tn = 5; // Default for fighters
   if (shipTarget) {
-    tn = ('chassisId' in shipTarget)
+    const isPlayerShip = 'chassisId' in shipTarget;
+    const baseEvasion = isPlayerShip
       ? (shipTarget as ShipState).baseEvasion + (shipTarget as ShipState).evasionModifiers
       : (shipTarget as EnemyShipState & { baseEvasion?: number }).baseEvasion ?? 5;
+    
+    // Expand Dogfight Rule to ship-based fighters (e.g. Hegemony Strike Fighters)
+    const targetSize = isPlayerShip
+      ? getChassisById((shipTarget as ShipState).chassisId)?.size
+      : getAdversaryById((shipTarget as EnemyShipState).adversaryId)?.size;
+
+    if (isSmallCraftSize(targetSize as ShipSize)) {
+      tn = Math.max(1, baseEvasion - 3); // Dogfight Rule
+    } else {
+      tn = baseEvasion;
+    }
   } else if (fighterTarget) {
     tn = Math.max(1, fighterTarget.baseEvasion - 3); // Dogfight Rule
   }

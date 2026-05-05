@@ -1289,6 +1289,7 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
         if (action === 'equip') {
           // Move from stash → slot
           if (isWeapon) {
+            if (!newStashedWeapons.includes(itemId)) return s;
             newStashedWeapons = newStashedWeapons.filter((id, i) => !(id === itemId && i === newStashedWeapons.indexOf(itemId)));
             const weapons = [...s.equippedWeapons];
             // Stash whatever was previously in that slot
@@ -1296,6 +1297,7 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
             weapons[slotIndex] = itemId;
             return { ...s, equippedWeapons: weapons };
           } else {
+            if (!newStashedSubsystems.includes(itemId)) return s;
             newStashedSubsystems = newStashedSubsystems.filter((id, i) => !(id === itemId && i === newStashedSubsystems.indexOf(itemId)));
             const subs = [...s.equippedSubsystems];
             if (subs[slotIndex]) newStashedSubsystems.push(subs[slotIndex]!);
