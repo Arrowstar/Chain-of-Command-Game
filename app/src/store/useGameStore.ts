@@ -702,9 +702,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const currentSpeed = combatModifiers?.playerStartSpeed3
         ? Math.min(3, finalSpeedCap)
         : Math.min(1, finalSpeedCap); // Explicitly reset to speed 1 at combat start
+      // Always restore shields to full at combat start. persistedShips carries
+      // end-of-battle shield values which must not bleed into the next engagement.
+      const maxSPS = ship.maxShieldsPerSector;
+      const fullShields: ShieldState = {
+        fore: maxSPS, foreStarboard: maxSPS, aftStarboard: maxSPS,
+        aft: maxSPS, aftPort: maxSPS, forePort: maxSPS,
+      };
       return { 
         ...ship, 
         currentSpeed,
+        shields: fullShields,
         warpedOut: false, // Reset warp status for new combat
         fighterLaunchCounts: {} // Reset fighter hangar capacity for the new combat
       };
@@ -3820,10 +3828,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 shieldHits: attackResult.shieldDamage,
                 struckSector: attackResult.sector as ShipArc,
                 shieldRemaining: Math.max(0, attackResult.struckShieldValue - attackResult.shieldDamage),
-                overflowHits: 0,
+                overflowHits: attackResult.overflowHits,
                 armorRoll: 0,
                 armorDie: 'd4' as any,
                 hullDamage: attackResult.hullDamage,
+                netOverflowHits: attackResult.netOverflowHits,
+                piercingHits: attackResult.piercingHits,
                 criticalTriggered: false,
                 volleyResult: attackResult.volleyResult,
                 tnBreakdown: {

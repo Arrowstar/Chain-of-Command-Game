@@ -31,6 +31,12 @@ export interface FighterAttackResult {
   /** True when the target was in an Ion Nebula — shields were bypassed. */
   ionNebulaActive?: boolean;
   volleyResult?: VolleyResult;
+  /** Number of piercing hits that bypassed shields and armor */
+  piercingHits: number;
+  /** Number of standard hits that bypassed shields */
+  overflowHits: number;
+  /** Overflow damage remaining after mitigation (fighters cap this at 1) */
+  netOverflowHits: number;
 }
 
 // ─── BFS Pathfinding ────────────────────────────────────────────
@@ -404,7 +410,10 @@ export function resolveFighterAttack(
       struckShieldValue: 0,
       rolls: allRolls,
       targetNumber: tn,
-      volleyResult: volley
+      volleyResult: volley,
+      piercingHits: 0,
+      overflowHits: 0,
+      netOverflowHits: 0,
     };
   }
 
@@ -420,7 +429,10 @@ export function resolveFighterAttack(
       struckShieldValue: 0,
       rolls: allRolls,
       targetNumber: tn,
-      volleyResult: volley
+      volleyResult: volley,
+      piercingHits: volley.totalCriticalHits,
+      overflowHits: volley.totalStandardHits,
+      netOverflowHits: volley.totalStandardHits, // 1:1 for fighters vs fighters
     };
   } else if (shipTarget) {
     // Capital Ship Attack
@@ -438,10 +450,16 @@ export function resolveFighterAttack(
     const targetTerrain = terrainMap?.get(targetKey);
     const ionNebulaActive = targetTerrain === 'ionNebula';
 
+    const standardHits = volley.totalStandardHits;
+    const piercingHits = volley.totalCriticalHits;
+
     const shieldVal = ionNebulaActive ? 0 : (shipTarget.shields[sector as keyof typeof shipTarget.shields] ?? 0);
-    const shieldDmg = Math.min(hits, shieldVal);
-    const overflow = hits - shieldDmg;
-    const hullDamage = overflow > 0 ? 1 : 0; // standard fighter rules: 1 hull max per volley
+    const shieldDmg = Math.min(standardHits, shieldVal);
+    const overflow = standardHits - shieldDmg;
+    
+    // standard fighter rules: 1 hull max per volley from standard hits.
+    // Piercing hits bypass shields AND this cap.
+    const hullDamage = (overflow > 0 ? 1 : 0) + piercingHits;
 
     return { 
       targetId: shipTarget.id, 
@@ -453,7 +471,10 @@ export function resolveFighterAttack(
       rolls: allRolls,
       targetNumber: tn,
       ionNebulaActive: ionNebulaActive || undefined,
-      volleyResult: volley
+      volleyResult: volley,
+      piercingHits: volley.totalCriticalHits,
+      overflowHits: overflow,
+      netOverflowHits: overflow > 0 ? 1 : 0,
     };
   }
 
