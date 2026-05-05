@@ -2015,7 +2015,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       case 'fire-primary': {
         const targetId = context?.targetShipId;
         const targetHex = context?.targetHex;
-        let initialTarget = targetId ? (state.enemyShips.find(s => s.id === targetId) || state.playerShips.find(s => s.id === targetId) || state.stations.find(s => s.id === targetId) || state.objectiveMarkers.find(m => m.name === targetId)) : null;
+        let initialTarget = targetId ? (state.enemyShips.find(s => s.id === targetId) || state.playerShips.find(s => s.id === targetId) || state.stations.find(s => s.id === targetId) || state.fighterTokens.find(f => f.id === targetId) || state.objectiveMarkers.find(m => m.name === targetId)) : null;
         let tacticalOverrideConsumed = false;
 
         // Read weapon from context or fallback to first equipped
@@ -2082,13 +2082,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
         const currentFired = ship.firedWeaponIndicesThisRound || [];
         updates.firedWeaponIndicesThisRound = [...currentFired, weaponIndex];
 
-        if (weapon.tags?.includes('torpedo') && initialTarget && 'id' in initialTarget) {
+        if (weapon.tags?.includes('torpedo') && initialTarget && ('id' in initialTarget || 'name' in initialTarget)) {
           get().spawnTorpedo({
             id: `torpedo-${Date.now()}`,
             name: `${weapon.name}`,
             allegiance: 'allied',
             sourceShipId: shipId,
-            targetShipId: (initialTarget as ShipState | EnemyShipState).id,
+            targetShipId: ('id' in initialTarget) ? initialTarget.id : initialTarget.name,
             position: ship.position,
             facing: ship.facing,
             currentHull: 1,
@@ -2098,7 +2098,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             isDestroyed: false,
             hasMoved: false,
           });
-          get().addLog('combat', `🚀 ${ship.name} fired ${weapon.name} at ${initialTarget.name}! It enters the hex grid.`);
+          get().addLog('combat', `🚀 ${ship.name} fired ${weapon.name} at ${initialTarget.name || (initialTarget as any).id}! It enters the hex grid.`);
           updates.firedWeaponThisRound = true;
           break;
         }
@@ -2388,6 +2388,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             }
 
             // ─── Weapon fire animation event (visual only, no game state) ─────
+            // Torpedoes are fired but don't resolve immediately; others do
             if (!weapon.tags?.includes('torpedo')) {
               useUIStore.getState().queueFireAnimation({
                 id: `fire-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -3923,14 +3924,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
     torpedoes.forEach(torpedo => {
       // 1. Identify active target
       const liveState = get();
-      let targetShip = liveState.enemyShips.find(s => s.id === torpedo.targetShipId && !s.isDestroyed) as (ShipState | EnemyShipState) | undefined;
-      if (!targetShip) {
-        targetShip = liveState.playerShips.find(s => s.id === torpedo.targetShipId && !s.isDestroyed);
-      }
+      const target = liveState.enemyShips.find(s => s.id === torpedo.targetShipId && !s.isDestroyed) ||
+                     liveState.playerShips.find(s => s.id === torpedo.targetShipId && !s.isDestroyed) ||
+                     liveState.stations.find(s => s.id === torpedo.targetShipId && !s.isDestroyed) ||
+                     liveState.fighterTokens.find(f => f.id === torpedo.targetShipId && !f.isDestroyed) ||
+                     liveState.objectiveMarkers.find(m => m.name === torpedo.targetShipId && !m.isDestroyed);
 
       const tIdx = updatedTorpedoes.findIndex(t => t.id === torpedo.id);
       
-      if (!targetShip) {
+      if (!target) {
         // Target destroyed or lost ═  torpedo auto-destructs
         if (tIdx !== -1) updatedTorpedoes[tIdx] = { ...updatedTorpedoes[tIdx], isDestroyed: true, hasMoved: true };
         get().addLog('movement', `🚀 ${torpedo.name} self-destructed (target lost).`);
@@ -3938,7 +3940,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
 
       // 2. Move towards target
-      const moveResult = moveTorpedo(torpedo, targetShip.position, state.terrainMap);
+      const moveResult = moveTorpedo(torpedo, target.position, state.terrainMap);
       let pdcInterceptHex: HexCoord | null = null;
 
       if (!moveResult.isDestroyed && allegiance === 'enemy') {
@@ -3993,42 +3995,57 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
       // 3. Attack if reached target
       if (moveResult.reachedTarget) {
-        const targetEvasion = ('chassisId' in targetShip)
-          ? (targetShip as ShipState).baseEvasion + (targetShip as ShipState).evasionModifiers
-          : (targetShip as EnemyShipState & { baseEvasion?: number }).baseEvasion ?? 5; // Default for adversaries if no baseEvasion
+        let targetEvasion = 5;
+        if ('chassisId' in target) targetEvasion = (target as ShipState).baseEvasion + (target as ShipState).evasionModifiers;
+        else if ('adversaryId' in target) targetEvasion = (target as EnemyShipState).baseEvasion + ((target as EnemyShipState).evasionModifiers ?? 0);
+        else if ('stationId' in target) targetEvasion = (target as StationState).baseEvasion + ((target as StationState).evasiveManeuvers ?? 0);
+        else if ('classId' in target) targetEvasion = (target as FighterToken).baseEvasion + ((target as FighterToken).evasiveManeuvers ?? 0);
+        else if ('hull' in target) targetEvasion = 0; // Objective markers are stationary and easy to hit
 
         const attackResult = resolveTorpedoAttack(torpedo, targetEvasion);
         
-        let atkMsg = `═a  🚀 ${torpedo.name} impacted ${targetShip.name} | TN: ${attackResult.targetNumber} | Roll: [${attackResult.rolls.join(', ')}]`;
+        let atkMsg = `═a  🚀 ${torpedo.name} impacted ${target.name} | TN: ${attackResult.targetNumber} | Roll: [${attackResult.rolls.join(', ')}]`;
 
         if (attackResult.hit) {
           atkMsg += ` | -${attackResult.hullDamage} hull (DIRECT HIT)`;
           
           // Apply Damage directly to Hull
-          const maxHull = ('chassisId' in targetShip)
-              ? (targetShip as ShipState).maxHull
-              : getAdversaryById((targetShip as EnemyShipState).adversaryId)?.hull ?? 10;
-              
-          const newHull = Math.max(0, targetShip.currentHull - attackResult.hullDamage);
-          const updates: Partial<ShipState & EnemyShipState> = { currentHull: newHull };
-          if (newHull === 0) updates.isDestroyed = true;
-          
-          if ('chassisId' in targetShip) {
-            get().updatePlayerShip(targetShip.id, updates);
-          } else {
-            get().updateEnemyShip(targetShip.id, updates);
+          if ('chassisId' in target) {
+            const newHull = Math.max(0, target.currentHull - attackResult.hullDamage);
+            get().updatePlayerShip(target.id, { currentHull: newHull, isDestroyed: newHull === 0 });
+          } else if ('adversaryId' in target) {
+            const newHull = Math.max(0, target.currentHull - attackResult.hullDamage);
+            get().updateEnemyShip(target.id, { currentHull: newHull, isDestroyed: newHull === 0 });
             
             // Critical Hit if 3+ hull damage (torpedoes deal 3)
-            if (attackResult.hullDamage >= 3 && !updates.isDestroyed) {
+            const maxHull = getAdversaryById((target as EnemyShipState).adversaryId)?.hull ?? 10;
+            if (attackResult.hullDamage >= 3 && newHull > 0) {
                 const { card: critCard, remainingDeck: newDeck } = drawCriticalCard(get().enemyCritDeck, 'enemy');
                 set({ enemyCritDeck: newDeck });
-                const currentEnemy = (targetShip as EnemyShipState);
-                get().updateEnemyShip(targetShip.id, {
-                    criticalDamage: [...currentEnemy.criticalDamage, critCard],
-                    hasDroppedBelow50: targetShip.currentHull > maxHull / 2 && newHull <= maxHull / 2
+                get().updateEnemyShip(target.id, {
+                    criticalDamage: [...(target as EnemyShipState).criticalDamage, critCard],
+                    hasDroppedBelow50: target.currentHull > maxHull / 2 && newHull <= maxHull / 2
                 });
-                get().addLog('critical', `══& CRITICAL HIT! ${targetShip.name} suffered: ${critCard.name}!`);
+                get().addLog('critical', `══& CRITICAL HIT! ${target.name} suffered: ${critCard.name}!`);
                 useUIStore.getState().queueModal('critical', { card: critCard });
+            }
+          } else if ('stationId' in target) {
+            const newHull = Math.max(0, target.currentHull - attackResult.hullDamage);
+            get().updateStation(target.id, { currentHull: newHull, isDestroyed: newHull === 0 });
+            if (newHull === 0) {
+              get().addLog('system', `💥 ${target.name} destroyed by torpedo impact!`);
+            }
+          } else if ('classId' in target) {
+            const newHull = Math.max(0, (target as FighterToken).currentHull - attackResult.hullDamage);
+            get().updateFighter(target.id, { currentHull: newHull, isDestroyed: newHull === 0 });
+            if (newHull === 0) {
+              get().addLog('system', `☠ ${(target as FighterToken).name} destroyed by torpedo impact!`);
+            }
+          } else if ('hull' in target) {
+            const newHull = Math.max(0, (target as ObjectiveMarkerState).hull - attackResult.hullDamage);
+            get().updateObjectiveMarker(target.name, { hull: newHull, isDestroyed: newHull === 0 });
+            if (newHull === 0) {
+              get().addLog('system', `💥 Objective ${target.name} destroyed!`);
             }
           }
           
