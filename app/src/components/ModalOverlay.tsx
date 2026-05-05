@@ -16,6 +16,11 @@ export default function ModalOverlay() {
     // Only delay combat modals so animations have time to play
     if (activeModal === 'volley' || activeModal === 'critical' || activeModal === 'skill-proc') {
       setIsDelaying(true);
+      
+      if (activeModal === 'volley' && modalData?.fireAnimation) {
+        useUIStore.getState().queueFireAnimation(modalData.fireAnimation);
+      }
+
       const timer = setTimeout(() => {
         setIsDelaying(false);
         setVisibleModal(activeModal);

@@ -3355,16 +3355,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
           if ((det.hullDmg ?? 0) > 0)   atkMsg += ` | -${det.hullDmg} hull`;
           get().addLog('combat', atkMsg, { damageResult: det.damageResult });
 
-          // ─── Enemy weapon fire animation event ─────────────────────────────
+          // 💥 Enemy weapon fire animation event 
           const defenderState = [...get().playerShips, ...get().enemyShips].find(s => s.id === det.target);
+          let fireAnimation: any = undefined;
           if (attackingShip && defenderState) {
-            useUIStore.getState().queueFireAnimation({
-              id: `fire-enemy-${a.shipId}-${Date.now()}`,
+            fireAnimation = {
+              id: `fire-enemy-${a.shipId}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
               attackerPos: attackingShip.position,
               targetPos: defenderState.position,
               weaponTags: [], // AI ships have no weapon tag metadata; default to beam
               isEnemy: !attackingShip.isAllied,
-            });
+            };
           }
 
           // Queue volley modal — sequential per attack (same as player attacks)
@@ -3377,6 +3378,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             }],
             weaponName: `${attackerName}'s weapons`,
             attackerId: attackerName,
+            fireAnimation,
           });
 
           // Trauma Hook: Shell-Shocked (+1 stress on ≥3 hull damage)
