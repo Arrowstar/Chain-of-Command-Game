@@ -161,7 +161,8 @@ describe('Trauma Effects', () => {
     const player = useGameStore.getState().players[0];
     const modal = useUIStore.getState();
     expect(ship.currentHull).toBe(9);
-    expect(player.commandTokens).toBe(5);
+    expect(player.commandTokens).toBe(4);
+    expect(player.pendingCommandTokenBonus).toBe(1);
     expect(modal.activeModal).toBe('skill-proc');
     expect(modal.modalData?.data?.title).toBe('Miracle Work');
     expect(modal.modalData?.data?.result?.isCritical).toBe(true);

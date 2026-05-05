@@ -123,7 +123,7 @@ export function executeStationTurn(
         const defTerrain = terrainMap.get(hexKey(target.position));
         const targetEvasion = target.baseEvasion + (target.evasionModifiers ?? 0);
 
-        const tn = calculateTN(targetEvasion, dist, defTerrain, 0, 0, 0, 0, false, false);
+        const tn = calculateTN(targetEvasion, dist, defTerrain, 0, 0, 0, [], false);
         const volley = rollVolley(pool, tn.total);
         const sector = determineStruckShieldSector(station.position, target.position, target.facing);
 
@@ -206,7 +206,7 @@ export function executeStationTurn(
         const defTerrain2 = terrainMap.get(hexKey(target.position));
         const targetEvasion2 = target.baseEvasion + (target.evasionModifiers ?? 0);
 
-        const tn = calculateTN(targetEvasion2, dist, defTerrain2, 0, 0, 0, 0, false, false);
+        const tn = calculateTN(targetEvasion2, dist, defTerrain2, 0, 0, 0, [], false);
         const volley = rollVolley(pool, tn.total);
         const sector = determineStruckShieldSector(station.position, target.position, target.facing);
 

@@ -164,15 +164,20 @@ export default function VolleyBreakdown({ results, damageResult, outOfArc, weapo
               {(() => {
                 const b = currentItem.damageResult.tnBreakdown;
                 if (!b) return null;
-                const rows: { label: string; value: number }[] = [
+                let rows: { label: string; value: number }[] = [
                   { label: 'Base Evasion', value: b.baseEvasion },
                   { label: `Range Modifier`, value: b.rangeModifier },
                   { label: 'Terrain', value: b.terrainModifier },
                   { label: 'Evasive Maneuvers', value: b.evasiveManeuvers },
                   { label: 'Target Lock', value: b.targetLockModifier },
                   { label: 'Small Craft Tracking', value: b.trackingBonus },
-                  { label: 'Other', value: b.otherModifiers },
-                ].filter(r => r.value !== 0);
+                ];
+                if (b.namedModifiers) {
+                  b.namedModifiers.forEach(mod => {
+                    rows.push({ label: mod.name, value: mod.value });
+                  });
+                }
+                rows = rows.filter(r => r.value !== 0);
                 if (rows.length === 0) return null;
                 return (
                   <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '6px', display: 'flex', flexDirection: 'column', gap: '2px' }}>

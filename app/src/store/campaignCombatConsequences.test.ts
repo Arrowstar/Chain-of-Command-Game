@@ -263,7 +263,8 @@ describe('combat consequences from campaign events', () => {
 
     const state = useGameStore.getState();
     const engineeringOfficer = state.players[0].officers.find(officer => officer.station === 'engineering');
-    expect(state.players[0].commandTokens).toBe(5);
+    expect(state.players[0].commandTokens).toBe(4);
+    expect(state.players[0].pendingCommandTokenBonus).toBe(1);
     expect(engineeringOfficer?.currentStress).toBe(1);
   });
 

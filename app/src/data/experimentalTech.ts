@@ -176,7 +176,7 @@ export const EXPERIMENTAL_TECH: ExperimentalTech[] = [
     id: 'neural-link-uplink',
     name: 'Neural Link Uplink',
     category: 'crew',
-    effect: 'Whenever an officer resolves an action that costs 3 or more Stress (including Fatigue Penalties), immediately gain 1 Command Token (CT) into that player\'s unspent pool.',
+    effect: 'Whenever an officer resolves an action that costs 3 or more Stress (including Fatigue Penalties), gain 1 Command Token (CT) at the start of the next round.',
     flavorText: '"The interface translates sheer panic into raw processing power."',
     isConsumable: false,
     isConsumed: false,

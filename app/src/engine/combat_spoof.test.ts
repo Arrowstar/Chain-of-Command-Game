@@ -29,7 +29,7 @@ describe('combat engine Spoofed Fire Control', () => {
       { q: 1, r: -1 }, HexFacing.Aft,
       5, shields, 'd6', 10, 10, false, weapon, [
         { type: 'd8', source: 'weapon' }
-      ], undefined, 0, 0, false, false, false, false, undefined, false, false, false, 0, false, false, undefined, false, true
+      ], undefined, 0, 0, false, false, false, false, undefined, false, false, false, 0, [], false, undefined, false, true
     );
 
     // With spoofing (true as last arg): 5+2 = 7.
@@ -50,7 +50,7 @@ describe('combat engine Spoofed Fire Control', () => {
       { q: 1, r: -1 }, HexFacing.Aft,
       5, shields, 'd6', 10, 10, false, weapon, [
         { type: 'd8', source: 'weapon' }
-      ], undefined, 0, 0, false, false, false, false, undefined, false, false, false, 0, false, false, 5 // Crit threshold 5
+      ], undefined, 0, 0, false, false, false, false, undefined, false, false, false, 0, [], false, 5 // Crit threshold 5
     );
 
     // If bug is fixed, 5 should be converted to a crit.

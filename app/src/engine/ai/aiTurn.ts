@@ -295,7 +295,11 @@ export function executeAITier(
           hasMovedThisRound,
         );
 
-        const tn = calculateTN(targetEvasion, dist, defTerrain, 0, 0, 0, 0, false, aiShip.isJammed || false);
+        const namedModifiers: import('../../types/game').NamedModifier[] = [];
+        if (aiShip.isJammed) {
+          namedModifiers.push({ name: 'Jammed', value: 2 });
+        }
+        const tn = calculateTN(targetEvasion, dist, defTerrain, 0, 0, 0, namedModifiers, false);
         // Tactic card extra dice
         if (tacticCard?.mechanicalEffect.extraDice) {
           pool.push(...tacticCard.mechanicalEffect.extraDice.map(dt => ({ type: dt, source: 'tactic' })));

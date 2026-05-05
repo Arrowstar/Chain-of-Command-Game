@@ -2236,10 +2236,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
             let targetEvasion = isMarker ? 0 : isStation
                 ? (target as StationState).baseEvasion
                 : (adversaryData 
-                    ? adversaryData.baseEvasion + ((target as EnemyShipState).evasionModifiers ?? 0)
-                    : (target as ShipState).baseEvasion + ((target as ShipState).evasionModifiers ?? 0));
+                    ? adversaryData.baseEvasion
+                    : (target as ShipState).baseEvasion);
+
+            const namedModifiers: import('../types/game').NamedModifier[] = [];
+
+            // Add any generic tactical modifiers that might still exist on the state
+            const genericEvasionMods = isMarker || isStation ? 0 : (target as any).evasionModifiers ?? 0;
+            if (genericEvasionMods !== 0) {
+                namedModifiers.push({ name: 'Tactics/Events', value: genericEvasionMods });
+            }
+
             if (isEnemy && !isMarker && state.exposedEnemyShipId === target.id) {
-                targetEvasion -= 1;
+                namedModifiers.push({ name: 'Exposed', value: -1 });
             }
               
             if (!isEnemy && !isMarker) {
@@ -2251,7 +2260,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     }
                     return false;
                 });
-                if (isAdjacentPaladin) targetEvasion += 1;
+                if (isAdjacentPaladin) namedModifiers.push({ name: 'Bulwark', value: 1 });
 
                 const isFleetComms = state.players.some(p => {
                     const s = state.playerShips.find(sh => sh.id === p.shipId);
@@ -2260,19 +2269,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     if (chatter && getOfficerById(chatter.officerId)?.traitName === 'Fleet Comms' && chatter.currentStress === 0) return true;
                     return false;
                 });
-                if (isFleetComms) targetEvasion += 1;
+                if (isFleetComms) namedModifiers.push({ name: 'Fleet Comms', value: 1 });
             }
 
             // Apply data-driven defensive traits when targeting an enemy ship
             if (isEnemy && !isMarker && adversaryData) {
-              const traitEvasionBonus = applyDefensiveTraits(
+              const traitModifiers = applyDefensiveTraits(
                 target as EnemyShipState,
                 adversaryData,
                 state.enemyShips,
                 state.playerShips,
                 targetTerrain,
               );
-              targetEvasion += traitEvasionBonus;
+              namedModifiers.push(...traitModifiers);
             }
 
             const targetArmorDie = isMarker ? 'd4' : isStation
@@ -2317,11 +2326,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
               !f.isDestroyed && 
               hexDistance(f.position, target.position) <= f.weaponRangeMax
             );
+            if (ewFighters.length > 0) {
+              namedModifiers.push({ name: 'EW Fighter Support', value: -1 });
+            }
+
             // Apply aura TN penalties from enemy Interdictor-class ships
-            const auraTNPenalty = (isEnemy && !isMarker && !isStation)
-              ? applyAuraTNPenalty(target.position, state.enemyShips)
-              : 0;
-            const ewModifier = (ewFighters.length > 0 ? -1 : 0) + auraTNPenalty;
+            if (isEnemy && !isMarker && !isStation) {
+              const auraModifiers = applyAuraTNPenalty(target.position, state.enemyShips);
+              namedModifiers.push(...auraModifiers);
+            }
+
+            if (ship.isJammed) {
+              namedModifiers.push({ name: 'Jammed', value: 2 });
+            }
 
             const damageResult = resolveAttack(
                 ship.position, ship.facing,
@@ -2351,12 +2368,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 tachyonStrike,
                 isMarker || isStation ? false : (target as any).pdcDisabled,
                 targetLockRerolls + bonusTargetRerolls,
-                ship.isJammed || false,
+                namedModifiers,
                 canRerollVoidGlass(1, state.experimentalTech),
                 state.currentTactic?.mechanicalEffect.critThresholdOverride,
                 false, // upgradeOneDie handled in assembleVolleyPool
-                ship.spoofedFireControlActive || false,
-                ewModifier
+                ship.spoofedFireControlActive || false
             );
             if (targetingPackageIndex !== -1) {
               targetingPackages.splice(targetingPackageIndex, 1);
@@ -2571,11 +2587,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
             const updatedPlayers = [...s.players];
             updatedPlayers[playerIndex] = {
               ...updatedPlayers[playerIndex],
-              commandTokens: updatedPlayers[playerIndex].commandTokens + neuralLinkBonusCt,
+              pendingCommandTokenBonus: (updatedPlayers[playerIndex].pendingCommandTokenBonus ?? 0) + neuralLinkBonusCt,
             };
             return { players: updatedPlayers };
           });
-          get().addLog('system', `Experimental Tech: Neural Link Uplink granted +${neuralLinkBonusCt} CT to ${player.name}.`);
+          get().addLog('system', `Experimental Tech: Neural Link Uplink will grant +${neuralLinkBonusCt} CT next round to ${player.name}.`);
         }
 
         if (fireRoE?.mechanicalEffect.hullDamageTriggersCrit) {
@@ -2678,7 +2694,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 result: procResult,
                 standardEffect: 'Repair 2 Hull instead of 1.',
                 failureEffect: 'Base action resolves at 1 Hull repaired.',
-                criticalEffect: 'Repair 2 Hull and gain +1 Command Token immediately.',
+                criticalEffect: 'Repair 2 Hull and gain +1 Command Token next round.',
               },
             });
           }
@@ -2695,10 +2711,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
           if (procResult?.isCritical) {
             const ps = [...state.players];
             const p = { ...ps[playerIndex] };
-            p.commandTokens += 1;
+            p.pendingCommandTokenBonus = (p.pendingCommandTokenBonus ?? 0) + 1;
             ps[playerIndex] = p;
             set({ players: ps });
-            get().addLog('system', `Miracle Work: ${dcName} optimized the power grid and gained +1 CT.`);
+            get().addLog('system', `Miracle Work: ${dcName} optimized the power grid and will gain +1 CT next round.`);
           }
         }
 
@@ -3037,10 +3053,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
         if (updates.currentHull === 0) updates.isDestroyed = true;
         const ps = [...state.players];
         const p = { ...ps[playerIndex] };
-        p.commandTokens += 4;
+        p.pendingCommandTokenBonus = (p.pendingCommandTokenBonus ?? 0) + 4;
         ps[playerIndex] = p;
         set({ players: ps });
-        get().addLog('damage', `Auxiliary Core Overcharged on ${ship.name}! +4 CT, -1 Hull.`);
+        get().addLog('damage', `Auxiliary Core Overcharged on ${ship.name}! +4 CT next round, -1 Hull.`);
         break;
       }
       case 'hermit-reactor-baffles': {
@@ -3064,10 +3080,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
           updatedPlayer.officers = updatedOfficers;
         }
 
-        updatedPlayer.commandTokens = Math.min(roundCtState.roundStartCt, updatedPlayer.commandTokens + 1);
+        updatedPlayer.pendingCommandTokenBonus = (updatedPlayer.pendingCommandTokenBonus ?? 0) + 1;
         updatedPlayers[playerIndex] = updatedPlayer;
         set({ players: updatedPlayers });
-        get().addLog('system', `${ship.name} bled reactor heat: Engineering recovered 1 Stress and restored 1 CT (up to round maximum).`);
+        get().addLog('system', `${ship.name} bled reactor heat: Engineering recovered 1 Stress and will gain +1 CT next round.`);
         break;
       }
       case 'salvaged-ai-coprocessor': {
@@ -3843,7 +3859,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                   evasiveManeuvers: attackResult.evasiveManeuvers,
                   targetLockModifier: 0,
                   trackingBonus: 0,
-                  otherModifiers: 0,
+                  namedModifiers: [],
                   total: attackResult.targetNumber,
                 },
                 ionNebulaActive: attackResult.ionNebulaActive,
@@ -4261,10 +4277,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const player = state.players.find(p => p.shipId === payload.shipId);
       if (!player) return false;
       set(s => ({
-        players: s.players.map(p => p.id === player.id ? { ...p, commandTokens: p.commandTokens + 1 } : p),
+        players: s.players.map(p => p.id === player.id ? { ...p, pendingCommandTokenBonus: (p.pendingCommandTokenBonus ?? 0) + 1 } : p),
       }));
       success = true;
-      get().addLog('system', `Fleet Asset: Emergency Reinforcement granted +1 CT to ${get().getShipName(payload.shipId)}.`);
+      get().addLog('system', `Fleet Asset: Emergency Reinforcement will grant +1 CT next round to ${get().getShipName(payload.shipId)}.`);
     }
 
     if (assetId === 'targeting-package' && payload.attackerShipId && payload.targetShipId && payload.mode) {

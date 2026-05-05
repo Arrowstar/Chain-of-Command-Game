@@ -128,7 +128,8 @@ describe('Fleet Assets', () => {
 
     expect(store.useFleetAsset('emergency-reinforcement', { shipId: 's1' })).toBe(true);
     let state = useGameStore.getState();
-    expect(state.players[0].commandTokens).toBe(6);
+    expect(state.players[0].commandTokens).toBe(5);
+    expect(state.players[0].pendingCommandTokenBonus).toBe(1);
     expect(state.fleetFavor).toBe(4);
 
     expect(state.useFleetAsset('emergency-reinforcement', { shipId: 's1' })).toBe(false);
@@ -156,7 +157,8 @@ describe('Fleet Assets', () => {
 
     expect(useGameStore.getState().useFleetAsset('emergency-reinforcement', { shipId: 's2' })).toBe(true);
     state = useGameStore.getState();
-    expect(state.players[1].commandTokens).toBe(6);
+    expect(state.players[1].commandTokens).toBe(5);
+    expect(state.players[1].pendingCommandTokenBonus).toBe(1);
     expect(state.useFleetAsset('emergency-reinforcement', { shipId: 's2' })).toBe(false);
   });
 

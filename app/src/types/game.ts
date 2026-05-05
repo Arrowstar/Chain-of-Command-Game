@@ -6,6 +6,11 @@ export interface HexCoord {
   r: number;
 }
 
+export interface NamedModifier {
+  name: string;
+  value: number;
+}
+
 export interface DeploymentBounds {
   minQ: number;
   maxQ: number;
@@ -520,23 +525,23 @@ export type AIBehaviorTag = 'aggressive' | 'artillery' | 'hunter' | 'swarm' | 's
  */
 export type ShipTrait =
   /** Aura around this ship that affects enemies within radius. */
-  | { type: 'aura'; effect: 'tnPenalty' | 'evasionBonus'; radius: number; amount: number }
+  | { type: 'aura'; effect: 'tnPenalty' | 'evasionBonus'; radius: number; amount: number; name?: string }
   /** Bonus dice (or evasion) when attacking within a distance band. */
-  | { type: 'rangeConditional'; minRange: number; maxRange: number; extraVolley?: DieType[]; evasionBonus?: number }
+  | { type: 'rangeConditional'; minRange: number; maxRange: number; extraVolley?: DieType[]; evasionBonus?: number; name?: string }
   /** Bonus dice when the struck sector is in the ship's rear arcs. */
-  | { type: 'flankingConditional'; requiredArcs: ShipArc[]; extraVolley: DieType[] }
+  | { type: 'flankingConditional'; requiredArcs: ShipArc[]; extraVolley: DieType[]; name?: string }
   /** Bonus evasion when this ship occupies a specific terrain type. */
-  | { type: 'terrainConditional'; terrain: TerrainType; evasionBonus: number }
+  | { type: 'terrainConditional'; terrain: TerrainType; evasionBonus: number; name?: string }
   /** Spawn fighters each round (replaces hardcoded carrier logic). */
-  | { type: 'spawner'; tokenClass: string; count: number }
+  | { type: 'spawner'; tokenClass: string; count: number; name?: string }
   /** Bonus evasion when this ship moved at least N hexes this round. */
-  | { type: 'movementConditional'; minHexesMoved: number; evasionBonus: number }
+  | { type: 'movementConditional'; minHexesMoved: number; evasionBonus: number; name?: string }
   /** Bonus dice when hull is at or below a fractional threshold (e.g. 0.5 = 50%). */
-  | { type: 'hullThresholdConditional'; threshold: number; extraVolley: DieType[] }
+  | { type: 'hullThresholdConditional'; threshold: number; extraVolley: DieType[]; name?: string }
   /** Grants Armor Piercing on attacks when this ship did not move this round. */
-  | { type: 'stationaryConditional'; grantsArmorPiercing: boolean }
+  | { type: 'stationaryConditional'; grantsArmorPiercing: boolean; name?: string }
   /** Bonus evasion when no player ship is within radius. */
-  | { type: 'isolationConditional'; radius: number; evasionBonus: number }
+  | { type: 'isolationConditional'; radius: number; evasionBonus: number; name?: string }
   /** The ship's weapons deal double damage to shields but zero damage to hull. */
   | { type: 'shieldBreaker' };
 

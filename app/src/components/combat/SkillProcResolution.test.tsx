@@ -70,7 +70,7 @@ describe('SkillProcResolution', () => {
           },
           standardEffect: 'Repair 2 Hull instead of 1.',
           failureEffect: 'Base action resolves at 1 Hull repaired.',
-          criticalEffect: 'Repair 2 Hull and gain +1 Command Token immediately.',
+          criticalEffect: 'Repair 2 Hull and gain +1 Command Token next round.',
         }}
         onClose={() => {}}
       />,

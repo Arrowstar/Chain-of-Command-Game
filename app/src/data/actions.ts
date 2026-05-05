@@ -87,7 +87,7 @@ export const STANDARD_ACTIONS: ActionDefinition[] = [
     name: 'Damage Control',
     ctCost: 2,
     stressCost: 2,
-    effect: 'Repair 1 Hull point or attempt to clear a Critical Damage card (roll 4+ on D6). Miracle Work: hull repair rolls Engineering Skill Die on 4+ for 2 Hull; crit also grants +1 CT.',
+    effect: 'Repair 1 Hull point or attempt to clear a Critical Damage card (roll 4+ on D6). Miracle Work: hull repair rolls Engineering Skill Die on 4+ for 2 Hull; crit also grants +1 CT next round.',
   },
   {
     id: 'reroute-power',

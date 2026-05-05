@@ -14,7 +14,7 @@ export const FLEET_ASSET_DEFINITIONS: FleetAssetDefinition[] = [
     name: 'Emergency Reinforcement',
     ffCost: 1,
     timing: 'Use during Command or Execution.',
-    effect: 'One ship gains +1 CT immediately this round.',
+    effect: 'One ship gains +1 CT at the start of the next round.',
     limitations: 'Limit: twice per round fleetwide. A ship can benefit once per round.',
   },
   {

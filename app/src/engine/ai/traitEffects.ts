@@ -84,8 +84,8 @@ export function applyDefensiveTraits(
   allEnemies: EnemyShipState[],
   playerShips: ShipState[],
   targetTerrain: TerrainType | undefined,
-): number {
-  let bonus = 0;
+): import('../../types/game').NamedModifier[] {
+  const modifiers: import('../../types/game').NamedModifier[] = [];
 
   // ── Target's own traits ──────────────────────────────────────────
   for (const trait of targetAdv.traits ?? []) {
@@ -95,20 +95,20 @@ export function applyDefensiveTraits(
           .filter(p => !p.isDestroyed)
           .reduce((min, p) => Math.min(min, hexDistance(target.position, p.position)), Infinity);
         if (nearestPlayer > trait.radius) {
-          bonus += trait.evasionBonus;
+          modifiers.push({ name: trait.name || 'Isolation Bonus', value: trait.evasionBonus });
         }
         break;
       }
 
       case 'terrainConditional':
         if (targetTerrain === trait.terrain) {
-          bonus += trait.evasionBonus;
+          modifiers.push({ name: trait.name || 'Cover Tactics', value: trait.evasionBonus });
         }
         break;
 
       case 'movementConditional':
         if ((target.hexesMovedThisRound ?? 0) >= trait.minHexesMoved) {
-          bonus += trait.evasionBonus;
+          modifiers.push({ name: trait.name || 'Hit and Run', value: trait.evasionBonus });
         }
         break;
 
@@ -128,12 +128,12 @@ export function applyDefensiveTraits(
         trait.effect === 'evasionBonus' &&
         hexDistance(other.position, target.position) <= trait.radius
       ) {
-        bonus += trait.amount;
+        modifiers.push({ name: trait.name || 'Aura Bonus', value: trait.amount });
       }
     }
   }
 
-  return bonus;
+  return modifiers;
 }
 
 /**
@@ -146,8 +146,8 @@ export function applyDefensiveTraits(
 export function applyAuraTNPenalty(
   targetPosition: EnemyShipState['position'],
   allEnemies: EnemyShipState[],
-): number {
-  let penalty = 0;
+): import('../../types/game').NamedModifier[] {
+  const modifiers: import('../../types/game').NamedModifier[] = [];
 
   for (const other of allEnemies) {
     if (other.isDestroyed) continue;
@@ -159,10 +159,10 @@ export function applyAuraTNPenalty(
         trait.effect === 'tnPenalty' &&
         hexDistance(other.position, targetPosition) <= trait.radius
       ) {
-        penalty += trait.amount;
+        modifiers.push({ name: trait.name || 'Aura Penalty', value: trait.amount });
       }
     }
   }
 
-  return penalty;
+  return modifiers;
 }

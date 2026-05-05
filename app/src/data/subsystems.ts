@@ -72,7 +72,7 @@ export const SUBSYSTEMS: Subsystem[] = [
     rpCost: 50,
     dpCost: 20,
     actionName: 'Overcharge Core',
-    effect: 'Immediately gain 4 CT to distribute among your other stations for this round. However, the surge causes your ship to take 1 unblockable Hull damage.',
+    effect: 'Gain 4 CT at the start of the next round. However, the surge causes your ship to take 1 unblockable Hull damage.',
     imagePath: '/assets/subsystems/AuxReactor.png',
   },
   {
@@ -98,7 +98,7 @@ export const SUBSYSTEMS: Subsystem[] = [
     rpCost: 55,
     dpCost: 18,
     actionName: 'Bleed Heat',
-    effect: 'Remove 1 Stress from Engineering and restore 1 CT to your ship. Cannot raise CT above its maximum.',
+    effect: 'Remove 1 Stress from Engineering and gain +1 CT at the start of the next round.',
     availability: 'event',
     imagePath: '/assets/subsystems/HermitReactorBaffles.png',
   },

@@ -16,6 +16,17 @@ describe('combat engine', () => {
     expect(breakdown.total).toBe(5);
   });
 
+  it('calculateTN aggregates named modifiers correctly', () => {
+    const namedModifiers = [
+      { name: 'Bulwark', value: 1 },
+      { name: 'Exposed', value: -1 },
+      { name: 'Jammed', value: 2 }
+    ];
+    const breakdown = calculateTN(5, 1, undefined, 0, 0, 0, namedModifiers);
+    expect(breakdown.namedModifiers).toEqual(namedModifiers);
+    expect(breakdown.total).toBe(7); // 5 + 0 (range 1) + 1 - 1 + 2
+  });
+
   it('assembleVolleyPool combines weapon and tactical officer die', () => {
     const weapon: WeaponModule = {
       id: 'w1', name: 'W1', arcs: ['fore'], rangeMin: 1, rangeMax: 3,
@@ -226,7 +237,7 @@ describe('combat engine', () => {
       { q: 1, r: -1 }, HexFacing.Aft,
       3, shields, 'd4', 10, 10, false, weapon, [
         { type: 'd8', source: 'weapon' },
-      ], undefined, 0, 0, false, false, false, false, undefined, false, false, false, 0, false, false, 5 // critThresholdOverride = 5
+      ], undefined, 0, 0, false, false, false, false, undefined, false, false, false, 0, [], false, 5 // critThresholdOverride = 5
     );
 
     expect(dmg.volleyResult.totalCrits).toBe(1);

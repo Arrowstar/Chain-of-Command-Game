@@ -28,7 +28,7 @@ export interface TNBreakdown {
   evasiveManeuvers: number;
   targetLockModifier: number;
   trackingBonus: number; // New: -1 TN for PDCs vs Small Craft
-  otherModifiers: number;
+  namedModifiers: import('../types/game').NamedModifier[];
   total: number;
 }
 
@@ -42,7 +42,7 @@ export function getAntiSmallCraftTNModifier(weapon: WeaponModule, targetSize?: S
 /**
  * Calculate the Target Number (TN) for an attack.
  *
- * TN = Base Evasion + Range Modifier + Terrain Modifier + Active Maneuvers + Tracking
+ * TN = Base Evasion + Range Modifier + Terrain Modifier + Active Maneuvers + Tracking + Named Modifiers
  */
 export function calculateTN(
   defenderEvasion: number,
@@ -51,9 +51,8 @@ export function calculateTN(
   evasiveManeuvers: number,
   targetLockModifier: number,
   trackingBonus: number = 0,
-  otherModifiers: number = 0,
+  namedModifiers: import('../types/game').NamedModifier[] = [],
   ignoreRangePenalty: boolean = false,
-  attackerIsJammed: boolean = false,
 ): TNBreakdown {
   let rangeModifier = getRangeModifier(distance);
   // Optional Manticore Override: Advanced Telemetry
@@ -66,8 +65,8 @@ export function calculateTN(
     terrainModifier = TERRAIN_DATA[defenderTerrain]?.tnModifier ?? 0;
   }
 
-  const finalOtherModifiers = otherModifiers + (attackerIsJammed ? 2 : 0);
-  const total = defenderEvasion + rangeModifier + terrainModifier + evasiveManeuvers + targetLockModifier + trackingBonus + finalOtherModifiers;
+  const namedModifiersTotal = namedModifiers.reduce((sum, mod) => sum + mod.value, 0);
+  const total = defenderEvasion + rangeModifier + terrainModifier + evasiveManeuvers + targetLockModifier + trackingBonus + namedModifiersTotal;
 
   return {
     baseEvasion: defenderEvasion,
@@ -76,10 +75,11 @@ export function calculateTN(
     evasiveManeuvers,
     targetLockModifier,
     trackingBonus,
-    otherModifiers: finalOtherModifiers,
+    namedModifiers,
     total: Math.max(1, total), // minimum TN of 1
   };
 }
+
 
 /**
  * Assemble the volley pool for an attack.
@@ -193,12 +193,11 @@ export function resolveAttack(
   tachyonStrike: boolean = false,
   pdcDisabled: boolean = false,
   targetRerolls: number = 0,
-  attackerIsJammed: boolean = false,
+  namedModifiers: import('../types/game').NamedModifier[] = [],
   rerollTacticalOnes: boolean = false,
   critThresholdOverride?: number,
   upgradeOneDie: boolean = false,
   spoofedFireControlActive: boolean = false,
-  ewModifier: number = 0,
 ): DamageResult {
   const distance = hexDistance(attackerPos, defenderPos);
 
@@ -218,7 +217,7 @@ export function resolveAttack(
       hullDamage: 0,
       criticalTriggered: false,
       volleyResult: emptyVolley,
-      tnBreakdown: { baseEvasion: 0, rangeModifier: 0, terrainModifier: 0, evasiveManeuvers: 0, targetLockModifier: 0, trackingBonus: 0, otherModifiers: 0, total: 0 },
+      tnBreakdown: { baseEvasion: 0, rangeModifier: 0, terrainModifier: 0, evasiveManeuvers: 0, targetLockModifier: 0, trackingBonus: 0, namedModifiers: [], total: 0 },
       outOfRange: true,
     };
   }
@@ -239,7 +238,7 @@ export function resolveAttack(
       hullDamage: 0,
       criticalTriggered: false,
       volleyResult: emptyVolley,
-      tnBreakdown: { baseEvasion: 0, rangeModifier: 0, terrainModifier: 0, evasiveManeuvers: 0, targetLockModifier: 0, trackingBonus: 0, otherModifiers: 0, total: 0 },
+      tnBreakdown: { baseEvasion: 0, rangeModifier: 0, terrainModifier: 0, evasiveManeuvers: 0, targetLockModifier: 0, trackingBonus: 0, namedModifiers: [], total: 0 },
       outOfArc: true,
     };
   }
@@ -254,9 +253,8 @@ export function resolveAttack(
     evasiveManeuvers,
     targetLockModifier,
     trackingBonus,
-    ewModifier, // otherModifiers
+    namedModifiers,
     ignoreRangePenalty,
-    attackerIsJammed
   );
 
   // Roll the volley
