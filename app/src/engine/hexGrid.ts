@@ -232,7 +232,7 @@ export function determineStruckShieldSector(
   // Subtract the defender's visual facing angle.
   // Each facing is 60° but facing-0 starts at FACING_PIXEL_OFFSET_DEG (-30°).
   const facingAngle = defenderFacing * 60 + FACING_PIXEL_OFFSET_DEG;
-  let relativeAngle = ((angle - facingAngle) % 360 + 360) % 360;
+  const relativeAngle = ((angle - facingAngle) % 360 + 360) % 360;
 
   // Map relative angle to arc (each arc spans 60°)
   const arcIndex = Math.floor(((relativeAngle + 30) % 360) / 60);

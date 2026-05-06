@@ -95,7 +95,7 @@ function bfsPath(
 
       if (distToGoal === 0) {
         // Found the exact goal hex!
-        let resultPath = newPath.slice(0, speed);
+        const resultPath = newPath.slice(0, speed);
         // Check stacking at our final destination step
         while (resultPath.length > 0) {
           const finalHex = resultPath[resultPath.length - 1];
@@ -119,7 +119,7 @@ function bfsPath(
 
   // If goal is unreachable, take the path that gets us closest, up to `speed` steps
   if (bestPath.length > 0) {
-    let resultPath = bestPath.slice(0, Math.min(speed, bestPath.length));
+    const resultPath = bestPath.slice(0, Math.min(speed, bestPath.length));
     while (resultPath.length > 0) {
       const finalHex = resultPath[resultPath.length - 1];
       if (fightersInHex(finalHex, allFighters, fighter.id) < MAX_FIGHTERS_PER_HEX) {

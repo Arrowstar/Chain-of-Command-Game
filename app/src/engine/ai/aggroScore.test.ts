@@ -10,14 +10,14 @@ vi.mock('../../data/shipChassis', () => ({
 }));
 
 describe('AI Aggro Scoring', () => {
-  const makeAIShip = (overrides: Partial<EnemyShipState> = {}): EnemyShipState => ({ /* @ts-ignore */ 
+  const makeAIShip = (overrides: Partial<EnemyShipState> = {}): EnemyShipState => ({  
     id: 'ai-1',
     position: { q: 0, r: 0 },
     facing: 0,
     ...overrides,
   } as any);
 
-  const makePlayerShip = (overrides: Partial<ShipState> = {}): ShipState => ({ /* @ts-ignore */ 
+  const makePlayerShip = (overrides: Partial<ShipState> = {}): ShipState => ({  
     id: 'player-1',
     chassisId: 'paladin',
     position: { q: 2, r: 0 },

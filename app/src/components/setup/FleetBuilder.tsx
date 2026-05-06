@@ -541,7 +541,7 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
       };
     } else {
       const enemy = ADVERSARIES[0];
-      const enemyShip: EnemyShipState = { /* @ts-ignore */  kind: 'ship', faction: 'player', id: 'e1', name: enemy.name, adversaryId: enemy.id,
+      const enemyShip: EnemyShipState = { /* @ts-expect-error */  kind: 'ship', faction: 'player', id: 'e1', name: enemy.name, adversaryId: enemy.id,
         kind: 'ship' as const, faction: 'hegemony' as const,
         position: { q: 9, r: -9 }, facing: HexFacing.Aft, currentSpeed: enemy.speed,
         currentHull: enemy.hull, maxHull: enemy.hull,

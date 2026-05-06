@@ -1,4 +1,4 @@
-import type { OfficerStation, DieType, SkillDieTier } from './game';
+import type { OfficerStation, SkillDieTier } from './game';
 
 export type CampaignDifficulty = 'easy' | 'normal' | 'hard';
 

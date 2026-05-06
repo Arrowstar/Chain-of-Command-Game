@@ -293,7 +293,7 @@ export default function SectorMapView() {
     const dimOpacity   = isLocked ? 0.4 : isMissed ? 0.3 : 1;
 
     // Stroke / glow based on state
-    let strokeColor = color;
+    const strokeColor = color;
     let strokeWidth = 1.5;
     let strokeOpacity = 0.6;
     let filterRef = 'url(#glow-default)';

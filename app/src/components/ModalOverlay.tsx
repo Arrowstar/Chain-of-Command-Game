@@ -18,7 +18,7 @@ export default function ModalOverlay() {
       setIsDelaying(true);
       
       if (activeModal === 'volley' && modalData?.fireAnimation) {
-        useUIStore.getState().queueFireAnimation(modalData.fireAnimation);
+        useUIStore.getState().queueFireAnimation(modalData.fireAnimation as import('../types/game').WeaponFireEvent);
       }
 
       const timer = setTimeout(() => {
@@ -66,32 +66,32 @@ export default function ModalOverlay() {
       justifyContent: 'center',
       alignItems: 'center'
     }}>
-      {visibleModal === 'volley' && visibleData && visibleData.results && (
+      {visibleModal === 'volley' && visibleData && (visibleData as any).results && (
         <VolleyBreakdown 
-          results={visibleData.results as any}
-          weaponName={visibleData.weaponName as string}
-          attackerId={visibleData.attackerId as string}
+          results={(visibleData as any).results as any}
+          weaponName={(visibleData as any).weaponName as string}
+          attackerId={(visibleData as any).attackerId as string}
           onClose={hideModal} 
         />
       )}
 
-      {visibleModal === 'skill-proc' && visibleData && visibleData.data && (
+      {visibleModal === 'skill-proc' && visibleData && (visibleData as any).data && (
         <SkillProcResolution
-          data={visibleData.data as any}
+          data={(visibleData as any).data as any}
           onClose={hideModal}
         />
       )}
       
       {/* Fumble Modal */}
-      {visibleModal === 'fumble' && visibleData && visibleData.card && (
+      {visibleModal === 'fumble' && visibleData && (visibleData as any).card && (
         <div className="panel panel--danger" style={{ width: '400px', maxWidth: '90vw', padding: 'var(--space-md)', textAlign: 'center' }}>
           <div className="label" style={{ color: 'var(--color-hostile-red)', marginBottom: 'var(--space-md)' }}>OFFICER FUMBLE</div>
-          <h2 style={{ color: 'var(--color-text-bright)', marginBottom: 'var(--space-sm)' }}>{(visibleData.card as any).name}</h2>
+          <h2 style={{ color: 'var(--color-text-bright)', marginBottom: 'var(--space-sm)' }}>{((visibleData as any).card as any).name}</h2>
           <div style={{ fontStyle: 'italic', fontSize: '0.85rem', marginBottom: 'var(--space-md)', color: 'var(--color-text-dim)' }}>
-            "{(visibleData.card as any).flavorText}"
+            "{((visibleData as any).card as any).flavorText}"
           </div>
           <div style={{ padding: '8px', background: 'rgba(255,50,50,0.1)', border: '1px solid var(--color-hostile-red)', marginBottom: 'var(--space-md)' }}>
-            {(visibleData.card as any).effect}
+            {((visibleData as any).card as any).effect}
           </div>
           <button className="btn btn--execute" style={{ width: '100%' }} onClick={hideModal}>ACKNOWLEDGE</button>
         </div>

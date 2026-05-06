@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { executeAITier } from '../engine/ai/aiTurn';
+
 import { useGameStore } from './useGameStore';
 import { useUIStore } from './useUIStore';
 import type { FumbleCard, PlayerState, QueuedAction } from '../types/game';
@@ -32,13 +32,13 @@ describe('Trauma Effects', () => {
         } as PlayerState
       ],
       playerShips: [{ kind: 'ship', faction: 'player', id: 's1', name: 'Ship 1', chassisId: 'c1', ownerId: 'p1',
-          position: { q: 0, r: 0 }, facing: 0 as any, currentSpeed: 2, currentHull: 10, maxHull: 10,
+          position: { q: 0, r: 0 }, facing: 0 as import('../types/game').HexFacing, currentSpeed: 2, currentHull: 10, maxHull: 10,
           shields: { fore: 2, foreStarboard: 2, aftStarboard: 2, aft: 2, aftPort: 2, forePort: 2 }, maxShieldsPerSector: 2,
           equippedWeapons: ['w1'], equippedSubsystems: [], criticalDamage: [], scars: [],
           armorDie: 'd6', baseEvasion: 5, evasionModifiers: 0, isDestroyed: false, hasDroppedBelow50: false, hasDrifted: false, targetLocks: []
         }
       ],
-      enemyShips: [{ kind: 'ship', faction: 'hegemony', id: 'e1', name: 'Enemy 1', adversaryId: 'hunter-killer', position: { q: 5, r: 0 }, facing: 3 as any,
+      enemyShips: [{ kind: 'ship', faction: 'hegemony', id: 'e1', name: 'Enemy 1', adversaryId: 'hunter-killer', position: { q: 5, r: 0 }, facing: 3 as import('../types/game').HexFacing,
           currentSpeed: 0, currentHull: 10, maxHull: 10,
           shields: { fore: 2, foreStarboard: 2, aftStarboard: 2, aft: 2, aftPort: 2, forePort: 2 },
           maxShieldsPerSector: 2,
@@ -135,8 +135,8 @@ describe('Trauma Effects', () => {
     expect(ship.evasiveManeuvers).toBe(3);
     expect(helmOfficer.currentStress).toBe(0);
     expect(modal.activeModal).toBe('skill-proc');
-    expect(modal.modalData?.data?.title).toBe('Precision Maneuvering');
-    expect(modal.modalData?.data?.result?.isCritical).toBe(true);
+    expect((modal.modalData as any)?.data?.title).toBe('Precision Maneuvering');
+    expect((modal.modalData as any)?.data?.result?.isCritical).toBe(true);
     vi.restoreAllMocks();
   });
 
@@ -160,8 +160,8 @@ describe('Trauma Effects', () => {
     expect(player.commandTokens).toBe(4);
     expect(player.pendingCommandTokenBonus).toBe(1);
     expect(modal.activeModal).toBe('skill-proc');
-    expect(modal.modalData?.data?.title).toBe('Miracle Work');
-    expect(modal.modalData?.data?.result?.isCritical).toBe(true);
+    expect((modal.modalData as any)?.data?.title).toBe('Miracle Work');
+    expect((modal.modalData as any)?.data?.result?.isCritical).toBe(true);
     vi.restoreAllMocks();
   });
 
@@ -205,9 +205,9 @@ describe('Trauma Effects', () => {
     expect(enemy.targetLocks).toEqual([-3]);
     expect(enemy.targetLockArmorPiercingShots).toBe(1);
     expect(modal.activeModal).toBe('skill-proc');
-    expect(modal.modalData?.data?.title).toBe('Target Painting');
-    expect(modal.modalData?.data?.result?.isCritical).toBe(true);
-    expect(modal.modalData?.data?.standardEffect).toBe('Target Lock improves from -2 TN to -3 TN for the rest of the round due to Eagle Eye.');
+    expect((modal.modalData as any)?.data?.title).toBe('Target Painting');
+    expect((modal.modalData as any)?.data?.result?.isCritical).toBe(true);
+    expect((modal.modalData as any)?.data?.standardEffect).toBe('Target Lock improves from -2 TN to -3 TN for the rest of the round due to Eagle Eye.');
     vi.restoreAllMocks();
   });
 
@@ -225,9 +225,9 @@ describe('Trauma Effects', () => {
     const modal = useUIStore.getState();
     expect(enemy.targetLocks).toEqual([-2]);
     expect(modal.activeModal).toBe('skill-proc');
-    expect(modal.modalData?.data?.result?.isSuccess).toBe(false);
-    expect(modal.modalData?.data?.failureEffect).toBe('Base action resolves at -2 TN.');
-    expect(modal.modalData?.data?.standardEffect).toBe('Target Lock improves from -2 TN to -3 TN for the rest of the round due to Eagle Eye.');
+    expect((modal.modalData as any)?.data?.result?.isSuccess).toBe(false);
+    expect((modal.modalData as any)?.data?.failureEffect).toBe('Base action resolves at -2 TN.');
+    expect((modal.modalData as any)?.data?.standardEffect).toBe('Target Lock improves from -2 TN to -3 TN for the rest of the round due to Eagle Eye.');
     vi.restoreAllMocks();
   });
 
@@ -289,7 +289,7 @@ describe('Trauma Effects', () => {
       const ship = state.playerShips[0];
       ship.position = { q: 0, r: 0 };
       // Add an asteroid hex at q=1, r=0 (adjacent)
-      const terrainMap = new Map<string, any>(state.terrainMap);
+      const terrainMap = new Map<string, import('../types/game').TerrainType>(state.terrainMap);
       terrainMap.set('1,0', 'asteroids');
       return { players: [p], playerShips: [ship], terrainMap };
     });

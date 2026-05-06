@@ -740,7 +740,7 @@ export function generateProceduralScenario(
     generationReport.push(`[PROCGEN] Objective Constraint: spawned ${selected} ("${stationName}") as primary target. Remaining budget ${budget}.`);
   } else if (spawnTurretBreach) {
     const turretTypes = ['heavy-turret', 'missile-turret', 'pdc-turret'];
-    let numTurrets = Math.min(5, Math.max(3, Math.floor(budget / 3)));
+    const numTurrets = Math.min(5, Math.max(3, Math.floor(budget / 3)));
     const qStart = -Math.floor(numTurrets / 2) * 2;
     for(let i=0; i<numTurrets; i++) {
         const type = pickRandom(turretTypes);

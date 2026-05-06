@@ -3,7 +3,7 @@ import { executeDrift, rotateShip, adjustSpeed, canOccupyHex } from './movement'
 import type { ShipState } from '../types/game';
 import { HexFacing, TerrainType } from '../types/game';
 
-const dummyShip: ShipState = { /* @ts-ignore */  kind: 'ship', faction: 'player', id: 'ship-1',
+const dummyShip: ShipState = {   kind: 'ship', faction: 'player', id: 'ship-1',
   name: 'Test Vessel',
   chassisId: 'vanguard',
   ownerId: 'player-1',

@@ -1,10 +1,6 @@
 import { create } from 'zustand';
 import type {
   CampaignState,
-  CampaignPhase,
-  ExperimentalTech,
-  CombatModifiers,
-  MarketInventory,
   PostCombatResult,
   FleetFavorConversionResult,
   EventResolution,
@@ -22,11 +18,12 @@ import {
   buildEventRequirementContext,
   getEventOptionAvailability,
   purchaseHullPatch, scrapItem, purchasePsychEval, purchaseDeepRepair, purchaseOfficerTraining,
-  advanceToNextSector, checkTotalWipe, getShipReplacementConfig,
+  advanceToNextSector, checkTotalWipe,
   generateMarketInventory,
-  purchaseChassisUpgrade, purchaseMarketItemFn, swapStashItem,
+  purchaseChassisUpgrade, purchaseMarketItemFn,
   applyShipReplacement,
 } from '../engine/campaignEngine';
+import type { AppliedEventState } from '../engine/campaignEngine';
 import { getChassisById } from '../data/shipChassis';
 import { getTechById, drawRandomTech } from '../data/experimentalTech';
 import {
@@ -450,7 +447,7 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
       };
     });
 
-    let updatedPlayers = persistedPlayers.map(player => {
+    const updatedPlayers = persistedPlayers.map(player => {
       const traumasForPlayer = finalResult.traumasGained.filter(t => {
         const ship = updatedShips.find(s => s.id === player.shipId);
         return ship && t.shipId === ship.id;
@@ -671,10 +668,10 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
       availability.autoSuccess
     );
 
-    let applied: any = null;
-    set(state => {
+    let applied: AppliedEventState | null = null;
+    set((state: CampaignStore) => {
       if (!state.campaign) return state;
-      let revealedNodes = [...state.campaign.revealedNodeIds];
+      const revealedNodes = [...state.campaign.revealedNodeIds];
       applied = applyEventResolution({
         resolution,
         requisitionPoints: state.campaign.requisitionPoints,
@@ -718,7 +715,8 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
       };
     });
 
-    if (applied && applied.fleetFavor <= -5) {
+    const finalApplied = applied as any;
+    if (finalApplied && finalApplied.fleetFavor <= -5) {
       useGameStore.setState({
         gameOver: true,
         victory: false,
@@ -728,8 +726,8 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
     }
 
     // Fire toasts for removed scars
-    if (applied && applied.clearedScars) {
-      applied.clearedScars.forEach((s: any) => {
+    if (finalApplied && finalApplied.clearedScars) {
+      finalApplied.clearedScars.forEach((s: { scarName: string; shipName: string }) => {
         fireToast({ type: 'tech', message: `Scar Removed: ${s.scarName} on ${s.shipName}` });
         get().pushCampaignLog({
           type: 'system',
@@ -740,8 +738,6 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
     }
 
     // Fire toasts for resource changes
-    const prevRP = get().campaign?.requisitionPoints ?? 0;
-    const prevFF = get().campaign?.fleetFavor ?? 0;
     for (const effect of resolution.effectsApplied) {
       if (effect.type === 'rp' && (effect.value ?? 0) !== 0) {
         const v = effect.value ?? 0;
@@ -1351,8 +1347,8 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
       if (!state.campaign) return state;
       
       const SCRAP_VALUE = 15; // Standard scrap value
-      let newStashedWeapons = [...state.campaign.stashedWeapons];
-      let newStashedSubsystems = [...state.campaign.stashedSubsystems];
+      const newStashedWeapons = [...state.campaign.stashedWeapons];
+      const newStashedSubsystems = [...state.campaign.stashedSubsystems];
 
       if (isWeapon) {
         const idx = newStashedWeapons.indexOf(itemId);

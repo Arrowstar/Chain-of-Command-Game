@@ -126,7 +126,7 @@ describe('Fighter AI', () => {
     });
 
     it('handles escort behavior (stays near source ship)', () => {
-        const sourceShip: ShipState = { /* @ts-ignore */  kind: 'ship', faction: 'player', id: 'carrier-1', position: { q: 0, r: 0 } } as any;
+        const sourceShip: ShipState = {   kind: 'ship', faction: 'player', id: 'carrier-1', position: { q: 0, r: 0 } } as any;
         const fighter = makeFighter({ 
              
             sourceShipId: 'carrier-1', 
@@ -141,7 +141,7 @@ describe('Fighter AI', () => {
     });
 
     it('handles screen behavior (targets nearby threats)', () => {
-        const sourceShip: ShipState = { /* @ts-ignore */  kind: 'ship', faction: 'player', id: 'carrier-1', position: { q: 0, r: 0 } } as any;
+        const sourceShip: ShipState = {   kind: 'ship', faction: 'player', id: 'carrier-1', position: { q: 0, r: 0 } } as any;
         const fighter = makeFighter({ 
              
             sourceShipId: 'carrier-1', 

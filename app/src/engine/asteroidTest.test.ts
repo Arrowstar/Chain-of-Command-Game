@@ -6,7 +6,7 @@ import { planAIMovement } from './ai/behaviors';
 import { HexFacing, TerrainType, type ShipState, type EnemyShipState } from '../types/game';
 import { hexKey } from './hexGrid';
 
-const dummyShip: ShipState = { /* @ts-ignore */  kind: 'ship', faction: 'player', id: 'ship-1',
+const dummyShip: ShipState = {   kind: 'ship', faction: 'player', id: 'ship-1',
   name: 'Test Vessel',
   chassisId: 'vanguard',
   ownerId: 'player-1',

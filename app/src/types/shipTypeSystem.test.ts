@@ -35,7 +35,7 @@ const MINIMAL_SHIELDS = {
   aft: 2, aftPort: 2, forePort: 2,
 };
 
-const playerShip: ShipState = { /* @ts-ignore */ 
+const playerShip: ShipState = {  
   kind: 'ship',
   faction: 'player',
   id: 'ps1',
@@ -62,7 +62,7 @@ const playerShip: ShipState = { /* @ts-ignore */
   targetLocks: [],
 };
 
-const hegemonyShip: EnemyShipState = { /* @ts-ignore */ 
+const hegemonyShip: EnemyShipState = {  
   kind: 'ship',
   faction: 'hegemony',
   id: 'hs1',
@@ -84,7 +84,7 @@ const hegemonyShip: EnemyShipState = { /* @ts-ignore */
   armorDie: 'd4',
 };
 
-const alliedAIShip: EnemyShipState = { /* @ts-ignore */ 
+const alliedAIShip: EnemyShipState = {  
   kind: 'ship',
   faction: 'allied',
   id: 'as1',
@@ -303,7 +303,7 @@ describe('Faction-based filtering — store integration', () => {
   });
 
   it('isEnemyFaction filters destroyed hegemony ships correctly', () => {
-    const deadShip: EnemyShipState = { /* @ts-ignore */  ...hegemonyShip, id: 'dead-1', isDestroyed: true };
+    const deadShip: EnemyShipState = {   ...hegemonyShip, id: 'dead-1', isDestroyed: true };
     const liveHostiles = [hegemonyShip, deadShip].filter(s => isEnemyFaction(s) && !s.isDestroyed);
 
     expect(liveHostiles).toHaveLength(1);

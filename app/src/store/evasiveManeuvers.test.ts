@@ -15,7 +15,7 @@ describe('Evasive Maneuvers (Evasive Pattern) Separation', () => {
     const shipId = 'test-ship';
     const playerId = 'test-player';
     
-    const mockShip: ShipState = { kind: 'ship', faction: 'player', /* @ts-ignore */  id: shipId,
+    const mockShip: ShipState = { kind: 'ship', faction: 'player',   id: shipId,
       name: 'Test Ship',
       chassisId: 'vanguard',
       position: { q: 0, r: 0 },

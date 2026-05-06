@@ -54,7 +54,7 @@ describe('Combat Engine Edge Cases (Faction & Serialization)', () => {
   describe('Point Defense (PDC) Discrimination', () => {
     it('Player PDC fires on Hegemony fighters but ignores Allied fighters', () => {
       // Setup a player ship with PDC
-      const playerShip: ShipState = { kind: 'ship', faction: 'player', /* @ts-ignore */ 
+      const playerShip: ShipState = { kind: 'ship', faction: 'player',  
         id: 'ps1', name: 'PDC Cruiser', chassisId: 'manticore', ownerId: 'p1',
         position: { q: 0, r: 0 }, facing: 0, currentSpeed: 0, currentHull: 10, maxHull: 10,
         shields: { fore: 2, aft: 2, forePort: 2, aftPort: 2, foreStarboard: 2, aftStarboard: 2 }, maxShieldsPerSector: 2,
@@ -104,7 +104,7 @@ describe('Combat Engine Edge Cases (Faction & Serialization)', () => {
         officers: [{ officerId: 'vance', station: 'tactical', currentStress: 0, actionsPerformedThisRound: 0, usedMethodicalThisRound: false, traumas: [], currentTier: 'veteran', isLocked: false, lockDuration: 0, hasFumbledThisRound: false }]
       };
 
-      const attackerShip: ShipState = { kind: 'ship', faction: 'player', /* @ts-ignore */ 
+      const attackerShip: ShipState = { kind: 'ship', faction: 'player',  
         id: 'ps1', name: 'Attacker', chassisId: 'manticore', ownerId: 'p1',
         position: { q: 0, r: 0 }, facing: 0, currentSpeed: 0, currentHull: 10, maxHull: 10,
         shields: { fore: 2, aft: 2, forePort: 2, aftPort: 2, foreStarboard: 2, aftStarboard: 2 }, maxShieldsPerSector: 2,
@@ -113,7 +113,7 @@ describe('Combat Engine Edge Cases (Faction & Serialization)', () => {
         isDestroyed: false, hasDroppedBelow50: false, hasDrifted: false, targetLocks: []
       };
 
-      const friendlyShip: ShipState = { kind: 'ship', faction: 'player', /* @ts-ignore */ 
+      const friendlyShip: ShipState = { kind: 'ship', faction: 'player',  
         id: 'ps2', name: 'Friendly', chassisId: 'manticore', ownerId: 'p1',
         position: { q: 2, r: -2 }, facing: 0, currentSpeed: 0, currentHull: 10, maxHull: 10,
         shields: { fore: 0, aft: 0, forePort: 0, aftPort: 0, foreStarboard: 0, aftStarboard: 0 }, maxShieldsPerSector: 2,
@@ -121,7 +121,7 @@ describe('Combat Engine Edge Cases (Faction & Serialization)', () => {
         isDestroyed: false, hasDroppedBelow50: false, hasDrifted: false, targetLocks: []
       };
 
-      const enemyShip: EnemyShipState = { kind: 'ship', faction: 'hegemony', /* @ts-ignore */ 
+      const enemyShip: EnemyShipState = { kind: 'ship', faction: 'hegemony',  
         id: 'e1', name: 'Enemy', adversaryId: 'hegemony-enforcer',
         position: { q: 2, r: -2 }, facing: 3, currentSpeed: 0, currentHull: 10, maxHull: 10,
         shields: { fore: 0, aft: 0, forePort: 0, aftPort: 0, foreStarboard: 0, aftStarboard: 0 }, maxShieldsPerSector: 2,
@@ -156,7 +156,7 @@ describe('Combat Engine Edge Cases (Faction & Serialization)', () => {
 
   describe('Allied AI Treason Prevention', () => {
     it('Allied AI never targets Player ships even if they are the closest unit', () => {
-      const playerShip: ShipState = { kind: 'ship', faction: 'player', /* @ts-ignore */ 
+      const playerShip: ShipState = { kind: 'ship', faction: 'player',  
         id: 'ps1', name: 'Player', chassisId: 'manticore', ownerId: 'p1',
         position: { q: 0, r: 0 }, facing: 0, currentSpeed: 0, currentHull: 10, maxHull: 10,
         shields: { fore: 2, aft: 2, forePort: 2, aftPort: 2, foreStarboard: 2, aftStarboard: 2 }, maxShieldsPerSector: 2,
@@ -164,7 +164,7 @@ describe('Combat Engine Edge Cases (Faction & Serialization)', () => {
         isDestroyed: false, hasDroppedBelow50: false, hasDrifted: false, targetLocks: []
       };
 
-      const alliedAIShip: EnemyShipState = { /* @ts-ignore */ 
+      const alliedAIShip: EnemyShipState = {  
         kind: 'ship', faction: 'allied', id: 'a1', name: 'Allied AI', adversaryId: 'allied-escort',
         position: { q: 1, r: 0 }, facing: 3, currentSpeed: 0, currentHull: 10, maxHull: 10, // Adjacent to player
         shields: { fore: 2, aft: 2, forePort: 2, aftPort: 2, foreStarboard: 2, aftStarboard: 2 }, maxShieldsPerSector: 2,

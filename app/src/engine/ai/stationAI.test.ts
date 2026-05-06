@@ -69,7 +69,7 @@ describe('Station AI', () => {
     ...overrides,
   } as unknown as StationState);
 
-  const makePlayerShip = (overrides: Partial<ShipState> = {}): ShipState => ({ /* @ts-ignore */ 
+  const makePlayerShip = (overrides: Partial<ShipState> = {}): ShipState => ({  
     id: 'player-1',
     name: 'Resolute',
     chassisId: 'paladin',

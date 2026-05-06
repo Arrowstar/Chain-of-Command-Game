@@ -18,7 +18,7 @@ interface UIStore {
     targets: SelectionTarget[];
     position: { x: number; y: number } | null;
     action: { shipId: string; actionId: string } | null;
-    context: Record<string, any> | null;
+    context: Record<string, unknown> | null;
   } | null;
 
   // Drag and drop
@@ -42,8 +42,8 @@ interface UIStore {
 
   // Modal overlays
   activeModal: 'fumble' | 'critical' | 'tactic' | 'roe' | 'dice' | 'volley' | 'skill-proc' | null;
-  modalData: Record<string, any> | null;
-  modalQueue: { type: UIStore['activeModal'], data: Record<string, any> }[];
+  modalData: Record<string, unknown> | null;
+  modalQueue: { type: UIStore['activeModal'], data: Record<string, unknown> }[];
 
   // Red Alert
   isRedAlert: boolean;
@@ -54,7 +54,7 @@ interface UIStore {
   // Targeting Mode
   targetingMode: 'ship' | 'hex' | 'weapon' | null;
   activeTargetingAction: { shipId: string; actionId: string } | null;
-  activeTargetingContext: Record<string, any> | null;
+  activeTargetingContext: Record<string, unknown> | null;
 
   // Actions
   selectShip: (id: string | null) => void;
@@ -62,7 +62,7 @@ interface UIStore {
   hoverShip: (id: string | null) => void;
 
   // Selection Picker Actions
-  openSelectionPicker: (hex: HexCoord, targets: SelectionTarget[], position: { x: number; y: number }, action?: { shipId: string; actionId: string } | null, context?: Record<string, any> | null) => void;
+  openSelectionPicker: (hex: HexCoord, targets: SelectionTarget[], position: { x: number; y: number }, action?: { shipId: string; actionId: string } | null, context?: Record<string, unknown> | null) => void;
   closeSelectionPicker: () => void;
   setDragging: (dragging: boolean, station?: string | null) => void;
   panCamera: (dx: number, dy: number) => void;
@@ -83,8 +83,8 @@ interface UIStore {
   resetUnreadCount: () => void;
   
   // Targeting
-  startTargeting: (mode: 'ship' | 'hex' | 'weapon', action: { shipId: string; actionId: string }, context?: Record<string, any>) => void;
-  updateTargetingContext: (context: Record<string, any>) => void;
+  startTargeting: (mode: 'ship' | 'hex' | 'weapon', action: { shipId: string; actionId: string }, context?: Record<string, unknown>) => void;
+  updateTargetingContext: (context: Record<string, unknown>) => void;
   clearTargeting: () => void;
 
   // Fire Animations

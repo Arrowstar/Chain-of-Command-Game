@@ -8,13 +8,13 @@ vi.mock('../utils/diceRoller', () => ({
 }));
 
 describe('Gravity Well Engine', () => {
-  const makeShip = (id: string, pos: HexCoord): ShipState => ({ /* @ts-ignore */ 
+  const makeShip = (id: string, pos: HexCoord): ShipState => ({  
     id,
     position: pos,
     isDestroyed: false,
   } as any);
 
-  const makeEnemyShip = (id: string, pos: HexCoord): EnemyShipState => ({ /* @ts-ignore */ 
+  const makeEnemyShip = (id: string, pos: HexCoord): EnemyShipState => ({  
     id,
     position: pos,
     isDestroyed: false,

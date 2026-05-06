@@ -108,7 +108,7 @@ export function previewAITierMovement(
       .filter(s => s.id !== aiShip.id && !s.isDestroyed)
       .map(s => {
         const adv = getAdversaryById(s.adversaryId);
-        return { pos: s.position, tag: adv?.aiTag || 'aggressive' as any };
+        return { pos: s.position, tag: adv?.aiTag || 'aggressive' };
       });
 
     const movePlan = planAIMovement(
@@ -187,7 +187,7 @@ export function executeAITier(
         .filter(s => s.id !== aiShip.id && !s.isDestroyed)
         .map(s => {
           const adv = getAdversaryById(s.adversaryId);
-          return { pos: s.position, tag: adv?.aiTag || 'aggressive' as any };
+          return { pos: s.position, tag: adv?.aiTag || 'aggressive' };
         });
 
       const movePlan = planAIMovement(

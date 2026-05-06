@@ -250,7 +250,7 @@ export default function HexMap() {
         toRemove.delete(item.id);
 
         let ent = trackMap.get(item.id);
-        let targetParams = { x: 0, y: 0, rot: 0 };
+        const targetParams = { x: 0, y: 0, rot: 0 };
 
         if (!ent) {
           const gfx = new PIXI.Graphics();
@@ -669,7 +669,7 @@ export default function HexMap() {
     if (!deploymentMode) {
       const fighterPreviewGfx = new PIXI.Graphics();
       const activeFighterTokens = fighterTokens.filter(f => !f.isDestroyed && !f.hasDrifted);
-      let simulatedFighters = [...fighterTokens];
+      const simulatedFighters = [...fighterTokens];
 
       activeFighterTokens.forEach(fighter => {
         const moveResult = resolveFighterMovement(

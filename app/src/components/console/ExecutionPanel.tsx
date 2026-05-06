@@ -563,7 +563,7 @@ export default function ExecutionPanel() {
                               <div className="label" style={{ marginBottom: '8px' }}>Select Rotation Direction:</div>
                               <div style={{ display: 'flex', gap: '8px' }}>
                                 <button className="btn" style={{ flex: 1 }} onClick={() => {
-                                  resolveAction(owner!.id, ship.id, action.id, { direction: 'counter-clockwise' });
+                                  resolveAction(owner!.id, ship.id, action.id, { direction: 'counterclockwise' });
                                   setExpandedActionId(null);
                                 }}>PORT (CCW)</button>
                                 <button className="btn" style={{ flex: 1 }} onClick={() => {

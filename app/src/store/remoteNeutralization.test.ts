@@ -69,7 +69,7 @@ describe('Remote Neutralization (remote-disarm-drone-rig) Resolution', () => {
       isDestroyed: false,
     };
 
-    // @ts-ignore - setting private/internal state for test
+    // - setting private/internal state for test
     useGameStore.setState({
       players: [player as any],
       playerShips: [ship as any],

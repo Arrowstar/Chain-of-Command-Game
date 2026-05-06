@@ -247,8 +247,8 @@ export function drawRandomTech(excludeIds: string[] = []): ExperimentalTech | nu
  * Uses the weighted rarity system for each draw.
  */
 export function drawMultipleRandomTech(count: number, excludeIds: string[] = []): ExperimentalTech[] {
-  let drawn: ExperimentalTech[] = [];
-  let currentExcludes = [...excludeIds];
+  const drawn: ExperimentalTech[] = [];
+  const currentExcludes = [...excludeIds];
   
   for (let i = 0; i < count; i++) {
     const tech = drawRandomTech(currentExcludes);

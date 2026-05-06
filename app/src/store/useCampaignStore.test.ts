@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { NodeType } from '../engine/mapGenerator';
+import { NodeType, type SectorMap } from '../engine/mapGenerator';
 import { useCampaignStore } from './useCampaignStore';
 import { useGameStore } from './useGameStore';
 import type { PlayerState, ShipState } from '../types/game';
@@ -11,7 +11,7 @@ function makeShip(id: string): ShipState {
     chassisId: 'vanguard',
     ownerId: 'p1',
     position: { q: 0, r: 0 },
-    facing: 0 as any,
+    facing: 0 as import('../types/game').HexFacing,
     currentSpeed: 0,
     currentHull: 3,
     maxHull: 3,
@@ -74,9 +74,9 @@ describe('useCampaignStore event resolution', () => {
         pendingStoryId: null,
       },
       sectorMap: {
-        nodes: [{ id: 'node-event', type: NodeType.Event, layer: 1, x: 0, y: 0, eventId: 'event-21' }],
-        paths: [],
-      } as any,
+        nodes: [{ id: 'node-event', type: NodeType.Event, layer: 1, position: 0.5, paths: [], isRevealed: true, eventId: 'event-21' }],
+        maxLayer: 1,
+      } as SectorMap,
       persistedPlayers: [makePlayer('s1')],
       persistedShips: [makeShip('s1')],
       officerDataMap: {},
@@ -100,9 +100,9 @@ describe('useCampaignStore event resolution', () => {
         ? { ...state.campaign, currentNodeId: 'node-damage' }
         : null,
       sectorMap: {
-        nodes: [{ id: 'node-damage', type: NodeType.Event, layer: 1, x: 0, y: 0, eventId: 'event-14' }],
-        paths: [],
-      } as any,
+        nodes: [{ id: 'node-damage', type: NodeType.Event, layer: 1, position: 0.5, paths: [], isRevealed: true, eventId: 'event-14' }],
+        maxLayer: 1,
+      } as SectorMap,
       persistedShips: [{ ...makeShip('s1'), currentHull: 3, maxHull: 3 }],
     }));
 
@@ -187,9 +187,9 @@ describe('useCampaignStore event resolution', () => {
     useCampaignStore.setState(state => ({
       campaign: state.campaign ? { ...state.campaign, currentNodeId: 'boss-node' } : null,
       sectorMap: {
-        nodes: [{ id: 'boss-node', type: NodeType.Boss, layer: 15, x: 0, y: 0 }],
-        paths: [],
-      } as any,
+        nodes: [{ id: 'boss-node', type: NodeType.Boss, layer: 15, position: 0.5, paths: [], isRevealed: true }],
+        maxLayer: 15,
+      } as SectorMap,
     }));
 
     const state = useCampaignStore.getState();

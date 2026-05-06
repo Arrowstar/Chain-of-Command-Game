@@ -16,8 +16,8 @@ export default function LineOfSight() {
 
     if (!selectedShipId || !hoveredShipId || selectedShipId === hoveredShipId) return;
 
-    let sourceShip = playerShips.find(s => s.id === selectedShipId) || enemyShips.find(s => s.id === selectedShipId);
-    let targetShip = playerShips.find(s => s.id === hoveredShipId) || enemyShips.find(s => s.id === hoveredShipId);
+    const sourceShip = playerShips.find(s => s.id === selectedShipId) || enemyShips.find(s => s.id === selectedShipId);
+    const targetShip = playerShips.find(s => s.id === hoveredShipId) || enemyShips.find(s => s.id === hoveredShipId);
 
     if (!sourceShip || !targetShip) return;
 

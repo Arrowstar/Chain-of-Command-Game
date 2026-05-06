@@ -1,7 +1,7 @@
 import type {
   PostCombatResult, TraumaGained, ScarGained, FleetFavorConversionResult,
   EventResolution, EventEffect, CombatModifiers,
-  DrydockResult, DrydockMutation, MarketInventory,
+  DrydockResult,
   SectorTransition, ShipReplacementConfig,
   EventRequirement,
   EventRequirementContext,
@@ -11,11 +11,11 @@ import type {
   PendingEconomicBuffs,
 } from '../types/campaignTypes';
 import type {
-  OfficerState, OfficerData, ShipState, PlayerState,
-  CriticalDamageCard, ScarEffect, TraumaEffect, SkillDieTier,
+  OfficerData, ShipState, PlayerState,
+  ScarEffect, TraumaEffect, SkillDieTier,
 } from '../types/game';
 import { getEventById } from '../data/eventNodes';
-import { getTechById, drawRandomTech, drawMultipleRandomTech } from '../data/experimentalTech';
+import { getTechById, drawMultipleRandomTech } from '../data/experimentalTech';
 import { getHullPatchCost, PSYCH_EVAL_COST, DEEP_REPAIR_COST, OFFICER_TRAINING_COSTS, SCRAP_SUBSYSTEM_GAIN, generateMarketInventory } from '../data/drydock';
 import { getChassisById } from '../data/shipChassis';
 import { getWeaponById } from '../data/weapons';
@@ -57,8 +57,8 @@ export interface AppliedEventState {
   pendingEconomicBuffs: PendingEconomicBuffs;
   grantedWeapons: string[];
   grantedSubsystems: string[];
+  clearedScars?: { scarName: string; shipName: string }[];
   autoDocConsumed: boolean;
-  clearedScars: { shipId: string; shipName: string; scarName: string }[];
 }
 
 // ─── Scar Templates ──────────────────────────────────────────────
@@ -248,8 +248,8 @@ export function resolveEventOption(
   let roll: number | undefined;
   let rolledGood: boolean | undefined;
   let techAwarded: string[] = [];
-  let grantedWeapons: string[] = [];
-  let grantedSubsystems: string[] = [];
+  const grantedWeapons: string[] = [];
+  const grantedSubsystems: string[] = [];
   let transformsToCombat = false;
   let combatModifiers: CombatModifiers | undefined;
   let narrativeResult = '';
@@ -369,17 +369,17 @@ export function getEventOptionAvailability(
   context: EventRequirementContext
 ): EventOptionAvailability {
   const requirements = option.requirements ?? [];
-  let requirementResults = requirements.map(requirement => ({
+  const requirementResults = requirements.map(requirement => ({
     requirement,
     met: requirementMet(requirement, context),
   }));
 
-  let mode = option.requirementMode ?? 'all';
+  const mode = option.requirementMode ?? 'all';
   let requirementsMet = requirements.length === 0 ? true : (mode === 'any'
     ? requirementResults.some(result => result.met)
     : requirementResults.every(result => result.met));
 
-  let unmetRequirementText = requirementResults
+  const unmetRequirementText = requirementResults
     .filter(result => !result.met)
     .map(result => describeRequirement(result.requirement));
 
@@ -443,8 +443,8 @@ export function applyEventResolution(params: ApplyEventResolutionParams): Applie
   let skipEnabled = canSkipNode;
   let updatedPlayers = [...persistedPlayers];
   let updatedShips = [...persistedShips];
-  let weaponStash = [...stashedWeapons];
-  let subsystemStash = [...stashedSubsystems];
+  const weaponStash = [...stashedWeapons];
+  const subsystemStash = [...stashedSubsystems];
   let economicBuffs = { ...pendingEconomicBuffs };
   let autoDocConsumed = false;
   const grantedWeapons: string[] = [];
@@ -978,7 +978,7 @@ export function applyShipReplacement(
   const chassis = getChassisById(config.newChassisId);
   if (!chassis) throw new Error(`Unknown replacement chassis: ${config.newChassisId}`);
 
-  const rebuiltShip: ShipState = { /* @ts-ignore */ 
+  const rebuiltShip: ShipState = {  
     ...ship,
     chassisId: chassis.id,
     isDestroyed: false,

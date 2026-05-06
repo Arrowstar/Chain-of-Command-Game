@@ -376,6 +376,31 @@ export interface PlayerState {
   commsBlackout?: boolean;           // fumble flag
 }
 
+export interface ActionContext {
+  wasted?: boolean;
+  reason?: string;
+  weaponIndex?: number;
+  clearCritId?: string;
+  delta?: number;
+  targetShipId?: string;
+  attackerShipId?: string;
+  shipId?: string;
+  targetOfficerId?: string;
+  sector?: ShipArc;
+  discharge?: boolean;
+  deployHex?: HexCoord;
+  classId?: string;
+  behavior?: string;
+  fighterId?: string;
+  count?: number;
+  to?: HexCoord;
+  targetHex?: HexCoord;
+  mode?: TargetingPackageMode;
+  direction?: 'clockwise' | 'counterclockwise';
+  weaponId?: string;
+  [key: string]: unknown;
+}
+
 export interface QueuedAction {
   id: string;
   station: OfficerStation;
@@ -385,7 +410,7 @@ export interface QueuedAction {
   weaponSlotIndex?: number;         // which weapon to fire
   ctCost: number;
   stressCost: number;
-  context?: Record<string, any>;    // arbitrary context like delta for speed
+  context?: ActionContext;          // arbitrary context like delta for speed
   resolved?: boolean;
   subsystemSlotIndex?: number;
 }
@@ -730,7 +755,7 @@ export type FleetAssetId =
   | 'escort-support-call'
   | 'extraction-window';
 
-export type TargetingPackageMode = 'tn' | 'reroll' | 'bonusHit';
+export type TargetingPackageMode = 'tn' | 'reroll' | 'bonusHit' | 'cancel-tactic' | 'interceptor-screen';
 
 export interface FleetAssetDefinition {
   id: FleetAssetId;
