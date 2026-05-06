@@ -201,14 +201,14 @@ export function executePostCombatLoop(params: {
     }
   }
 
-  return { 
-    victory: false, 
-    reason: '', 
-    rpGained: 0, 
-    ffConverted: 0, 
-    traumasGained, 
-    scarsGained, 
-    officerStressResets 
+  return {
+    victory: false,
+    reason: '',
+    rpGained: 0,
+    ffConverted: 0,
+    traumasGained,
+    scarsGained,
+    officerStressResets
   };
 }
 
@@ -517,13 +517,13 @@ export function applyEventResolution(params: ApplyEventResolutionParams): Applie
           const clearedScar = s.scars[randomIndex];
           const newScars = [...s.scars];
           newScars.splice(randomIndex, 1);
-          
+
           clearedScars.push({
             shipId: s.id,
             shipName: s.name,
             scarName: clearedScar.name,
           });
-          
+
           return { ...s, scars: newScars };
         }
         return s;
@@ -938,7 +938,7 @@ export function advanceToNextSector(currentSector: number): SectorTransition {
     newMapSeed: Math.random(),
     rpBonus: BOSS_RP_REWARD,
     shieldRestored: true,
-    epicWeaponDrop: null, // TODO: implement epic weapon pool when weapon system expands
+    epicWeaponDrop: null,
     campaignVictory,
   };
 }
@@ -953,8 +953,6 @@ export function checkTotalWipe(playerShips: ShipState[]): boolean {
 /**
  * Configuration to rebuild a destroyed player's ship with starter gear.
  * Per spec: issued a basic Vanguard Cruiser with starting weapons and Rookie officers.
- *
- * TODO: Wire into campaign store to actually replace the ship at the next node start.
  */
 export function getShipReplacementConfig(): ShipReplacementConfig {
   return {
