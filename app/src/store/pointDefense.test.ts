@@ -6,10 +6,7 @@ describe('Point Defense vs Fighters', () => {
   beforeEach(() => {
     useGameStore.setState({
       players: [] as PlayerState[],
-      playerShips: [
-        {
-          id: 's1',
-          name: 'Bulwark',
+      playerShips: [{ kind: 'ship', faction: 'player', id: 's1', name: 'Bulwark',
           chassisId: 'vanguard',
           ownerId: 'p1',
           position: { q: 0, r: 0 },
@@ -33,7 +30,7 @@ describe('Point Defense vs Fighters', () => {
           pdcDisabled: false,
           firedWeaponIndicesThisRound: [],
           ordnanceLoadedIndicesThisRound: [],
-        } as ShipState,
+        } as unknown as unknown as ShipState,
       ],
       enemyShips: [],
       fighterTokens: [
@@ -41,7 +38,8 @@ describe('Point Defense vs Fighters', () => {
           id: 'f1',
           name: 'Strike Fighter',
           classId: 'strike-fighter',
-          allegiance: 'enemy',
+          kind: 'fighter',
+          faction: 'hegemony',
           sourceShipId: 'carrier-1',
           position: { q: 3, r: 0 },
           facing: 0 as any,
@@ -56,7 +54,7 @@ describe('Point Defense vs Fighters', () => {
           hasDrifted: false,
           hasActed: false,
           assignedTargetId: null,
-        } as FighterToken,
+        } as unknown as FighterToken,
       ],
       torpedoTokens: [],
       terrainMap: new Map(),
@@ -68,7 +66,7 @@ describe('Point Defense vs Fighters', () => {
 
   it('can intercept an enemy fighter on an approach hex before adjacency', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.7);
-    useGameStore.getState().resolveFighterStep('enemy');
+    useGameStore.getState().resolveFighterStep('hegemony');
     const fighter = useGameStore.getState().fighterTokens.find(f => f.id === 'f1');
     expect(fighter?.isDestroyed).toBe(true);
     expect(fighter?.position).toEqual({ q: 2, r: 0 });
@@ -77,10 +75,7 @@ describe('Point Defense vs Fighters', () => {
   it('can destroy an incoming seeker torpedo before impact', () => {
     useGameStore.setState({
       fighterTokens: [],
-      enemyShips: [
-        {
-          id: 'e1',
-          name: 'Enemy Launcher',
+      enemyShips: [{ kind: 'ship', faction: 'hegemony', id: 'e1', name: 'Enemy Launcher',
           adversaryId: 'hunter-killer',
           position: { q: 4, r: 0 },
           facing: 3 as any,
@@ -100,9 +95,10 @@ describe('Point Defense vs Fighters', () => {
       ],
       torpedoTokens: [
         {
+          kind: 'torpedo',
+          faction: 'hegemony',
           id: 't1',
           name: 'Seeker Torpedo',
-          allegiance: 'enemy',
           sourceShipId: 'e1',
           targetShipId: 's1',
           position: { q: 4, r: 0 },
@@ -118,7 +114,7 @@ describe('Point Defense vs Fighters', () => {
     });
 
     vi.spyOn(Math, 'random').mockReturnValue(0.7);
-    useGameStore.getState().resolveTorpedoStep('enemy');
+    useGameStore.getState().resolveTorpedoStep('hegemony');
 
     const torpedo = useGameStore.getState().torpedoTokens.find(t => t.id === 't1');
     expect(torpedo?.isDestroyed).toBe(true);

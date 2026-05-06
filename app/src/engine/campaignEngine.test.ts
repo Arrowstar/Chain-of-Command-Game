@@ -42,7 +42,7 @@ function makeOfficerData(id: string, stressLimit: number | null = 4): OfficerDat
 }
 
 function makeShip(id: string, crits: { id: string; isRepaired: boolean }[] = []): ShipState {
-  return {
+  return { kind: 'ship', faction: 'player',
     id,
     name: id,
     chassisId: 'vanguard',

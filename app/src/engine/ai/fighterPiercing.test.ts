@@ -5,10 +5,12 @@ import * as diceRoller from '../../utils/diceRoller';
 
 describe('Fighter Piercing Damage', () => {
   const mockFighter: FighterToken = {
+    kind: 'fighter',
+    faction: 'allied',
     id: 'f1',
     name: 'Strike Squadron',
     classId: 'strike',
-    allegiance: 'allied',
+    
     sourceShipId: 's1',
     position: { q: 0, r: 0 },
     facing: 0,
@@ -26,6 +28,8 @@ describe('Fighter Piercing Damage', () => {
   };
 
   const mockEnemy: EnemyShipState = {
+    kind: 'ship',
+    faction: 'hegemony',
     id: 'e1',
     name: 'Enemy Corvette',
     adversaryId: 'corvette',
@@ -49,7 +53,6 @@ describe('Fighter Piercing Damage', () => {
     hasDrifted: false,
     baseEvasion: 2, // TN 2
     armorDie: 'd6',
-    isAllied: false,
     targetLocks: [],
   };
 

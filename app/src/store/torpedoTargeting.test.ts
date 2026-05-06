@@ -33,9 +33,10 @@ describe('Torpedo Targeting Expansion', () => {
       ],
       torpedoTokens: [
         {
+          kind: 'torpedo',
+          faction: 'allied',
           id: 't1',
           name: 'Seeker Torpedo',
-          allegiance: 'allied',
           targetShipId: 'station-1',
           position: { q: 0, r: 0 },
           currentHull: 1,
@@ -61,7 +62,8 @@ describe('Torpedo Targeting Expansion', () => {
           id: 'f1',
           name: 'Enemy Interceptor',
           classId: 'interceptor',
-          allegiance: 'enemy',
+          kind: 'fighter',
+          faction: 'hegemony',
           position: { q: 1, r: 0 },
           currentHull: 1,
           maxHull: 1,
@@ -71,9 +73,10 @@ describe('Torpedo Targeting Expansion', () => {
       ],
       torpedoTokens: [
         {
+          kind: 'torpedo',
+          faction: 'allied',
           id: 't2',
           name: 'Seeker Torpedo',
-          allegiance: 'allied',
           targetShipId: 'f1',
           position: { q: 0, r: 0 },
           currentHull: 1,
@@ -107,7 +110,7 @@ describe('Torpedo Targeting Expansion', () => {
         {
           id: 't3',
           name: 'Seeker Torpedo',
-          allegiance: 'allied',
+          faction: 'allied',
           targetShipId: 'Sensor Relay',
           position: { q: 0, r: 0 },
           currentHull: 1,
@@ -132,7 +135,7 @@ describe('Torpedo Targeting Expansion', () => {
         {
           id: 't4',
           name: 'Seeker Torpedo',
-          allegiance: 'allied',
+          faction: 'allied',
           targetShipId: 'missing-target',
           position: { q: 0, r: 0 },
           currentHull: 1,

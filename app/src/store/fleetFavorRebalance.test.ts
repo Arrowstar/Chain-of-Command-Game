@@ -3,9 +3,7 @@ import { useGameStore } from '../store/useGameStore';
 import type { PlayerState, ShipState } from '../types/game';
 
 function makePlayerShip(): ShipState {
-  return {
-    id: 's1',
-    name: 'Player Ship',
+  return { kind: 'ship', faction: 'player', id: 's1', name: 'Player Ship',
     chassisId: 'vanguard',
     ownerId: 'p1',
     position: { q: 0, r: 0 },

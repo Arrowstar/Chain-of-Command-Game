@@ -18,7 +18,7 @@ describe('Load Ordnance Visibility Integration', () => {
           { officerId: 'vane', station: 'tactical', currentStress: 0, currentTier: 'veteran', isLocked: false, lockDuration: 0, traumas: [], hasFumbledThisRound: false, actionsPerformedThisRound: 0 },
         ],
       }],
-      playerShips: [{
+      playerShips: [{ kind: 'ship', faction: 'player',
         id: 's1',
         name: 'Resolute',
         chassisId: 'vanguard',

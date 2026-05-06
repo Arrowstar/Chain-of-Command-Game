@@ -48,7 +48,7 @@ export default function FleetAssetsPanel() {
     [enemyShips]
   );
   const incomingEnemyTorpedoes = useMemo(
-    () => torpedoTokens.filter(token => token.allegiance === 'enemy' && !token.isDestroyed),
+    () => torpedoTokens.filter(token => token.faction === 'hegemony' && !token.isDestroyed),
     [torpedoTokens]
   );
 

@@ -42,7 +42,8 @@ describe('Fighter AI Dogfighting Expansion', () => {
     id: 'f1',
     name: 'Saber 1',
     classId: 'test-fighter',
-    allegiance: 'allied',
+    kind: 'fighter',
+    faction: 'allied',
     position: { q: 1, r: 0 },
     facing: 0,
     currentHull: 1,
@@ -54,16 +55,17 @@ describe('Fighter AI Dogfighting Expansion', () => {
     behavior: 'attack',
     isDestroyed: false,
     assignedTargetId: 'target-1',
-  } as FighterToken;
+  } as unknown as FighterToken;
 
   it('applies dogfight bonus (-3 TN) to FighterToken targets', () => {
     const target = {
       id: 'target-1',
-      allegiance: 'enemy',
+      kind: 'fighter',
+    faction: 'hegemony',
       position: { q: 0, r: 0 },
       baseEvasion: 8,
       isDestroyed: false,
-    } as FighterToken;
+    } as unknown as FighterToken;
 
     resolveFighterAttack(attacker, [], [], [attacker, target]);
 
@@ -74,12 +76,14 @@ describe('Fighter AI Dogfighting Expansion', () => {
   it('applies dogfight bonus (-3 TN) to EnemyShipState targets with size: fighter', () => {
     const target = {
       id: 'target-1',
+      kind: 'ship',
+      faction: 'hegemony',
       adversaryId: 'fighter-ship',
       position: { q: 0, r: 0 },
       baseEvasion: 8,
       isDestroyed: false,
       shields: { fore: 0, foreStarboard: 0, aftStarboard: 0, aft: 0, aftPort: 0, forePort: 0 },
-    } as EnemyShipState;
+    } as unknown as any;
 
     resolveFighterAttack(attacker, [], [target], [attacker]);
 
@@ -92,12 +96,14 @@ describe('Fighter AI Dogfighting Expansion', () => {
   it('does NOT apply dogfight bonus to Small ships', () => {
     const target = {
       id: 'target-1',
+      kind: 'ship',
+      faction: 'hegemony',
       adversaryId: 'small-ship',
       position: { q: 0, r: 0 },
       baseEvasion: 5,
       isDestroyed: false,
       shields: { fore: 0, foreStarboard: 0, aftStarboard: 0, aft: 0, aftPort: 0, forePort: 0 },
-    } as EnemyShipState;
+    } as unknown as any;
 
     resolveFighterAttack(attacker, [], [target], [attacker]);
 

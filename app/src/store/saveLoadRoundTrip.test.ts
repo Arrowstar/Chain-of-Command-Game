@@ -67,10 +67,7 @@ describe('Game state persistence round-trip', () => {
           ],
         },
       ],
-      playerShips: [
-        {
-          id: 's1',
-          name: 'Resolute',
+      playerShips: [{ kind: 'ship', faction: 'player', id: 's1', name: 'Resolute',
           chassisId: 'manticore',
           ownerId: 'p1',
           position: { q: 2, r: -1 },
@@ -104,10 +101,7 @@ describe('Game state persistence round-trip', () => {
           armorDisabled: true,
         } as any,
       ],
-      enemyShips: [
-        {
-          id: 'e1',
-          name: 'Interdictor',
+      enemyShips: [{ kind: 'ship', faction: 'hegemony', id: 'e1', name: 'Interdictor',
           adversaryId: 'hegemony-interdictor',
           position: { q: 5, r: -1 },
           facing: 3,
@@ -133,7 +127,8 @@ describe('Game state persistence round-trip', () => {
           id: 'f1',
           name: 'Sabre Wing',
           classId: 'strike-fighter',
-          allegiance: 'allied',
+          kind: 'fighter',
+          faction: 'allied',
           sourceShipId: 's1',
           position: { q: 3, r: -1 },
           facing: 0,
@@ -152,9 +147,10 @@ describe('Game state persistence round-trip', () => {
       ],
       torpedoTokens: [
         {
+          kind: 'torpedo',
+          faction: 'allied',
           id: 't1',
           name: 'Seeker',
-          allegiance: 'allied',
           sourceShipId: 's1',
           targetShipId: 'e1',
           position: { q: 4, r: -1 },

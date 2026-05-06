@@ -17,9 +17,7 @@ describe('resolveAction - Rotate Shields Logic', () => {
           { id: 'a1', station: 'tactical', actionId: 'rotate-shields', resolved: false } as any,
         ],
       }],
-      playerShips: [{
-        id: 's1',
-        name: 'Resolute',
+      playerShips: [{ kind: 'ship', faction: 'player', id: 's1', name: 'Resolute',
         ownerId: 'p1',
         shields: { fore: 2, foreStarboard: 2, aftStarboard: 2, aft: 2, aftPort: 2, forePort: 2 },
         maxShieldsPerSector: 4,

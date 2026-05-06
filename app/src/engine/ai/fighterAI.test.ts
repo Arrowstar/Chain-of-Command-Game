@@ -40,10 +40,12 @@ vi.mock('../../data/fighters', () => ({
 
 describe('Fighter AI', () => {
   const makeFighter = (overrides: Partial<FighterToken> = {}): FighterToken => ({
+    kind: 'fighter',
+    faction: 'allied',
     id: 'f1',
     name: 'Saber 1',
     classId: 'test-fighter',
-    allegiance: 'allied',
+    
     sourceShipId: 'carrier-1',
     position: { q: 0, r: 0 },
     facing: 0,
@@ -62,6 +64,8 @@ describe('Fighter AI', () => {
   });
 
   const makeEnemyShip = (overrides: Partial<EnemyShipState> = {}): EnemyShipState => ({
+    kind: 'ship',
+    faction: 'hegemony',
     id: 'enemy-1',
     name: 'Enemy',
     adversaryId: 'hunter-killer',
@@ -122,9 +126,9 @@ describe('Fighter AI', () => {
     });
 
     it('handles escort behavior (stays near source ship)', () => {
-        const sourceShip: ShipState = { id: 'carrier-1', position: { q: 0, r: 0 } } as any;
+        const sourceShip: ShipState = { /* @ts-ignore */  kind: 'ship', faction: 'player', id: 'carrier-1', position: { q: 0, r: 0 } } as any;
         const fighter = makeFighter({ 
-            allegiance: 'allied', 
+             
             sourceShipId: 'carrier-1', 
             position: { q: 3, r: 0 }, 
             behavior: 'escort' 
@@ -137,14 +141,14 @@ describe('Fighter AI', () => {
     });
 
     it('handles screen behavior (targets nearby threats)', () => {
-        const sourceShip: ShipState = { id: 'carrier-1', position: { q: 0, r: 0 } } as any;
+        const sourceShip: ShipState = { /* @ts-ignore */  kind: 'ship', faction: 'player', id: 'carrier-1', position: { q: 0, r: 0 } } as any;
         const fighter = makeFighter({ 
-            allegiance: 'allied', 
+             
             sourceShipId: 'carrier-1', 
             position: { q: 1, r: 0 }, 
             behavior: 'screen' 
         });
-        const enemyFighter = makeFighter({ id: 'ef1', allegiance: 'enemy', position: { q: 1, r: 1 } });
+        const enemyFighter = makeFighter({ id: 'ef1', faction: 'hegemony', position: { q: 1, r: 1 } });
 
         const result = resolveFighterMovement(fighter, [sourceShip], [], [fighter, enemyFighter], new Map(), [], []);
 
@@ -166,7 +170,7 @@ describe('Fighter AI', () => {
 
     it('performs dogfighting against other fighters', () => {
         const fighter = makeFighter({ position: { q: 1, r: 0 }, weaponRangeMax: 1, assignedTargetId: 'enemy-f1' });
-        const enemyFighter = makeFighter({ id: 'enemy-f1', allegiance: 'enemy', position: { q: 0, r: 0 } });
+        const enemyFighter = makeFighter({ id: 'enemy-f1', faction: 'hegemony', position: { q: 0, r: 0 } });
 
         const result = resolveFighterAttack(fighter, [], [], [fighter, enemyFighter]);
 

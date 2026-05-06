@@ -16,8 +16,7 @@ describe('Weapon Discharge and Bypass Logic', () => {
           { id: 'a1', station: 'tactical', actionId: 'fire-primary', resolved: false, weaponSlotIndex: 0 } as any,
         ],
       }],
-      playerShips: [{
-        id: 's1',
+      playerShips: [{ id: 's1',
         position: { q: 0, r: 0 },
         facing: 0 as HexFacing,
         equippedWeapons: ['plasma-battery'],
@@ -42,11 +41,10 @@ describe('Weapon Discharge and Bypass Logic', () => {
   it('allows discharging a weapon even if valid targets exist (hostile or otherwise)', () => {
     // Add an enemy ship in range
     useGameStore.setState(state => ({
-      enemyShips: [{
-        id: 'e1',
+      enemyShips: [{ id: 'e1',
         position: { q: 1, r: 0 }, // Adjacent, definitely in range/arc
         isDestroyed: false,
-        isAllied: false,
+        faction: 'hegemony',
         shields: { fore: 5, foreStarboard: 5, aftStarboard: 5, aft: 5, aftPort: 5, forePort: 5 },
         currentHull: 10,
         maxHull: 10,
@@ -71,11 +69,10 @@ describe('Weapon Discharge and Bypass Logic', () => {
   it('resolves an out-of-range shot as a miss instead of blocking', () => {
      // Add an enemy ship far away
     useGameStore.setState(state => ({
-      enemyShips: [{
-        id: 'e1',
+      enemyShips: [{ id: 'e1',
         position: { q: 10, r: 0 }, // Out of range (plasma battery max is 4)
         isDestroyed: false,
-        isAllied: false,
+        faction: 'hegemony',
         shields: { fore: 5, foreStarboard: 5, aftStarboard: 5, aft: 5, aftPort: 5, forePort: 5 },
         currentHull: 10,
         maxHull: 10,

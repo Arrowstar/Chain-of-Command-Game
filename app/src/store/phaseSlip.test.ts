@@ -25,10 +25,7 @@ describe('Phase Slip Logic', () => {
           ],
         },
       ],
-      playerShips: [
-        {
-          id: 's1',
-          name: 'Test Ship',
+      playerShips: [{ kind: 'ship', faction: 'player', id: 's1', name: 'Test Ship',
           chassisId: 'vanguard',
           ownerId: 'p1',
           position: { q: 0, r: 0 },

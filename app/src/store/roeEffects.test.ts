@@ -22,9 +22,7 @@ describe('Rules of Engagement Effects', () => {
           ]
         } as PlayerState
       ],
-      playerShips: [
-        {
-          id: 's1', name: 'Ship 1', chassisId: 'c1', ownerId: 'p1',
+      playerShips: [{ kind: 'ship', faction: 'player', id: 's1', name: 'Ship 1', chassisId: 'c1', ownerId: 'p1',
           position: { q: 0, r: 0 }, facing: 0 as any, currentSpeed: 2, currentHull: 10, maxHull: 10,
           shields: { fore: 2, foreStarboard: 2, aftStarboard: 2, aft: 2, aftPort: 2, forePort: 2 }, maxShieldsPerSector: 2,
           equippedWeapons: [], equippedSubsystems: [], criticalDamage: [], scars: [],

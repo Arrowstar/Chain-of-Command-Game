@@ -21,9 +21,7 @@ function makePlayer(): PlayerState {
 }
 
 function makeShip(): ShipState {
-  return {
-    id: 's1',
-    name: 'Ship 1',
+  return { kind: 'ship', faction: 'player', id: 's1', name: 'Ship 1',
     chassisId: 'vanguard',
     ownerId: 'p1',
     position: { q: 0, r: 0 },
@@ -50,9 +48,7 @@ function makeShip(): ShipState {
 }
 
 function makeEnemy(): EnemyShipState {
-  return {
-    id: 'e1',
-    name: 'Enemy 1',
+  return { kind: 'ship', faction: 'hegemony', id: 'e1', name: 'Enemy 1',
     adversaryId: 'hunter-killer',
     position: { q: 1, r: 0 },
     facing: 3 as any,
@@ -192,9 +188,11 @@ describe('Fleet Assets', () => {
 
   it('Escort / Support Call interceptor screen destroys an incoming enemy torpedo', () => {
     const torpedo: TorpedoToken = {
+      kind: 'torpedo',
+      faction: 'hegemony',
       id: 'torp-1',
       name: 'Enemy Torpedo',
-      allegiance: 'enemy',
+      
       sourceShipId: 'e1',
       targetShipId: 's1',
       position: { q: 0, r: 1 },
@@ -217,9 +215,7 @@ describe('Fleet Assets', () => {
   it('Extraction Window lets a ship count as a safe warp-out outside the breakout zone', () => {
     useGameStore.setState({
       phase: 'execution',
-      playerShips: [
-        {
-          ...makeShip(),
+      playerShips: [{ ...makeShip(),
           position: { q: 0, r: 0 },
         },
       ],

@@ -17,7 +17,7 @@ vi.mock('../../data/adversaries', () => ({
 import { getAdversaryById } from '../../data/adversaries';
 
 function makeEnemy(id: string, position: { q: number; r: number }, adversaryId = 'hegemony-interdictor'): EnemyShipState {
-  return {
+  return { kind: 'ship', faction: 'hegemony',
     id,
     name: id,
     adversaryId,

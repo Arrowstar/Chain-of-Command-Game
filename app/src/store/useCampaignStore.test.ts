@@ -5,7 +5,7 @@ import { useGameStore } from './useGameStore';
 import type { PlayerState, ShipState } from '../types/game';
 
 function makeShip(id: string): ShipState {
-  return {
+  return { kind: 'ship', faction: 'player',
     id,
     name: id,
     chassisId: 'vanguard',

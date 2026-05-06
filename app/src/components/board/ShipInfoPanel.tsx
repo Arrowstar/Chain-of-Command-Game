@@ -329,9 +329,9 @@ function LockIndicator({ progress, isLocked, target, targetCount }: { progress: 
   } else if (target.kind === 'terrain' || target.kind === 'objective') {
     color = 'var(--color-alert-amber)';
   } else if (target.kind === 'fighter') {
-    color = target.fighter?.allegiance === 'enemy' ? 'var(--color-hostile-red)' : 'var(--color-holo-cyan)';
+    color = target.fighter?.faction === 'hegemony' ? 'var(--color-hostile-red)' : 'var(--color-holo-cyan)';
   } else if (target.kind === 'torpedo') {
-    color = target.torpedo?.allegiance === 'enemy' ? 'var(--color-hostile-red)' : 'var(--color-holo-cyan)';
+    color = target.torpedo?.faction === 'hegemony' ? 'var(--color-hostile-red)' : 'var(--color-holo-cyan)';
   }
 
   return (
@@ -415,7 +415,7 @@ function ShipTooltipContent({ ship, isEnemy }: { ship: ShipState | EnemyShipStat
   const isFlagship = isEnemy && /\(Flagship\)/i.test(rawVesselName);
   const vesselName = isEnemy ? formatEnemyVesselName(rawVesselName) : rawVesselName;
   const vesselClass = isEnemy ? (adversary?.name ?? 'Unknown Adversary Class') : (chassis?.className ?? 'Unknown Vessel Class');
-  const maxShieldValue = !isEnemy && 'maxShieldsPerSector' in ship ? (ship as ShipState).maxShieldsPerSector : (adversary?.shieldsPerSector || 0);
+  const maxShieldValue = !isEnemy && 'maxShieldsPerSector' in ship ? (ship as unknown as ShipState).maxShieldsPerSector : (adversary?.shieldsPerSector || 0);
   const hasShields = maxShieldValue > 0;
 
   return (
@@ -493,11 +493,11 @@ function ShipTooltipContent({ ship, isEnemy }: { ship: ShipState | EnemyShipStat
 
       <ShipSchematicPreview ship={ship} isEnemy={isEnemy} />
 
-      {!isEnemy && 'equippedWeapons' in ship && (ship as ShipState).equippedWeapons?.length > 0 && (
+      {!isEnemy && 'equippedWeapons' in ship && (ship as unknown as ShipState).equippedWeapons?.length > 0 && (
         <div style={{ marginBottom: 'var(--space-sm)' }}>
           <div className="label" style={{ marginBottom: '4px' }}>Equipped Weaponry</div>
           <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-          { (ship as ShipState).equippedWeapons.map((wId, index) => {
+          { (ship as unknown as ShipState).equippedWeapons.map((wId, index) => {
             if (!wId) return null;
             const weapon = getWeaponById(wId);
             if (!weapon) return null;
@@ -524,11 +524,11 @@ function ShipTooltipContent({ ship, isEnemy }: { ship: ShipState | EnemyShipStat
         </div>
       )}
 
-      {!isEnemy && 'equippedSubsystems' in ship && (ship as ShipState).equippedSubsystems?.length > 0 && (
+      {!isEnemy && 'equippedSubsystems' in ship && (ship as unknown as ShipState).equippedSubsystems?.length > 0 && (
         <div style={{ marginTop: 'var(--space-sm)' }}>
           <div className="label" style={{ marginBottom: '4px' }}>Installed Subsystems</div>
           <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-            {(ship as ShipState).equippedSubsystems.map((sId, index) => {
+            {(ship as unknown as ShipState).equippedSubsystems.map((sId, index) => {
               if (!sId) return null;
               const sub = getSubsystemById(sId);
               if (!sub) return null;
@@ -616,13 +616,13 @@ function ShipTooltipContent({ ship, isEnemy }: { ship: ShipState | EnemyShipStat
         </div>
       )}
 
-      {!isEnemy && 'scars' in ship && (ship as ShipState).scars?.length > 0 && (
+      {!isEnemy && 'scars' in ship && (ship as unknown as ShipState).scars?.length > 0 && (
         <div style={{ marginTop: 'var(--space-md)' }}>
           <div className="label" style={{ color: 'var(--color-alert-amber)', marginBottom: '6px' }}>
             Persistent Scars
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
-            {(ship as ShipState).scars.map(scar => (
+            {(ship as unknown as ShipState).scars.map(scar => (
               <div
                 key={scar.id}
                 className="panel panel--raised"
@@ -927,10 +927,10 @@ function FighterTooltipContent({ fighter, stackCount }: { fighter: FighterToken;
   return (
     <>
       <div style={{ marginBottom: 'var(--space-sm)' }}>
-        <div className="label" style={{ color: fighter.allegiance === 'enemy' ? 'var(--color-hostile-red)' : 'var(--color-holo-cyan)' }}>
-          {fighter.allegiance === 'enemy' ? 'Enemy Small Craft' : 'Allied Small Craft'}
+        <div className="label" style={{ color: fighter.faction === 'hegemony' ? 'var(--color-hostile-red)' : 'var(--color-holo-cyan)' }}>
+          {fighter.faction === 'hegemony' ? 'Enemy Small Craft' : 'Allied Small Craft'}
         </div>
-        <h3 style={{ margin: '4px 0 2px', color: fighter.allegiance === 'enemy' ? 'var(--color-hostile-red)' : 'var(--color-holo-cyan)' }}>
+        <h3 style={{ margin: '4px 0 2px', color: fighter.faction === 'hegemony' ? 'var(--color-hostile-red)' : 'var(--color-holo-cyan)' }}>
           {fighter.name}
         </h3>
         <div className="label" style={{ color: 'var(--color-text-dim)' }}>
@@ -943,7 +943,7 @@ function FighterTooltipContent({ fighter, stackCount }: { fighter: FighterToken;
         <StatCard label="Speed" value={String(fighter.speed)} />
         <StatCard label="Evasion" value={String(fighter.baseEvasion)} />
         <StatCard label="Stack in Hex" value={String(stackCount)} />
-        {fighter.allegiance === 'allied' && (
+        {fighter.faction === 'allied' && (
           <>
             <StatCard label="Behavior" value={fighter.behavior.replace('_', ' ').toUpperCase()} />
             <StatCard label="Target" value={targetName} />
@@ -954,7 +954,7 @@ function FighterTooltipContent({ fighter, stackCount }: { fighter: FighterToken;
       <div className="panel panel--raised" style={{ padding: 'var(--space-sm)', marginTop: 'var(--space-sm)' }}>
         <Tooltip content={
           <div>
-            <div style={{ color: fighter.allegiance === 'enemy' ? 'var(--color-hostile-red)' : 'var(--color-holo-cyan)', fontWeight: 'bold', marginBottom: '4px' }}>Standard Armament</div>
+            <div style={{ color: fighter.faction === 'hegemony' ? 'var(--color-hostile-red)' : 'var(--color-holo-cyan)', fontWeight: 'bold', marginBottom: '4px' }}>Standard Armament</div>
             <div>Max Range: {fighter.weaponRangeMax}</div>
             <div>Volley: {fighter.volleyPool.join(', ')}</div>
           </div>
@@ -986,8 +986,8 @@ function TorpedoTooltipContent({ torpedo }: { torpedo: TorpedoToken }) {
   return (
     <>
       <div style={{ marginBottom: 'var(--space-sm)' }}>
-        <div className="label" style={{ color: torpedo.allegiance === 'enemy' ? 'var(--color-hostile-red)' : 'var(--color-alert-amber)' }}>
-          {torpedo.allegiance === 'enemy' ? 'Enemy Ordnance' : 'Allied Ordnance'}
+        <div className="label" style={{ color: torpedo.faction === 'hegemony' ? 'var(--color-hostile-red)' : 'var(--color-alert-amber)' }}>
+          {torpedo.faction === 'hegemony' ? 'Enemy Ordnance' : 'Allied Ordnance'}
         </div>
         <h3 style={{ margin: '4px 0 2px', color: 'var(--color-alert-amber)' }}>{torpedo.name}</h3>
         <div className="label" style={{ color: 'var(--color-text-dim)' }}>

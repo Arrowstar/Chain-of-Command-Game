@@ -44,7 +44,7 @@ describe('Enemy Critical Damage Wiring', () => {
   beforeEach(() => {
     useGameStore.setState({
       playerShips: [{ id: 'p1', chassisId: 'vanguard', position: { q: 0, r: 0 }, facing: 0, currentHull: 10, maxHull: 10, shields: { fore: 5, foreStarboard: 5, aftStarboard: 5, aft: 5, aftPort: 5, forePort: 5 }, equippedWeapons: ['w1'], equippedSubsystems: [], criticalDamage: [], scars: [], armorDie: 'd6', baseEvasion: 5, ownerId: 'player', isDestroyed: false, hasDroppedBelow50: false, hasDrifted: false } as any],
-      enemyShips: [{ id: 'e1', name: 'Enemy Ship', position: { q: 2, r: 0 }, facing: 3, currentHull: 10, maxHull: 10, shields: { fore: 5, foreStarboard: 5, aftStarboard: 5, aft: 5, aftPort: 5, forePort: 5 }, adversaryId: 'a1', criticalDamage: [], isDestroyed: false, hasDroppedBelow50: false, hasDrifted: false, baseEvasion: 5, armorDie: 'd6' } as any],
+      enemyShips: [{ kind: 'ship', faction: 'hegemony', id: 'e1', name: 'Enemy Ship', position: { q: 2, r: 0 }, facing: 3, currentHull: 10, maxHull: 10, shields: { fore: 5, foreStarboard: 5, aftStarboard: 5, aft: 5, aftPort: 5, forePort: 5 }, adversaryId: 'a1', criticalDamage: [], isDestroyed: false, hasDroppedBelow50: false, hasDrifted: false, baseEvasion: 5, armorDie: 'd6' } as any],
       players: [{ id: 'player1', shipId: 'p1', commandTokens: 10, officers: [{ station: 'tactical', currentTier: 'rookie', officerId: 'officer-vane' }], assignedActions: [] } as any],
       log: [],
       enemyCritDeck: [{ id: 'enemy-generator-offline', name: 'Generator Offline', effect: '...', isRepaired: false }],
@@ -95,9 +95,10 @@ describe('Enemy Critical Damage Wiring', () => {
   it('should apply critical damage to an enemy when a torpedo impacts it', async () => {
     useGameStore.setState({
       torpedoTokens: [{
+        kind: 'torpedo',
+        faction: 'allied',
         id: 't1',
         name: 'Seeker Torpedo',
-        allegiance: 'allied',
         sourceShipId: 'p1',
         targetShipId: 'e1',
         position: { q: 1, r: 0 },

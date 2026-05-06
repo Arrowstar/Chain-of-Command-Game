@@ -4,6 +4,8 @@ import type { EnemyShipState } from '../types/game';
 
 function makeEnemyShip(overrides: Partial<EnemyShipState> = {}): EnemyShipState {
   return {
+    kind: 'ship',
+    faction: 'hegemony',
     id: 'enemy-1',
     name: 'Enemy',
     adversaryId: 'hunter-killer',

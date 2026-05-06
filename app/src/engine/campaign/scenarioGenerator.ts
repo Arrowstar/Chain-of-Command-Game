@@ -834,6 +834,8 @@ export function generateProceduralScenario(
       : `${adv.name} «${callsign}»`;
 
     return {
+      kind: 'ship',
+      faction: 'hegemony',
       id: `e${idx + 1}`,
       name: shipName,
       adversaryId: adv.id,

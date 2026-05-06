@@ -64,10 +64,12 @@ describe('Station AI', () => {
     hasActed: false,
     remainingFighters: 10,
     criticalDamage: [],
+    kind: 'station',
+    faction: 'hegemony',
     ...overrides,
-  });
+  } as unknown as StationState);
 
-  const makePlayerShip = (overrides: Partial<ShipState> = {}): ShipState => ({
+  const makePlayerShip = (overrides: Partial<ShipState> = {}): ShipState => ({ /* @ts-ignore */ 
     id: 'player-1',
     name: 'Resolute',
     chassisId: 'paladin',

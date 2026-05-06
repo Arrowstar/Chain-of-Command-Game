@@ -19,7 +19,7 @@ describe('CaptainHand', () => {
         maxCommandTokens: 5,
         assignedActions: []
       }],
-      playerShips: [{
+      playerShips: [{ kind: 'ship', faction: 'player',
         id: 's1',
         name: 'Resolute',
         chassisId: 'vanguard',
@@ -100,7 +100,7 @@ describe('CaptainHand', () => {
       playerShips: [{
         ...state.playerShips[0],
         scars: [{ id: 'scar-bridge', name: 'Damaged Bridge', effect: '', fromCriticalId: 'bridge-hit' }],
-      }],
+      } as any],
     }));
 
     render(

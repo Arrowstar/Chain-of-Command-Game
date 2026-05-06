@@ -314,7 +314,7 @@ export default function HexMap() {
     const visibleEnemyShips = deploymentMode ? [] : enemyShips;
     syncEntities(visibleEnemyShips, enemies, (ship, g, getParams, isNew) => {
       g.clear();
-      const allegiance = ship.isAllied ? 'allied' : 'enemy';
+      const allegiance = ship.faction === 'allied' ? 'allied' : 'enemy';
       const hasSprite = attachOrUpdateSprite(g, ship.adversaryId, isNew, allegiance);
       if (!hasSprite) {
         drawShipTriangle(g, 0, 0, 0, allegiance);
@@ -351,11 +351,11 @@ export default function HexMap() {
     syncEntities(activeFighters, fighters, (f, g, getParams, isNew) => {
       g.clear();
       const fc = getFighterClassById(f.classId);
-      const spriteKey = fc?.imageKey || (f.allegiance === 'enemy' ? 'strike-fighter' : 'allied-fighter');
-      const hasSprite = attachOrUpdateSprite(g, spriteKey, isNew, f.allegiance === 'enemy' ? 'enemy' : 'allied');
+      const spriteKey = fc?.imageKey || (f.faction === 'hegemony' ? 'strike-fighter' : 'allied-fighter');
+      const hasSprite = attachOrUpdateSprite(g, spriteKey, isNew, f.faction === 'hegemony' ? 'enemy' : 'allied');
       if (!hasSprite) {
-        const color = f.allegiance === 'allied' ? 0x7CFFB2 : 0xFF6B6B;
-        const glowColor = f.allegiance === 'allied' ? 0x7CFFB2 : 0xFF8A8A;
+        const color = f.faction === 'allied' ? 0x7CFFB2 : 0xFF6B6B;
+        const glowColor = f.faction === 'allied' ? 0x7CFFB2 : 0xFF8A8A;
 
         g.lineStyle(1.5, color, 0.9);
         g.beginFill(glowColor, 0.5);
@@ -366,7 +366,7 @@ export default function HexMap() {
         g.closePath();
         g.endFill();
       } else {
-        const color = f.allegiance === 'allied' ? 0x7CFFB2 : 0xFF6B6B;
+        const color = f.faction === 'allied' ? 0x7CFFB2 : 0xFF6B6B;
         g.lineStyle(1.5, color, 0.9);
         g.beginFill(color, 0.7);
         // Small chevron pointing right, just ahead of the sprite nose
@@ -502,7 +502,7 @@ export default function HexMap() {
         const actingEnemies = simulatedEnemyShips.filter(enemy => {
           if (enemy.isDestroyed || enemy.hasDrifted) return false;
           const adversary = getAdversaryById(enemy.adversaryId);
-          return !!adversary && adversary.size === stepSize && !!enemy.isAllied === stepAllied;
+          return !!adversary && adversary.size === stepSize && (enemy.faction === 'allied') === stepAllied;
         });
 
         if (actingEnemies.length === 0) continue;
@@ -609,7 +609,7 @@ export default function HexMap() {
           if (!preview) return;
 
           const isSelected = ship.id === selectedShipId;
-          const lineColor = isSelected ? 0xFFD5BF : ship.isAllied ? 0x69EBD8 : 0xFF9D6E;
+          const lineColor = isSelected ? 0xFFD5BF : ship.faction === 'allied' ? 0x69EBD8 : 0xFF9D6E;
           const endpointColor = preview.noMovement ? 0xF6D365 : lineColor;
           const lineAlpha = isSelected ? 0.78 : 0.4;
           const lineWidth = isSelected ? 3 : 1.5;
@@ -693,8 +693,8 @@ export default function HexMap() {
 
         if (!moveResult.moved || moveResult.traversedHexes.length === 0) {
           if (moveResult.intentionalHold) {
-            const isAllied = fighter.allegiance === 'allied';
-            const lineColor = isAllied ? 0x7CFFB2 : 0xFF6B6B;
+            const isAlliedFighter = fighter.faction === 'allied';
+            const lineColor = isAlliedFighter ? 0x7CFFB2 : 0xFF6B6B;
             const markerRadius = 10;
             const startPx = hexToPixel(fighter.position);
             
@@ -711,8 +711,8 @@ export default function HexMap() {
           return;
         }
 
-        const isAllied = fighter.allegiance === 'allied';
-        const lineColor = isAllied ? 0x7CFFB2 : 0xFF6B6B;
+        const isAlliedFighter = fighter.faction === 'allied';
+        const lineColor = isAlliedFighter ? 0x7CFFB2 : 0xFF6B6B;
         const lineAlpha = 0.45;
         const markerRadius = 10;
 
@@ -1171,7 +1171,7 @@ export default function HexMap() {
         const targetEntities = [
           ...enemyShips.filter(s => !s.isDestroyed),
           ...stations.filter(s => !s.isDestroyed),
-          ...fighterTokens.filter(f => !f.isDestroyed && f.allegiance === 'enemy')
+          ...fighterTokens.filter(f => !f.isDestroyed && f.faction === 'hegemony')
         ];
         
         targetEntities.forEach(s => {
@@ -1312,10 +1312,10 @@ export default function HexMap() {
 
               // Otherwise proceed with single target logic (or none)
               const pShipTarget = hexTargets.find(t => t.kind === 'ship' && !t.isEnemy);
-              const pShip = pShipTarget?.kind === 'ship' ? pShipTarget.ship as ShipState : undefined;
+              const pShip = pShipTarget?.kind === 'ship' ? pShipTarget.ship as unknown as ShipState : undefined;
               
               const eShipTarget = hexTargets.find(t => t.kind === 'ship' && t.isEnemy);
-              const eShip = eShipTarget?.kind === 'ship' ? eShipTarget.ship as EnemyShipState : undefined;
+              const eShip = eShipTarget?.kind === 'ship' ? eShipTarget.ship as unknown as EnemyShipState : undefined;
               
               const fighterTarget = hexTargets.find(t => t.kind === 'fighter');
               const eFighter = fighterTarget?.kind === 'fighter' ? fighterTarget.fighter : undefined;
@@ -1517,7 +1517,7 @@ export default function HexMap() {
       .forEach(ship => results.push({ kind: 'ship', ship, isEnemy: false }));
     
     enemyShips.filter(ship => !ship.isDestroyed && hexKey(ship.position) === hoveredKey)
-      .forEach(ship => results.push({ kind: 'ship', ship, isEnemy: !ship.isAllied }));
+      .forEach(ship => results.push({ kind: 'ship', ship, isEnemy: ship.faction !== 'allied' }));
 
     // Stations
     stations.filter(station => !station.isDestroyed && hexKey(station.position) === hoveredKey)

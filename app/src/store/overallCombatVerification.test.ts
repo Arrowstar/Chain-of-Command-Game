@@ -54,8 +54,7 @@ describe('Overall Combat Verification (Enemy Criticals)', () => {
   beforeEach(() => {
     useGameStore.setState({
       playerShips: [{ id: 'p1', chassisId: 'vanguard', position: { q: 0, r: 0 }, facing: 0, currentHull: 10, maxHull: 10, shields: { fore: 5, foreStarboard: 5, aftStarboard: 5, aft: 5, aftPort: 5, forePort: 5 }, equippedWeapons: ['heavy-laser'], equippedSubsystems: [], criticalDamage: [], scars: [], armorDie: 'd6', baseEvasion: 5, ownerId: 'player', isDestroyed: false, hasDroppedBelow50: false, hasDrifted: false } as any],
-      enemyShips: [
-        { id: 'e1', name: 'Enemy 1', position: { q: 2, r: 0 }, facing: 3, currentHull: 10, maxHull: 10, shields: { fore: 5, foreStarboard: 5, aftStarboard: 5, aft: 5, aftPort: 5, forePort: 5 }, adversaryId: 'a1', criticalDamage: [], isDestroyed: false, hasDroppedBelow50: false, hasDrifted: false, baseEvasion: 5, armorDie: 'd6' } as any,
+      enemyShips: [{ kind: 'ship', faction: 'hegemony', id: 'e1', name: 'Enemy 1', position: { q: 2, r: 0 }, facing: 3, currentHull: 10, maxHull: 10, shields: { fore: 5, foreStarboard: 5, aftStarboard: 5, aft: 5, aftPort: 5, forePort: 5 }, adversaryId: 'a1', criticalDamage: [], isDestroyed: false, hasDroppedBelow50: false, hasDrifted: false, baseEvasion: 5, armorDie: 'd6' } as any,
         { id: 'e2', name: 'Enemy 2', position: { q: 3, r: 0 }, facing: 3, currentHull: 10, maxHull: 10, shields: { fore: 5, foreStarboard: 5, aftStarboard: 5, aft: 5, aftPort: 5, forePort: 5 }, adversaryId: 'a1', criticalDamage: [], isDestroyed: false, hasDroppedBelow50: false, hasDrifted: false, baseEvasion: 5, armorDie: 'd6' } as any
       ],
       players: [{ id: 'player1', shipId: 'p1', commandTokens: 10, officers: [{ station: 'tactical', currentTier: 'rookie', officerId: 'officer-vane' }], assignedActions: [] } as any],

@@ -41,8 +41,8 @@ function sortActingShips(
   allEnemyShips: EnemyShipState[],
 ): EnemyShipState[] {
   return [...actingShips].sort((a, b) => {
-    const aTargets = a.isAllied ? allEnemyShips.filter(e => !e.isAllied && !e.isDestroyed) : [...allPlayerShips, ...allEnemyShips.filter(e => e.isAllied && !e.isDestroyed)];
-    const bTargets = b.isAllied ? allEnemyShips.filter(e => !e.isAllied && !e.isDestroyed) : [...allPlayerShips, ...allEnemyShips.filter(e => e.isAllied && !e.isDestroyed)];
+    const aTargets = a.faction === 'allied' ? allEnemyShips.filter(e => e.faction === 'hegemony' && !e.isDestroyed) : [...allPlayerShips, ...allEnemyShips.filter(e => e.faction === 'allied' && !e.isDestroyed)];
+    const bTargets = b.faction === 'allied' ? allEnemyShips.filter(e => e.faction === 'hegemony' && !e.isDestroyed) : [...allPlayerShips, ...allEnemyShips.filter(e => e.faction === 'allied' && !e.isDestroyed)];
 
     const aDist = aTargets.length > 0 ? Math.min(...aTargets.map(p => hexDistance(a.position, p.position))) : Infinity;
     const bDist = bTargets.length > 0 ? Math.min(...bTargets.map(p => hexDistance(b.position, p.position))) : Infinity;
@@ -89,9 +89,9 @@ export function previewAITierMovement(
     const adversary = getAdversaryById(aiShip.adversaryId);
     if (!adversary) continue;
 
-    const possibleTargets = aiShip.isAllied
-      ? simulatedEnemies.filter(e => !e.isAllied && !e.isDestroyed)
-      : [...allPlayerShips, ...simulatedEnemies.filter(e => e.isAllied && !e.isDestroyed)];
+    const possibleTargets = aiShip.faction === 'allied'
+      ? simulatedEnemies.filter(e => e.faction === 'hegemony' && !e.isDestroyed)
+      : [...allPlayerShips, ...simulatedEnemies.filter(e => e.faction === 'allied' && !e.isDestroyed)];
 
     const aggroEntries = calculateAggroScores(aiShip, possibleTargets, tacticCard, [], players);
     if (aggroEntries.length === 0) continue;
@@ -163,9 +163,9 @@ export function executeAITier(
     const adversary = getAdversaryById(aiShip.adversaryId);
     if (!adversary) continue;
 
-    const possibleTargets = aiShip.isAllied
-      ? allEnemyShips.filter(e => !e.isAllied && !e.isDestroyed)
-      : [...allPlayerShips, ...allEnemyShips.filter(e => e.isAllied && !e.isDestroyed)];
+    const possibleTargets = aiShip.faction === 'allied'
+      ? allEnemyShips.filter(e => e.faction === 'hegemony' && !e.isDestroyed)
+      : [...allPlayerShips, ...allEnemyShips.filter(e => e.faction === 'allied' && !e.isDestroyed)];
 
     // 1. Acquire target
     const aggroEntries = calculateAggroScores(aiShip, possibleTargets, tacticCard, [], players);

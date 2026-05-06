@@ -71,8 +71,7 @@ export function buildTutorialGameConfig(): GameInitConfig {
       },
     ],
 
-    playerShips: [
-      {
+    playerShips: [{ kind: 'ship', faction: 'player', 
         id: 'tutorial-player-ship',
         name: 'ISS Perseverance',
         chassisId: 'vanguard',
@@ -105,8 +104,7 @@ export function buildTutorialGameConfig(): GameInitConfig {
       },
     ],
 
-    enemyShips: [
-      {
+    enemyShips: [{ kind: 'ship', faction: 'hegemony', 
         id: 'tutorial-enemy-1',
         name: 'Hegemony Hunter-Killer «Iron Fang»',
         adversaryId: 'hunter-killer',

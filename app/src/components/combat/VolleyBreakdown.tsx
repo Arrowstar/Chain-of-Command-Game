@@ -32,10 +32,10 @@ export default function VolleyBreakdown({ results, damageResult, outOfArc, weapo
 
   const getAllegianceColor = (id: string) => {
     if (playerShips.some(s => s.id === id)) return 'var(--color-holo-cyan)';
-    if (fighterTokens.some(f => f.id === id && f.allegiance === 'allied')) return 'var(--color-holo-cyan)';
+    if (fighterTokens.some(f => f.id === id && f.faction === 'allied')) return 'var(--color-holo-cyan)';
     if (enemyShips.some(s => s.id === id)) return 'var(--color-hostile-red)';
     if (stations.some(s => s.id === id)) return 'var(--color-hostile-red)';
-    if (fighterTokens.some(f => f.id === id && f.allegiance === 'enemy')) return 'var(--color-hostile-red)';
+    if (fighterTokens.some(f => f.id === id && f.faction === 'hegemony')) return 'var(--color-hostile-red)';
     return 'var(--color-text-secondary)';
   };
 

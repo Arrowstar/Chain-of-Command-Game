@@ -169,7 +169,7 @@ export const TACTIC_DECK: TacticCard[] = [
 
 function hasEnemyCarrier(enemyShips: EnemyShipState[]): boolean {
   return enemyShips.some(ship => {
-    if (ship.isDestroyed || ship.isAllied) return false;
+    if (ship.isDestroyed || ship.faction !== 'hegemony') return false;
     return getAdversaryById(ship.adversaryId)?.id === 'carrier';
   });
 }

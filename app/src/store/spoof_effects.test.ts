@@ -20,7 +20,7 @@ function makePlayer(): PlayerState {
 }
 
 function makeShip(id = 's1', ownerId = 'p1'): ShipState {
-  return {
+  return { kind: 'ship', faction: 'player',
     id,
     name: 'Ship 1',
     chassisId: 'vanguard',

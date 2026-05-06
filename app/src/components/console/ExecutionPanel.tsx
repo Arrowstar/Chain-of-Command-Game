@@ -114,16 +114,16 @@ export default function ExecutionPanel() {
 
   // Allied fighters relevant to this step (small step only)
   const alliedFighters = (isAllied && size === 'small')
-    ? fighterTokens.filter(f => f.allegiance === 'allied' && !f.isDestroyed)
+    ? fighterTokens.filter(f => f.faction === 'allied' && !f.isDestroyed)
     : [];
   const enemyFighters = (!isAllied && size === 'small')
-    ? fighterTokens.filter(f => f.allegiance === 'enemy' && !f.isDestroyed)
+    ? fighterTokens.filter(f => f.faction === 'hegemony' && !f.isDestroyed)
     : [];
   const activeTorpedoes = (isAllied && size === 'small')
-    ? torpedoTokens.filter(t => t.allegiance === 'allied' && !t.isDestroyed)
+    ? torpedoTokens.filter(t => t.faction === 'allied' && !t.isDestroyed)
     : [];
   const enemyTorpedoes = (!isAllied && size === 'small')
-    ? torpedoTokens.filter(t => t.allegiance === 'enemy' && !t.isDestroyed)
+    ? torpedoTokens.filter(t => t.faction === 'hegemony' && !t.isDestroyed)
     : [];
 
   const isStepResolved = isAllied
@@ -150,7 +150,7 @@ export default function ExecutionPanel() {
       };
       
       // Focus on HOSTILE targets only for the "no valid targets" check
-      const hostileShips = enemyShips.filter(s => !s.isDestroyed && !s.isAllied);
+      const hostileShips = enemyShips.filter(s => !s.isDestroyed && s.faction !== 'allied');
       const validShipIds = getValidTargetsForWeapon(attackerShip.position, attackerShip.facing, effectiveWeapon, hostileShips, useGameStore.getState().terrainMap);
       
       // Include stations in "valid target" check (they are typically hostile if not destroyed)
@@ -452,7 +452,7 @@ export default function ExecutionPanel() {
                           {/* Vector Orders — Fighter + Behavior Selector */}
                           {def?.id === 'vector-orders' && (() => {
                             const selection = vectorOrdersSelections[action.id] ?? { fighterId: '', behavior: 'attack' };
-                            const availableFighters = fighterTokens.filter(f => f.allegiance === 'allied' && f.sourceShipId === ship.id && !f.isDestroyed);
+                            const availableFighters = fighterTokens.filter(f => f.faction === 'allied' && f.sourceShipId === ship.id && !f.isDestroyed);
                             const selectedFighter = availableFighters.find(f => f.id === selection.fighterId) || availableFighters[0];
                             const selectedBehavior = BEHAVIOR_INFO[selection.behavior];
                             const isEscortOrScreen = selection.behavior === 'escort' || selection.behavior === 'screen';

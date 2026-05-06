@@ -428,6 +428,8 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
       }));
 
       finalShips.push({
+        kind: 'ship' as const,
+        faction: 'player' as const,
         id: sid,
         name: draftShipName,
         chassisId: draftChassis.id,
@@ -476,20 +478,21 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
     let config: GameInitConfig;
     if (scenarioConfig) {
       const combinedSpawns = [
-        ...(scenarioConfig.enemies || []).map(e => ({ ...e, isAllied: false })),
-        ...(scenarioConfig.allies || []).map(a => ({ ...a, isAllied: true }))
+        ...(scenarioConfig.enemies || []).map(e => ({ ...e, faction: 'hegemony' })),
+        ...(scenarioConfig.allies || []).map(a => ({ ...a, faction: 'allied' }))
       ];
       const mappedEnemies = combinedSpawns.map((e, i) => {
         const adv = ADVERSARIES.find(a => a.id === e.adversaryId) || ADVERSARIES[0];
         return {
           id: `e${i + 1}`, name: adv.name, adversaryId: adv.id,
+          kind: 'ship' as const, faction: (e.faction === 'allied' ? 'allied' : 'hegemony') as 'hegemony' | 'allied',
           position: e.coord, facing: e.facing, currentSpeed: adv.speed,
           currentHull: adv.hull, maxHull: adv.hull,
           baseEvasion: adv.baseEvasion, armorDie: adv.armorDie,
           shields: { fore: adv.shieldsPerSector, foreStarboard: adv.shieldsPerSector, aftStarboard: adv.shieldsPerSector, aft: adv.shieldsPerSector, aftPort: adv.shieldsPerSector, forePort: adv.shieldsPerSector },
           maxShieldsPerSector: adv.shieldsPerSector, criticalDamage: [],
-          isDestroyed: false, hasDroppedBelow50: false, hasDrifted: false, targetLocks: [], isAllied: e.isAllied,
-        } as EnemyShipState;
+          isDestroyed: false, hasDroppedBelow50: false, hasDrifted: false, targetLocks: [],
+        } as unknown as EnemyShipState;
       });
       
       const stationSpawns = scenarioConfig.stationSpawns?.map(s => ({
@@ -506,7 +509,8 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
           id: `scenario-fighter-${i}`,
           name: fighterClass.name,
           classId: f.classId,
-          allegiance: f.allegiance,
+          kind: 'fighter' as const,
+          faction: (f.allegiance === 'enemy' ? 'hegemony' : 'allied') as 'allied' | 'hegemony',
           sourceShipId: 'scenario',
           position: f.coord,
           facing: f.facing,
@@ -537,8 +541,8 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
       };
     } else {
       const enemy = ADVERSARIES[0];
-      const enemyShip: EnemyShipState = {
-        id: 'e1', name: enemy.name, adversaryId: enemy.id,
+      const enemyShip: EnemyShipState = { /* @ts-ignore */  kind: 'ship', faction: 'player', id: 'e1', name: enemy.name, adversaryId: enemy.id,
+        kind: 'ship' as const, faction: 'hegemony' as const,
         position: { q: 9, r: -9 }, facing: HexFacing.Aft, currentSpeed: enemy.speed,
         currentHull: enemy.hull, maxHull: enemy.hull,
         baseEvasion: enemy.baseEvasion, armorDie: enemy.armorDie,

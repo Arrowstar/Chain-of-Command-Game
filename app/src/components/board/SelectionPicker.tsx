@@ -172,9 +172,9 @@ function getTargetDisplayInfo(target: SelectionTarget) {
       const fc = getFighterClassById(target.fighter.classId);
       return {
         name: target.fighter.name,
-        type: `${target.fighter.allegiance === 'enemy' ? 'Enemy' : 'Allied'} ${fc?.name || 'Small Craft'}`,
+        type: `${target.fighter.faction === 'hegemony' ? 'Enemy' : 'Allied'} ${fc?.name || 'Small Craft'}`,
         image: ASSET_MAP[fc?.imageKey || ''],
-        color: target.fighter.allegiance === 'enemy' ? '#FF6B6B' : '#7CFFB2',
+        color: target.fighter.faction === 'hegemony' ? '#FF6B6B' : '#7CFFB2',
       };
     }
     case 'station': {

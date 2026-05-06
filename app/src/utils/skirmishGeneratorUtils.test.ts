@@ -22,8 +22,7 @@ describe('generateSkirmishConfig', () => {
         { coord: { q: 0, r: 0 }, type: 'asteroids' as const },
         { coord: { q: 1, r: 1 }, type: 'ionNebula' as const },
       ],
-      enemyShips: [
-        { id: 'e1', position: { q: -2, r: -2 }, facing: HexFacing.Aft, adversaryId: 'hegemony-corvette' },
+      enemyShips: [{ kind: 'ship', faction: 'hegemony',  id: 'e1', position: { q: -2, r: -2 }, facing: HexFacing.Aft, adversaryId: 'hegemony-corvette' },
       ],
       objectiveMarkers: [],
       scenarioRules: [],

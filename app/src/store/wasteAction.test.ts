@@ -18,9 +18,7 @@ describe('resolveAction - Waste Action Logic', () => {
           { id: 'a1', station: 'sensors', actionId: 'cyber-warfare', resolved: false } as any,
         ],
       }],
-      playerShips: [{
-        id: 's1',
-        name: 'Resolute',
+      playerShips: [{ kind: 'ship', faction: 'player', id: 's1', name: 'Resolute',
         ownerId: 'p1',
         shields: { fore: 0, foreStarboard: 0, aftStarboard: 0, aft: 0, aftPort: 0, forePort: 0 },
       } as any],

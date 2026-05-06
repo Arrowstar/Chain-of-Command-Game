@@ -31,6 +31,8 @@ describe('SectorMapView', () => {
     }];
 
     const ships: ShipState[] = [{
+      kind: 'ship',
+      faction: 'player',
       id: 'ship-1',
       name: 'ISS Resolute',
       chassisId: 'vanguard',
@@ -171,6 +173,8 @@ describe('SectorMapView', () => {
         assignedActions: [],
       }],
       persistedShips: [{
+        kind: 'ship',
+        faction: 'player',
         id: 'ship-2',
         name: 'ISS Bastion',
         chassisId: 'vanguard',

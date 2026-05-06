@@ -34,7 +34,7 @@ describe('GameScreen', () => {
         briefingCommandTokenBonus: 0,
         assignedActions: [],
       }],
-      playerShips: [{
+      playerShips: [{ kind: 'ship', faction: 'player',
         id: 's1',
         name: 'Resolute',
         chassisId: 'vanguard',

@@ -104,7 +104,7 @@ export function executeStationTurn(
     if (!stationData) continue;
 
     // ── Weapon Attacks (only if a valid target exists in range) ──
-    const possibleTargets = [...allPlayerShips, ...allEnemyShips.filter(e => e.isAllied && !e.isDestroyed)];
+    const possibleTargets = [...allPlayerShips, ...allEnemyShips.filter(e => e.faction === 'allied' && !e.isDestroyed)];
     const aggroEntries = calculateStationAggroScores(station, possibleTargets);
     const primaryTarget = aggroEntries[0];
     const target = primaryTarget ? possibleTargets.find(p => p.id === primaryTarget.targetId) : undefined;
@@ -303,7 +303,8 @@ export function executeStationTurn(
           id: `station-fighter-${station.id}-r${round}-${Date.now()}-${i}`,
           name: `${stationFighterClass.name} ${station.name.split(' ').pop()?.slice(0, 3).toUpperCase() ?? 'STN'}${i + 1}`,
           classId: stationFighterClass.id,
-          allegiance: 'enemy',
+          kind: 'fighter',
+          faction: 'hegemony',
           sourceShipId: station.id,
           position: hex,
           facing: station.facing,

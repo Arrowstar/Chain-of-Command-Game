@@ -16,10 +16,7 @@ describe('Destroyed ship debris fields', () => {
           officers: [],
         } as PlayerState,
       ],
-      playerShips: [
-        {
-          id: 's1',
-          name: 'Player Ship',
+      playerShips: [{ kind: 'ship', faction: 'player', id: 's1', name: 'Player Ship',
           chassisId: 'vanguard',
           ownerId: 'p1',
           position: { q: 0, r: 0 },
@@ -40,12 +37,9 @@ describe('Destroyed ship debris fields', () => {
           hasDroppedBelow50: false,
           hasDrifted: false,
           targetLocks: [],
-        } as ShipState,
+        } as unknown as unknown as ShipState,
       ],
-      enemyShips: [
-        {
-          id: 'e1',
-          name: 'Enemy Ship',
+      enemyShips: [{ kind: 'ship', faction: 'hegemony', id: 'e1', name: 'Enemy Ship',
           adversaryId: 'hunter-killer',
           position: { q: 2, r: 0 },
           facing: 3 as any,
@@ -61,7 +55,7 @@ describe('Destroyed ship debris fields', () => {
           targetLocks: [],
           baseEvasion: 5,
           armorDie: 'd6',
-        } as EnemyShipState,
+        } as unknown as unknown as EnemyShipState,
       ],
       fighterTokens: [],
       torpedoTokens: [],

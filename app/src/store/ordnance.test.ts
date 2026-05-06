@@ -68,25 +68,21 @@ describe('Ordnance Mechanic', () => {
           ]
         } as PlayerState
       ],
-      playerShips: [
-        {
-          id: 's1', name: 'Ship 1', chassisId: 'vanguard', ownerId: 'p1',
+      playerShips: [{ kind: 'ship', faction: 'player', id: 's1', name: 'Ship 1', chassisId: 'vanguard', ownerId: 'p1',
           position: { q: 0, r: 0 }, facing: 0 as any, currentSpeed: 0, currentHull: 10, maxHull: 10,
           shields: { fore: 2, foreStarboard: 2, aftStarboard: 2, aft: 2, aftPort: 2, forePort: 2 }, maxShieldsPerSector: 2,
           equippedWeapons: ['heavy-railgun', 'plasma-battery'], // Index 0: Ordnance, Index 1: Standard
           equippedSubsystems: [], criticalDamage: [], scars: [],
           armorDie: 'd6', baseEvasion: 5, evasionModifiers: 0, isDestroyed: false, hasDroppedBelow50: false, hasDrifted: true, targetLocks: [],
           ordnanceLoadedStatus: {}
-        } as ShipState
+        } as unknown as unknown as ShipState
       ],
-      enemyShips: [
-        {
-            id: 'e1', name: 'Enemy 1', adversaryId: 'reaper',
+      enemyShips: [{ kind: 'ship', faction: 'hegemony', id: 'e1', name: 'Enemy 1', adversaryId: 'reaper',
             position: { q: 3, r: 0 }, facing: 3 as any, currentSpeed: 0, currentHull: 10, maxHull: 10,
             shields: { fore: 2, foreStarboard: 2, aftStarboard: 2, aft: 2, aftPort: 2, forePort: 2 },
             criticalDamage: [], isDestroyed: false, hasDroppedBelow50: false, hasDrifted: false, targetLocks: [],
             baseEvasion: 5, armorDie: 'd6'
-        } as unknown as EnemyShipState
+        } as unknown as unknown as unknown as EnemyShipState
       ],
       terrainMap: new Map(),
       log: [],

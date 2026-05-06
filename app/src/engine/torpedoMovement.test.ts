@@ -13,9 +13,11 @@ vi.mock('../utils/diceRoller', () => ({
 
 describe('Torpedo Movement & Physics', () => {
   const makeTorpedo = (overrides: Partial<TorpedoToken> = {}): TorpedoToken => ({
+    kind: 'torpedo',
+    faction: 'allied',
     id: 't1',
     name: 'Seeker 1',
-    allegiance: 'allied',
+    
     sourceShipId: 's1',
     targetShipId: 'e1',
     position: { q: 0, r: 0 },

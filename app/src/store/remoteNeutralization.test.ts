@@ -103,7 +103,7 @@ describe('Remote Neutralization (remote-disarm-drone-rig) Resolution', () => {
   });
 
   it('should remove a Torpedo on a successful Engineering roll', () => {
-    const torpedo = { id: 'target-1', name: 'Torpedo', allegiance: 'enemy', position: { q: 2, r: 0 }, isDestroyed: false } as any;
+    const torpedo = { id: 'target-1', name: 'Torpedo', faction: 'hegemony', position: { q: 2, r: 0 }, isDestroyed: false } as any;
     useGameStore.setState({ torpedoTokens: [torpedo] });
 
     // Mock success
@@ -121,7 +121,7 @@ describe('Remote Neutralization (remote-disarm-drone-rig) Resolution', () => {
   });
 
   it('should mark a Fighter as destroyed on a successful Engineering roll', () => {
-    const fighter = { id: 'target-1', name: 'Fighter', allegiance: 'enemy', position: { q: 2, r: 0 }, isDestroyed: false, currentHull: 1 } as any;
+    const fighter = { id: 'target-1', name: 'Fighter', kind: 'fighter', faction: 'hegemony', position: { q: 2, r: 0 }, isDestroyed: false, currentHull: 1 } as any;
     useGameStore.setState({ fighterTokens: [fighter] });
 
     // Mock success
@@ -198,7 +198,7 @@ describe('Remote Neutralization (remote-disarm-drone-rig) Resolution', () => {
   });
 
   it('should NOT remove an allied Fighter', () => {
-    const fighter = { id: 'target-1', name: 'Allied Fighter', allegiance: 'allied', position: { q: 2, r: 0 }, isDestroyed: false, currentHull: 1 } as any;
+    const fighter = { id: 'target-1', name: 'Allied Fighter', kind: 'fighter', faction: 'allied', position: { q: 2, r: 0 }, isDestroyed: false, currentHull: 1 } as any;
     useGameStore.setState({ fighterTokens: [fighter] });
 
     // Mock success

@@ -189,11 +189,11 @@ interface GameStore {
   removeFighter: (id: string) => void;
   updateFighter: (id: string, updates: Partial<FighterToken>) => void;
   assignFighterTarget: (playerId: string, targetShipId: string) => void;
-  resolveFighterStep: (allegiance: 'allied' | 'enemy') => void;
+  resolveFighterStep: (faction: 'allied' | 'hegemony') => void;
 
   // Torpedo Tokens
   spawnTorpedo: (token: TorpedoToken) => void;
-  resolveTorpedoStep: (allegiance: 'allied' | 'enemy') => void;
+  resolveTorpedoStep: (faction: 'allied' | 'hegemony') => void;
 
   // CIC Sync (Aegis) ═  spend 1 CT to trigger an allied officer action
   invokeCICSync: (aegisPlayerId: string, targetPlayerId: string, action: QueuedAction) => void;
@@ -308,7 +308,7 @@ function buildReserveSquadron(
   terrainMap: Map<string, TerrainType>,
   round: number,
 ): FighterToken[] {
-  const carrier = enemyShips.find(ship => !ship.isDestroyed && !ship.isAllied && getAdversaryById(ship.adversaryId)?.id === 'carrier');
+  const carrier = enemyShips.find(ship => !ship.isDestroyed && ship.faction === 'hegemony' && getAdversaryById(ship.adversaryId)?.id === 'carrier');
   if (!carrier) return [];
 
   const usedNames = new Set(fighterTokens.map(f => f.name));
@@ -472,7 +472,7 @@ const SHIELD_SECTORS: Array<keyof ShieldState> = ['fore', 'foreStarboard', 'aftS
 
 export function getHostileTargets(state: { enemyShips: EnemyShipState[], stations: StationState[] }): CombatTarget[] {
   const enemies: CombatTarget[] = state.enemyShips
-    .filter(s => !s.isDestroyed && !s.isAllied)
+    .filter(s => !s.isDestroyed && s.faction === 'hegemony')
     .map(s => ({ kind: 'enemy', state: s }));
   const stations: CombatTarget[] = state.stations
     .filter(s => !s.isDestroyed)
@@ -714,6 +714,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       };
       return { 
         ...ship, 
+        kind: 'ship' as const,
+        faction: 'player' as const,
         currentSpeed,
         shields: fullShields,
         warpedOut: false, // Reset warp status for new combat
@@ -729,6 +731,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       combatModifiers?.enemyShieldsZeroRound1
         ? {
             ...ship,
+            kind: 'ship' as const,
+            faction: (ship.faction ?? 'hegemony') as 'hegemony' | 'allied',
             shields: {
               fore: 0,
               foreStarboard: 0,
@@ -738,7 +742,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
               forePort: 0,
             },
           }
-        : ship
+        : {
+            ...ship,
+            kind: 'ship' as const,
+            faction: (ship.faction ?? 'hegemony') as 'hegemony' | 'allied',
+          }
     ));
 
     // Initialize stations from config (either direct StationState[] or stationSpawns)
@@ -750,6 +758,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
         initialStations.push({
           id: `station-${spawn.stationId}-${idx}`,
           name: spawn.name || stationData.name,
+          kind: 'station',
+          faction: 'hegemony',
           stationId: stationData.id,
           position: spawn.position,
           facing: spawn.facing ?? 0,
@@ -1523,7 +1533,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
     
     // Chassis traits exist for both player and enemy
-    const chassis = getChassisById((ship as ShipState).chassisId ?? '');
+    const chassis = getChassisById((ship as unknown as unknown as ShipState).chassisId ?? '');
     chassisTrait = chassis?.uniqueTraitName || null;
 
     const occupiedHexes = new Set<string>();
@@ -1531,7 +1541,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     state.enemyShips.forEach(s => !s.isDestroyed && occupiedHexes.add(hexKey(s.position)));
     occupiedHexes.delete(hexKey(ship.position)); // Don't collide with self
 
-    const result = executeDrift(ship as ShipState, occupiedHexes, state.terrainMap, false, helmTrait, chassisTrait);
+    const result = executeDrift(ship as unknown as unknown as ShipState, occupiedHexes, state.terrainMap, false, helmTrait, chassisTrait);
     const triggeredHazards = state.tacticHazards.filter(hazard =>
       hazard.expiresAfterRound >= state.round &&
       result.path.some(step => hexKey(step) === hexKey(hazard.position))
@@ -1917,7 +1927,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           }
         }
         
-        const targetUpdates: Partial<ShipState & EnemyShipState> = {};
+        const targetUpdates: any = {};
         if (lockValue < 0) {
           targetUpdates.targetLocks = [...(target.targetLocks || []), lockValue];
         }
@@ -2084,9 +2094,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
         if (weapon.tags?.includes('torpedo') && initialTarget && ('id' in initialTarget || 'name' in initialTarget)) {
           get().spawnTorpedo({
+            kind: 'torpedo',
             id: `torpedo-${Date.now()}`,
             name: `${weapon.name}`,
-            allegiance: 'allied',
+            faction: 'allied',
             sourceShipId: shipId,
             targetShipId: ('id' in initialTarget) ? initialTarget.id : initialTarget.name,
             position: ship.position,
@@ -2147,7 +2158,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             });
             state.fighterTokens.forEach(f => {
                 if (!f.isDestroyed && blastHexes.some(h => hexEquals(h, f.position))) {
-                    targetsToEvaluate.push({ id: f.id, target: f, isEnemy: f.allegiance !== 'allied', isFighter: true });
+                    targetsToEvaluate.push({ id: f.id, target: f, isEnemy: f.faction !== 'allied', isFighter: true });
                 }
             });
         } else if (targetId) {
@@ -2159,7 +2170,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             } else if (station) {
                 targetsToEvaluate.push({ id: station.id, target: station as any, isEnemy: true, isStation: true } as any);
             } else if (initialTarget && 'id' in initialTarget) {
-                targetsToEvaluate.push({ id: (initialTarget as ShipState | EnemyShipState).id, target: initialTarget as ShipState | EnemyShipState | FighterToken, isEnemy });
+                targetsToEvaluate.push({ id: (initialTarget as unknown as unknown as ShipState | EnemyShipState).id, target: initialTarget as unknown as unknown as ShipState | EnemyShipState | FighterToken, isEnemy });
             }
         }
 
@@ -2186,17 +2197,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
             const targetMaxHull = isMarker 
                 ? (target as ObjectiveMarkerState).maxHull
                 : isStation
-                    ? (target as StationState).maxHull
+                    ? (target as unknown as StationState).maxHull
                     : (isEnemy
-                        ? getAdversaryById((target as EnemyShipState).adversaryId)?.hull || 0
-                        : (target as ShipState).maxHull);
+                        ? getAdversaryById((target as unknown as unknown as EnemyShipState).adversaryId)?.hull || 0
+                        : (target as unknown as unknown as ShipState).maxHull);
             
             if (tacOfficerData?.traitName === 'Bloodlust' && target.currentHull <= targetMaxHull / 2) {
                 pool.push({ type: 'd6', source: 'trait' });
             }
 
             if (isFighter) {
-                const fighterTarget = target as FighterToken;
+                const fighterTarget = target as unknown as FighterToken;
                 const attackerSize = chassis?.size as ShipSize | undefined;
                 const flakResult = resolveFlakAgainstFighter(weapon, fighterTarget, pool, attackerSize);
 
@@ -2207,7 +2218,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                         ),
                     }));
 
-                    if (fighterTarget.allegiance === 'enemy') {
+                    if (fighterTarget.faction === 'hegemony') {
                         const currentState = get();
                         const newCount = currentState.smallShipsDestroyedThisMission + 1;
                         set({ smallShipsDestroyedThisMission: newCount });
@@ -2236,12 +2247,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
             }
 
             const targetTerrain = state.terrainMap.get(hexKey(target.position));
-            const adversaryData = isEnemy && !isMarker && !isStation ? getAdversaryById((target as EnemyShipState).adversaryId) : null;
+            const adversaryData = isEnemy && !isMarker && !isStation ? getAdversaryById((target as unknown as unknown as EnemyShipState).adversaryId) : null;
             let targetEvasion = isMarker ? 0 : isStation
-                ? (target as StationState).baseEvasion
+                ? (target as unknown as StationState).baseEvasion
                 : (adversaryData 
                     ? adversaryData.baseEvasion
-                    : (target as ShipState).baseEvasion);
+                    : (target as unknown as unknown as ShipState).baseEvasion);
 
             const namedModifiers: import('../types/game').NamedModifier[] = [];
 
@@ -2279,7 +2290,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             // Apply data-driven defensive traits when targeting an enemy ship
             if (isEnemy && !isMarker && adversaryData) {
               const traitModifiers = applyDefensiveTraits(
-                target as EnemyShipState,
+                target as unknown as unknown as EnemyShipState,
                 adversaryData,
                 state.enemyShips,
                 state.playerShips,
@@ -2289,8 +2300,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
             }
 
             const targetArmorDie = isMarker ? 'd4' : isStation
-                ? (target as StationState).armorDie
-                : (adversaryData ? adversaryData.armorDie : (target as ShipState).armorDie) || 'd4';
+                ? (target as unknown as StationState).armorDie
+                : (adversaryData ? adversaryData.armorDie : (target as unknown as unknown as ShipState).armorDie) || 'd4';
             let targetLockModifier = 0;
             const finalTargetLocks = [...((target as any).targetLocks || [])];
             if (finalTargetLocks.length > 0) {
@@ -2314,18 +2325,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
             }
             const tachyonStrike = canUseTachyonMatrix(tachyonMatrixUsed, state.experimentalTech);
 
-            const evasiveManeuvers = isMarker || isStation ? 0 : (target as ShipState).evasiveManeuvers ?? 0;
+            const evasiveManeuvers = isMarker || isStation ? 0 : (target as unknown as unknown as ShipState).evasiveManeuvers ?? 0;
 
             const targetSize = isFighter
                 ? ShipSize.Fighter
                 : isStation
                     ? 'large'
                     : isEnemy && !isMarker
-                        ? getAdversaryById((target as EnemyShipState).adversaryId)?.size
-                        : (!isMarker ? getChassisById((target as ShipState).chassisId)?.size : undefined);
+                        ? getAdversaryById((target as unknown as unknown as EnemyShipState).adversaryId)?.size
+                        : (!isMarker ? getChassisById((target as unknown as unknown as ShipState).chassisId)?.size : undefined);
 
             const ewFighters = get().fighterTokens.filter(f => 
-              f.allegiance === 'allied' && 
+              f.faction === 'allied' && 
               f.classId === 'ew-fighter' && 
               !f.isDestroyed && 
               hexDistance(f.position, target.position) <= f.weaponRangeMax
@@ -2469,7 +2480,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     shieldsPerSector: damageResult.shieldRemaining,
                 });
             } else if (isStation) {
-                const stationTarget = target as StationState;
+                const stationTarget = target as unknown as StationState;
                 const targetUpdates: Partial<StationState> = {
                     shields: { ...stationTarget.shields, [damageResult.struckSector]: damageResult.shieldRemaining },
                     currentHull: Math.max(0, stationTarget.currentHull - finalHullDamage),
@@ -2495,7 +2506,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     useUIStore.getState().queueModal('critical', { card: critCard });
                 }
             } else {
-                const targetUpdates: Partial<EnemyShipState & ShipState> = {
+                const targetUpdates: any = {
                     shields: { ...target.shields, [damageResult.struckSector]: damageResult.shieldRemaining },
                     currentHull: Math.max(0, (target as any).currentHull - finalHullDamage),
                     targetLocks: finalTargetLocks,
@@ -2510,7 +2521,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     if (damageResult.criticalTriggered && !targetUpdates.isDestroyed) {
                         const { card: critCard, remainingDeck: newDeck } = drawCriticalCard(get().enemyCritDeck, 'enemy');
                         set({ enemyCritDeck: newDeck });
-                        const currentEnemy = (target as EnemyShipState);
+                        const currentEnemy = (target as unknown as unknown as EnemyShipState);
                         get().updateEnemyShip(target.id, {
                             criticalDamage: [...currentEnemy.criticalDamage, critCard],
                             hasDroppedBelow50: (target as any).currentHull > targetMaxHull / 2 && (targetUpdates.currentHull ?? 0) <= targetMaxHull / 2
@@ -2524,7 +2535,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 }
 
                 if (isEnemy && targetUpdates.isDestroyed) {
-                    const enemySize = getAdversaryById((target as EnemyShipState).adversaryId)?.size;
+                    const enemySize = getAdversaryById((target as unknown as unknown as EnemyShipState).adversaryId)?.size;
                     if (enemySize) {
                       const shieldRestore = getKineticSiphonShieldRestore(enemySize, state.experimentalTech);
                       if (shieldRestore > 0) {
@@ -2752,7 +2763,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           break;
         }
 
-        const targetUpdates: Partial<ShipState & EnemyShipState & StationState> = {
+        const targetUpdates: any = {
           shields: { ...target.shields, [sector]: 0 }
         };
 
@@ -2899,7 +2910,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         const targetPosition =
           state.tacticHazards.find(h => h.id === targetId)?.position
           ?? state.torpedoTokens.find(t => t.id === targetId)?.position
-          ?? state.fighterTokens.find(f => f.id === targetId && f.allegiance === 'enemy')?.position;
+          ?? state.fighterTokens.find(f => f.id === targetId && f.faction === 'hegemony')?.position;
 
         if (targetPosition && hexDistance(ship.position, targetPosition) > subsystemRangeMax) {
           get().addLog(
@@ -2954,7 +2965,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
               get().addLog('combat', `Remote Drone neutralized hostile Torpedo at (${torpedo.position.q}, ${torpedo.position.r}).`);
             } else {
               // Find and remove Hostile Fighter
-              const fighterIndex = state.fighterTokens.findIndex(f => f.id === targetId && f.allegiance === 'enemy');
+              const fighterIndex = state.fighterTokens.findIndex(f => f.id === targetId && f.faction === 'hegemony');
               if (fighterIndex !== -1) {
                 const fighter = state.fighterTokens[fighterIndex];
                 set(s => ({
@@ -3028,7 +3039,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
           id: `allied-fighter-${ship.id}-${Date.now()}`,
           name: squadronName,
           classId: fighterClass.id,
-          allegiance: 'allied',
+          kind: 'fighter',
+          faction: 'allied',
           sourceShipId: ship.id,
           position: deployHex,
           facing: ship.facing,
@@ -3364,7 +3376,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
               attackerPos: attackingShip.position,
               targetPos: defenderState.position,
               weaponTags: [], // AI ships have no weapon tag metadata; default to beam
-              isEnemy: !attackingShip.isAllied,
+              isEnemy: attackingShip.faction === 'hegemony',
             };
           }
 
@@ -3598,8 +3610,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
 
     if (size === 'small') {
-      get().resolveFighterStep('enemy');
-      get().resolveTorpedoStep('enemy');
+      get().resolveFighterStep('hegemony');
+      get().resolveTorpedoStep('hegemony');
     }
 
     // ═ ══ ═ Trait Spawner: fighter-spawning enemies (e.g. Carrier) ═ ══ ═
@@ -3678,7 +3690,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!player) return;
     set(s => ({
       fighterTokens: s.fighterTokens.map(f =>
-        f.allegiance === 'allied' && f.sourceShipId === player.shipId
+        f.faction === 'allied' && f.sourceShipId === player.shipId
           ? { ...f, assignedTargetId: targetShipId }
           : f
       ),
@@ -3690,7 +3702,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   // ═ ══ ══ ═ Fighter Step Resolution ═ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ═
     resolveFighterStep: (allegiance) => {
     const state = get();
-    const fighters = state.fighterTokens.filter(f => f.allegiance === allegiance && !f.isDestroyed && !f.hasDrifted);
+    const fighters = state.fighterTokens.filter(f => f.faction === allegiance && !f.isDestroyed && !f.hasDrifted);
     if (fighters.length === 0) return;
 
     const allFighters = state.fighterTokens;
@@ -3718,7 +3730,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         );
       }
 
-      if (allegiance === 'enemy' && moveResult.moved) {
+      if (allegiance === 'hegemony' && moveResult.moved) {
         let pdcInterceptHex: HexCoord | null = null;
 
         for (const traversedHex of moveResult.traversedHexes) {
@@ -3781,7 +3793,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             isDestroyed: newHull === 0,
           };
 
-          if (wasDestroyed && targetFighter.allegiance === 'enemy') {
+          if (wasDestroyed && targetFighter.faction === 'hegemony') {
             const currentState = get();
             const newCount = currentState.smallShipsDestroyedThisMission + 1;
             set({ smallShipsDestroyedThisMission: newCount });
@@ -3918,7 +3930,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   resolveTorpedoStep: (allegiance) => {
     const state = get();
-    const torpedoes = state.torpedoTokens.filter(t => t.allegiance === allegiance && !t.isDestroyed && !t.hasMoved);
+    const torpedoes = state.torpedoTokens.filter(t => t.faction === allegiance && !t.isDestroyed && !t.hasMoved);
     if (torpedoes.length === 0) return;
 
     let updatedTorpedoes = [...state.torpedoTokens];
@@ -3945,7 +3957,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const moveResult = moveTorpedo(torpedo, target.position, state.terrainMap);
       let pdcInterceptHex: HexCoord | null = null;
 
-      if (!moveResult.isDestroyed && allegiance === 'enemy') {
+      if (!moveResult.isDestroyed && allegiance === 'hegemony') {
         for (const traversedHex of moveResult.traversedHexes) {
           const pdcAttempts = resolvePointDefenseInterception(
             get().playerShips,
@@ -3998,10 +4010,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
       // 3. Attack if reached target
       if (moveResult.reachedTarget) {
         let targetEvasion = 5;
-        if ('chassisId' in target) targetEvasion = (target as ShipState).baseEvasion + (target as ShipState).evasionModifiers;
-        else if ('adversaryId' in target) targetEvasion = (target as EnemyShipState).baseEvasion + ((target as EnemyShipState).evasionModifiers ?? 0);
-        else if ('stationId' in target) targetEvasion = (target as StationState).baseEvasion + ((target as StationState).evasiveManeuvers ?? 0);
-        else if ('classId' in target) targetEvasion = (target as FighterToken).baseEvasion + ((target as FighterToken).evasiveManeuvers ?? 0);
+        if ('chassisId' in target) targetEvasion = (target as unknown as unknown as ShipState).baseEvasion + (target as unknown as unknown as ShipState).evasionModifiers;
+        else if ('adversaryId' in target) targetEvasion = (target as unknown as unknown as EnemyShipState).baseEvasion + ((target as unknown as unknown as EnemyShipState).evasionModifiers ?? 0);
+        else if ('stationId' in target) targetEvasion = (target as unknown as StationState).baseEvasion + ((target as unknown as StationState).evasiveManeuvers ?? 0);
+        else if ('classId' in target) targetEvasion = (target as unknown as FighterToken).baseEvasion + ((target as unknown as FighterToken).evasiveManeuvers ?? 0);
         else if ('hull' in target) targetEvasion = 0; // Objective markers are stationary and easy to hit
 
         const attackResult = resolveTorpedoAttack(torpedo, targetEvasion);
@@ -4020,12 +4032,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
             get().updateEnemyShip(target.id, { currentHull: newHull, isDestroyed: newHull === 0 });
             
             // Critical Hit if 3+ hull damage (torpedoes deal 3)
-            const maxHull = getAdversaryById((target as EnemyShipState).adversaryId)?.hull ?? 10;
+            const maxHull = getAdversaryById((target as unknown as unknown as EnemyShipState).adversaryId)?.hull ?? 10;
             if (attackResult.hullDamage >= 3 && newHull > 0) {
                 const { card: critCard, remainingDeck: newDeck } = drawCriticalCard(get().enemyCritDeck, 'enemy');
                 set({ enemyCritDeck: newDeck });
                 get().updateEnemyShip(target.id, {
-                    criticalDamage: [...(target as EnemyShipState).criticalDamage, critCard],
+                    criticalDamage: [...(target as unknown as unknown as EnemyShipState).criticalDamage, critCard],
                     hasDroppedBelow50: target.currentHull > maxHull / 2 && newHull <= maxHull / 2
                 });
                 get().addLog('critical', `══& CRITICAL HIT! ${target.name} suffered: ${critCard.name}!`);
@@ -4038,10 +4050,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
               get().addLog('system', `💥 ${target.name} destroyed by torpedo impact!`);
             }
           } else if ('classId' in target) {
-            const newHull = Math.max(0, (target as FighterToken).currentHull - attackResult.hullDamage);
+            const newHull = Math.max(0, (target as unknown as FighterToken).currentHull - attackResult.hullDamage);
             get().updateFighter(target.id, { currentHull: newHull, isDestroyed: newHull === 0 });
             if (newHull === 0) {
-              get().addLog('system', `☠ ${(target as FighterToken).name} destroyed by torpedo impact!`);
+              get().addLog('system', `☠ ${(target as unknown as FighterToken).name} destroyed by torpedo impact!`);
             }
           } else if ('hull' in target) {
             const newHull = Math.max(0, (target as ObjectiveMarkerState).hull - attackResult.hullDamage);
@@ -4759,6 +4771,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const newEnemies: EnemyShipState[] = dueSpawns.map((spawn, idx) => {
         const adv = getAdversaryById(spawn.adversaryId) ?? ADVERSARIES[0];
         return {
+          kind: 'ship' as const,
+          faction: 'hegemony' as const,
           id: `e-spawn-${currentRound}-${idx}`,
           name: `${adv.name} «Reinforcement»`,
           adversaryId: adv.id,

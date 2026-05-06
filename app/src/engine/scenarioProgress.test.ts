@@ -59,8 +59,7 @@ describe('getCombatScenarioProgress station tracking', () => {
     const state = {
       ...baseState,
       objectiveType: 'Search & Destroy',
-      enemyShips: [
-        { id: 'ship1', isDestroyed: true } as any
+      enemyShips: [{ kind: 'ship', faction: 'hegemony',  id: 'ship1', isDestroyed: true } as any
       ],
       stations: [
         { id: 'station1', isDestroyed: false } as any

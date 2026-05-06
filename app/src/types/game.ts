@@ -117,6 +117,24 @@ export function isCapitalShipSize(size: ShipSize | undefined): boolean {
   return size === ShipSize.Medium || size === ShipSize.Large;
 }
 
+// ─── Unified Ship Type System ─────────────────────────────────────
+
+/**
+ * Structural kind of a combat entity on the board.
+ * - 'ship'    : Capital ships (player or AI-controlled).
+ * - 'fighter' : Small craft / strike fighter tokens.
+ * - 'station' : Fixed stations and defense platforms.
+ */
+export type ShipKind = 'ship' | 'fighter' | 'station';
+
+/**
+ * Faction affiliation of any Ship.
+ * - 'player'   : Directly controlled by a human player.
+ * - 'hegemony' : Hostile enemy units (the Hegemony).
+ * - 'allied'   : AI-controlled friendly units.
+ */
+export type ShipFaction = 'player' | 'hegemony' | 'allied';
+
 // ─── Terrain ─────────────────────────────────────────────────────
 
 export const TerrainType = {
@@ -269,6 +287,10 @@ export interface ShieldState {
 }
 
 export interface ShipState {
+  /** Structural kind — always 'ship' for capital ships. */
+  kind: 'ship';
+  /** Faction affiliation — always 'player' for player-controlled ships. */
+  faction: 'player';
   id: string;
   name: string;
   chassisId: string;               // references ShipChassis.id
@@ -568,6 +590,14 @@ export interface AdversaryData {
 }
 
 export interface EnemyShipState {
+  /** Structural kind — always 'ship' for capital ships. */
+  kind: 'ship';
+  /**
+   * Faction of this AI capital ship.
+   * - 'hegemony' : hostile enemy unit.
+   * - 'allied'   : friendly AI escort.
+   */
+  faction: 'hegemony' | 'allied';
   id: string;
   name: string;
   adversaryId: string;             // references AdversaryData.id
@@ -589,7 +619,6 @@ export interface EnemyShipState {
   armorDie: DieType;
   evasionModifiers?: number;       // temporary modifiers this round
   evasiveManeuvers?: number;       // explicit bonus from Evasive Pattern action
-  isAllied?: boolean;              // true if this AI ship fights for the players
   isJammed?: boolean;              // true if affected by ECM Active Jamming this round
   predictiveVolleyActive?: boolean;
   spoofedFireControlActive?: boolean;
@@ -629,10 +658,13 @@ export interface FighterClassData {
  * Up to 3 fighters may share a hex; they co-exist with capital ships.
  */
 export interface FighterToken {
+  /** Structural kind — always 'fighter'. */
+  kind: 'fighter';
+  /** Faction: 'allied' fighters fight for the players; 'hegemony' fighters are hostile. */
+  faction: 'allied' | 'hegemony';
   id: string;
   name: string;
   classId: string;          // references FighterClassData.id
-  allegiance: 'allied' | 'enemy';
   /** Which capital ship launched / spawned this fighter. */
   sourceShipId: string;
   position: HexCoord;
@@ -659,9 +691,12 @@ export interface FighterToken {
  * Torpedoes do not participate in dogfights but can be targeted by PDC.
  */
 export interface TorpedoToken {
+  /** Structural kind — always 'torpedo'. */
+  kind: 'torpedo',
   id: string;
   name: string;
-  allegiance: 'allied' | 'enemy';
+  /** Faction: matches the firing ship's faction. 'allied' = player-fired; 'hegemony' = enemy-fired. */
+  faction: 'allied' | 'hegemony';
   /** Which capital ship fired this torpedo */
   sourceShipId: string;
   /** Which ship this torpedo is homing on */
@@ -745,6 +780,10 @@ export interface StationData {
 }
 
 export interface StationState {
+  /** Structural kind — always 'station'. */
+  kind: 'station';
+  /** Faction — stations are always Hegemony-controlled. */
+  faction: 'hegemony';
   id: string;
   name: string;
   stationId: string; // references StationData.id
@@ -772,6 +811,44 @@ export interface StationState {
   targetLocks?: number[];
   targetLocksRerolls?: number;
   targetLockArmorPiercingShots?: number;
+}
+
+// ─── Unified Ship Union & Type Guards ────────────────────────────
+
+/**
+ * The unified combat-entity union. Discriminate on `.kind` for structural type,
+ * and on `.faction` for allegiance.
+ */
+export type Ship = ShipState | EnemyShipState | FighterToken | StationState | TorpedoToken;
+
+/** True for any capital ship (player or AI), regardless of faction. */
+export function isCapitalShip(s: Ship): s is ShipState | EnemyShipState {
+  return s.kind === 'ship';
+}
+
+/** True for any strike fighter / small craft token. */
+export function isFighterShip(s: Ship): s is FighterToken {
+  return s.kind === 'fighter';
+}
+
+/** True for any station or defense platform. */
+export function isStationShip(s: Ship): s is StationState {
+  return s.kind === 'station';
+}
+
+/** True for player-controlled capital ships only. */
+export function isPlayerFaction(s: Ship): s is ShipState {
+  return s.faction === 'player';
+}
+
+/** True for Hegemony (hostile) units of any kind. */
+export function isEnemyFaction(s: Ship): boolean {
+  return s.faction === 'hegemony';
+}
+
+/** True for allied (friendly AI) units of any kind. */
+export function isAlliedFaction(s: Ship): boolean {
+  return s.faction === 'allied';
 }
 
 // ─── Combat Targeting ─────────────────────────────────────────────

@@ -3,9 +3,7 @@ import { useGameStore } from './useGameStore';
 import type { EnemyShipState, PlayerState, ShipState } from '../types/game';
 
 function makePlayerShip(scars: ShipState['scars'] = []): ShipState {
-  return {
-    id: 's1',
-    name: 'Player Ship',
+  return { kind: 'ship', faction: 'player', id: 's1', name: 'Player Ship',
     chassisId: 'vanguard',
     ownerId: 'p1',
     position: { q: 0, r: 0 },
@@ -30,9 +28,7 @@ function makePlayerShip(scars: ShipState['scars'] = []): ShipState {
 }
 
 function makeEnemyShip(): EnemyShipState {
-  return {
-    id: 'e1',
-    name: 'Enemy Ship',
+  return { kind: 'ship', faction: 'hegemony', id: 'e1', name: 'Enemy Ship',
     adversaryId: 'hunter-killer',
     position: { q: 2, r: -2 },
     facing: 3 as any,

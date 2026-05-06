@@ -153,7 +153,7 @@ export function resolveFighterMovement(
   let goalHex: HexCoord | null = null;
   const isRetreating = fighter.behavior === 'hit_and_run' && fighter.hitAndRunPhase === 'retreat';
 
-  const sourceShip = fighter.allegiance === 'allied' 
+  const sourceShip = fighter.faction === 'allied' 
     ? playerShips.find(s => s.id === fighter.sourceShipId)
     : enemyShips.find(s => s.id === fighter.sourceShipId);
 
@@ -175,8 +175,8 @@ export function resolveFighterMovement(
       const dist = hexDistance(fighter.position, sourceShip.position);
       // Look for enemy fighters/torpedoes close to the escort target
       const threats = [
-        ...torpedoTokens.filter(t => t.allegiance !== fighter.allegiance),
-        ...allFighters.filter(f => f.allegiance !== fighter.allegiance && !f.isDestroyed),
+        ...torpedoTokens.filter(t => t.faction !== fighter.faction),
+        ...allFighters.filter(f => f.faction !== fighter.faction && !f.isDestroyed),
       ].filter(t => hexDistance(t.position, sourceShip.position) <= 3)
         .sort((a, b) => hexDistance(fighter.position, a.position) - hexDistance(fighter.position, b.position));
 
@@ -195,8 +195,8 @@ export function resolveFighterMovement(
     // Screen: Target nearest torpedo or fighter within 2 hexes of source ship
     if (sourceShip) {
       const threats = [
-        ...torpedoTokens.filter(t => t.allegiance !== fighter.allegiance),
-        ...allFighters.filter(f => f.allegiance !== fighter.allegiance && !f.isDestroyed)
+        ...torpedoTokens.filter(t => t.faction !== fighter.faction),
+        ...allFighters.filter(f => f.faction !== fighter.faction && !f.isDestroyed)
       ].filter(t => hexDistance(t.position, sourceShip.position) <= 2);
       
       if (threats.length > 0) {
@@ -213,10 +213,10 @@ export function resolveFighterMovement(
   } else if (fighter.behavior === 'harass') {
     // Harass (Sticky State): Target assigned/nearest, maintain weaponRangeMax
     let targetShip: ShipState | EnemyShipState | StationState | undefined;
-    if (fighter.allegiance === 'allied' && fighter.assignedTargetId) {
+    if (fighter.faction === 'allied' && fighter.assignedTargetId) {
       targetShip = enemyShips.find(s => s.id === fighter.assignedTargetId && !s.isDestroyed)
         || stations.find(s => s.id === fighter.assignedTargetId && !s.isDestroyed);
-    } else if (fighter.allegiance === 'enemy') {
+    } else if (fighter.faction === 'hegemony') {
       const livingShips = playerShips.filter(s => !s.isDestroyed);
       if (livingShips.length > 0) {
         livingShips.sort((a, b) => hexDistance(fighter.position, a.position) - hexDistance(fighter.position, b.position));
@@ -241,10 +241,10 @@ export function resolveFighterMovement(
   } else if (fighter.behavior === 'flanking') {
     // Flanking (Ghost Target): Target hex directly behind enemy
     let targetShip: ShipState | EnemyShipState | StationState | undefined;
-    if (fighter.allegiance === 'allied' && fighter.assignedTargetId) {
+    if (fighter.faction === 'allied' && fighter.assignedTargetId) {
       targetShip = enemyShips.find(s => s.id === fighter.assignedTargetId && !s.isDestroyed)
         || stations.find(s => s.id === fighter.assignedTargetId && !s.isDestroyed);
-    } else if (fighter.allegiance === 'enemy') {
+    } else if (fighter.faction === 'hegemony') {
       const livingShips = playerShips.filter(s => !s.isDestroyed);
       if (livingShips.length > 0) {
         livingShips.sort((a, b) => hexDistance(fighter.position, a.position) - hexDistance(fighter.position, b.position));
@@ -269,7 +269,7 @@ export function resolveFighterMovement(
     }
   } else {
     // Default Attack/Swarm behavior
-    if (fighter.allegiance === 'allied') {
+    if (fighter.faction === 'allied') {
       if (!fighter.assignedTargetId) return { newPosition: fighter.position, moved: false, traversedHexes: [], newFacing: fighter.facing };
       const target = enemyShips.find(s => s.id === fighter.assignedTargetId && !s.isDestroyed)
         || playerShips.find(s => s.id === fighter.assignedTargetId && !s.isDestroyed)
@@ -279,7 +279,7 @@ export function resolveFighterMovement(
       goalHex = target.position;
     } else {
       const livingShips = playerShips.filter(s => !s.isDestroyed);
-      const livingFighters = allFighters.filter(f => f.allegiance === 'allied' && !f.isDestroyed);
+      const livingFighters = allFighters.filter(f => f.faction === 'allied' && !f.isDestroyed);
       if (livingShips.length === 0 && livingFighters.length === 0) return { newPosition: fighter.position, moved: false, traversedHexes: [], newFacing: fighter.facing };
 
       const shipDistances = livingShips.map(s => ({ pos: s.position, dist: hexDistance(fighter.position, s.position) }));
@@ -330,13 +330,13 @@ export function resolveFighterAttack(
   let shipTarget: (ShipState | EnemyShipState | StationState) | undefined;
   let fighterTarget: FighterToken | undefined;
 
-  if (fighter.allegiance === 'allied') {
+  if (fighter.faction === 'allied') {
     if (fighter.assignedTargetId) {
       // Priority: Assigned Target (enemy ship or station)
       shipTarget = enemyShips.find(s => s.id === fighter.assignedTargetId && !s.isDestroyed)
         || stations.find(s => s.id === fighter.assignedTargetId && !s.isDestroyed);
       if (!shipTarget) {
-        fighterTarget = allFighters.find(f => f.id === fighter.assignedTargetId && !f.isDestroyed && f.allegiance === 'enemy');
+        fighterTarget = allFighters.find(f => f.id === fighter.assignedTargetId && !f.isDestroyed && f.faction === 'hegemony');
       }
     }
     // Escort / Screen fallback: if no assigned enemy target, attack the nearest in-range enemy
@@ -347,7 +347,7 @@ export function resolveFighterAttack(
       // Collect all in-range enemies with a type tag so we can pick the single closest one
       const candidates: { dist: number; kind: 'fighter' | 'ship'; target: FighterToken | EnemyShipState | StationState }[] = [
         ...allFighters
-          .filter(f => f.allegiance === 'enemy' && !f.isDestroyed && hexDistance(fighter.position, f.position) <= range)
+          .filter(f => f.faction === 'hegemony' && !f.isDestroyed && hexDistance(fighter.position, f.position) <= range)
           .map(f => ({ dist: hexDistance(fighter.position, f.position), kind: 'fighter' as const, target: f })),
         ...enemyShips
           .filter(s => !s.isDestroyed && hexDistance(fighter.position, s.position) <= range)
@@ -359,14 +359,14 @@ export function resolveFighterAttack(
 
       if (candidates.length > 0) {
         const best = candidates[0];
-        if (best.kind === 'fighter') fighterTarget = best.target as FighterToken;
-        else shipTarget = best.target as EnemyShipState | StationState;
+        if (best.kind === 'fighter') fighterTarget = best.target as unknown as FighterToken;
+        else shipTarget = best.target as unknown as EnemyShipState | StationState;
       }
     }
   } else {
     // Enemy swarm: Target nearest player ship or nearest allied fighter
     const livingShips = playerShips.filter(s => !s.isDestroyed);
-    const livingFighters = allFighters.filter(f => !f.isDestroyed && f.allegiance === 'allied');
+    const livingFighters = allFighters.filter(f => !f.isDestroyed && f.faction === 'allied');
 
     const shipDistances = livingShips.map(s => ({ target: s, dist: hexDistance(fighter.position, s.position) }));
     const fighterDistances = livingFighters.map(f => ({ target: f, dist: hexDistance(fighter.position, f.position) }));
@@ -378,8 +378,8 @@ export function resolveFighterAttack(
 
     if (allDistances.length > 0) {
       const best = allDistances[0];
-      if (best.type === 'ship') shipTarget = best.target as ShipState;
-      else fighterTarget = best.target as FighterToken;
+      if (best.type === 'ship') shipTarget = best.target as unknown as ShipState;
+      else fighterTarget = best.target as unknown as FighterToken;
     }
   }
 
@@ -395,10 +395,10 @@ export function resolveFighterAttack(
   if (shipTarget) {
     const isPlayerShip = 'chassisId' in shipTarget;
     const baseEvasion = isPlayerShip
-      ? (shipTarget as ShipState).baseEvasion + ((shipTarget as ShipState).evasionModifiers ?? 0)
-      : (shipTarget as EnemyShipState).baseEvasion + ((shipTarget as EnemyShipState).evasionModifiers ?? 0);
+      ? (shipTarget as unknown as ShipState).baseEvasion + ((shipTarget as unknown as ShipState).evasionModifiers ?? 0)
+      : (shipTarget as unknown as EnemyShipState).baseEvasion + ((shipTarget as unknown as EnemyShipState).evasionModifiers ?? 0);
     
-    const evasiveManeuvers = (shipTarget as ShipState).evasiveManeuvers ?? 0;
+    const evasiveManeuvers = (shipTarget as unknown as ShipState).evasiveManeuvers ?? 0;
     const currentBaseEvasion = baseEvasion;
     
     // Total TN includes evasive maneuvers
@@ -406,8 +406,8 @@ export function resolveFighterAttack(
     
     // Expand Dogfight Rule to ship-based fighters (e.g. Hegemony Strike Fighters)
     const targetSize = isPlayerShip
-      ? getChassisById((shipTarget as ShipState).chassisId)?.size
-      : getAdversaryById((shipTarget as EnemyShipState).adversaryId)?.size;
+      ? getChassisById((shipTarget as unknown as ShipState).chassisId)?.size
+      : getAdversaryById((shipTarget as unknown as EnemyShipState).adversaryId)?.size;
 
     if (isSmallCraftSize(targetSize as ShipSize)) {
       tn = Math.max(1, totalBaseEvasion - 3); // Dogfight Rule
@@ -544,10 +544,11 @@ export function buildCarrierFighters(
     const squadronName = `${fighterClass.name} «${flavorName}»`;
 
     results.push({
+      kind: 'fighter',
       id: `${idPrefix}-${i}`,
       name: squadronName,
       classId: fighterClass.id,
-      allegiance: 'enemy',
+      faction: 'hegemony',
       sourceShipId: shipId,
       position: hex,
       facing: shipFacing as any,

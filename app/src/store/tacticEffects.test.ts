@@ -4,9 +4,7 @@ import type { EnemyShipState, PlayerState, ShipState } from '../types/game';
 import { TACTIC_DECK } from '../data/tacticDeck';
 
 function makePlayerShip(): ShipState {
-  return {
-    id: 's1',
-    name: 'Resolute',
+  return { kind: 'ship', faction: 'player', id: 's1', name: 'Resolute',
     chassisId: 'vanguard',
     ownerId: 'p1',
     position: { q: 0, r: 0 },
@@ -31,9 +29,7 @@ function makePlayerShip(): ShipState {
 }
 
 function makeEnemyShip(overrides: Partial<EnemyShipState> = {}): EnemyShipState {
-  return {
-    id: 'e1',
-    name: 'Enemy Ship',
+  return { kind: 'ship', faction: 'hegemony', id: 'e1', name: 'Enemy Ship',
     adversaryId: 'carrier',
     position: { q: 5, r: 0 },
     facing: 3 as any,
@@ -160,16 +156,12 @@ describe('enemy tactic effects', () => {
     const tactic = TACTIC_DECK.find(card => card.id === 'minefield-calibration')!;
     useGameStore.setState({
       tacticDeck: [tactic],
-      playerShips: [
-        {
-          ...makePlayerShip(),
+      playerShips: [{ ...makePlayerShip(),
           position: { q: 0, r: 0 },
           shields: { fore: 2, foreStarboard: 2, aftStarboard: 2, aft: 2, aftPort: 2, forePort: 2 },
         },
       ],
-      enemyShips: [
-        {
-          ...makeEnemyShip({
+      enemyShips: [{ ...makeEnemyShip({
             position: { q: 5, r: 0 },
             shields: { fore: 2, foreStarboard: 2, aftStarboard: 2, aft: 2, aftPort: 2, forePort: 2 },
           }),

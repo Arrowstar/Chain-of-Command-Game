@@ -31,18 +31,14 @@ describe('Trauma Effects', () => {
           ]
         } as PlayerState
       ],
-      playerShips: [
-        {
-          id: 's1', name: 'Ship 1', chassisId: 'c1', ownerId: 'p1',
+      playerShips: [{ kind: 'ship', faction: 'player', id: 's1', name: 'Ship 1', chassisId: 'c1', ownerId: 'p1',
           position: { q: 0, r: 0 }, facing: 0 as any, currentSpeed: 2, currentHull: 10, maxHull: 10,
           shields: { fore: 2, foreStarboard: 2, aftStarboard: 2, aft: 2, aftPort: 2, forePort: 2 }, maxShieldsPerSector: 2,
           equippedWeapons: ['w1'], equippedSubsystems: [], criticalDamage: [], scars: [],
           armorDie: 'd6', baseEvasion: 5, evasionModifiers: 0, isDestroyed: false, hasDroppedBelow50: false, hasDrifted: false, targetLocks: []
         }
       ],
-      enemyShips: [
-        {
-          id: 'e1', name: 'Enemy 1', adversaryId: 'hunter-killer', position: { q: 5, r: 0 }, facing: 3 as any,
+      enemyShips: [{ kind: 'ship', faction: 'hegemony', id: 'e1', name: 'Enemy 1', adversaryId: 'hunter-killer', position: { q: 5, r: 0 }, facing: 3 as any,
           currentSpeed: 0, currentHull: 10, maxHull: 10,
           shields: { fore: 2, foreStarboard: 2, aftStarboard: 2, aft: 2, aftPort: 2, forePort: 2 },
           maxShieldsPerSector: 2,

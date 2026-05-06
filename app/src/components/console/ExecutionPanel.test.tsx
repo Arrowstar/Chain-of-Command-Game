@@ -26,7 +26,7 @@ describe('ExecutionPanel', () => {
           { id: 'cw-1', station: 'sensors', actionId: 'cyber-warfare', ctCost: 2, stressCost: 2, resolved: false },
         ],
       }],
-      playerShips: [{
+      playerShips: [{ kind: 'ship', faction: 'player',
         id: 's1',
         name: 'Resolute',
         chassisId: 'vanguard',
@@ -50,8 +50,9 @@ describe('ExecutionPanel', () => {
         hasDrifted: true,
         targetLocks: [],
       }],
-      enemyShips: [
-        {
+      enemyShips: [{ 
+          kind: 'ship',
+          faction: 'hegemony',
           id: 'e1',
           name: 'Monitor',
           adversaryId: 'monitor',
@@ -70,7 +71,9 @@ describe('ExecutionPanel', () => {
           baseEvasion: 4,
           armorDie: 'd4',
         },
-        {
+        { 
+          kind: 'ship',
+          faction: 'hegemony',
           id: 'e2',
           name: 'Strike Fighter',
           adversaryId: 'strike-fighter',

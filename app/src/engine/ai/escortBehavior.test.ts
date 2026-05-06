@@ -5,6 +5,8 @@ import { hexDistance, hexKey } from '../hexGrid';
 
 function makePlayerShip(overrides: Partial<ShipState> = {}): ShipState {
   return {
+    kind: 'ship',
+    faction: 'player',
     id: 'player-1',
     name: 'Resolute',
     chassisId: 'paladin',
@@ -33,6 +35,8 @@ function makePlayerShip(overrides: Partial<ShipState> = {}): ShipState {
 
 function makeEnemyShip(overrides: Partial<EnemyShipState> = {}): EnemyShipState {
   return {
+    kind: 'ship',
+    faction: 'hegemony',
     id: 'enemy-1',
     name: 'Escort',
     adversaryId: 'hegemony-escort',

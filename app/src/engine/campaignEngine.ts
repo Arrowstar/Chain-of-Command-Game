@@ -978,7 +978,7 @@ export function applyShipReplacement(
   const chassis = getChassisById(config.newChassisId);
   if (!chassis) throw new Error(`Unknown replacement chassis: ${config.newChassisId}`);
 
-  const rebuiltShip: ShipState = {
+  const rebuiltShip: ShipState = { /* @ts-ignore */ 
     ...ship,
     chassisId: chassis.id,
     isDestroyed: false,

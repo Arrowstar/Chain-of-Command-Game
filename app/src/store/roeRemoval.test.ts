@@ -21,9 +21,7 @@ function makePlayer(): PlayerState {
 }
 
 function makeShip(): ShipState {
-  return {
-    id: 's1',
-    name: 'Ship 1',
+  return { kind: 'ship', faction: 'player', id: 's1', name: 'Ship 1',
     chassisId: 'vanguard',
     ownerId: 'p1',
     position: { q: 0, r: 0 },
@@ -50,9 +48,7 @@ function makeShip(): ShipState {
 }
 
 function makeEnemy(): EnemyShipState {
-  return {
-    id: 'e1',
-    name: 'Enemy 1',
+  return { kind: 'ship', faction: 'hegemony', id: 'e1', name: 'Enemy 1',
     adversaryId: 'hunter-killer',
     position: { q: 1, r: 0 },
     facing: 3 as any,

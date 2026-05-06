@@ -70,10 +70,7 @@ function buildBaseState() {
         ],
       } as unknown as PlayerState,
     ],
-    playerShips: [
-      {
-        id: 's1',
-        name: 'Resolute',
+    playerShips: [{ kind: 'ship', faction: 'player', id: 's1', name: 'Resolute',
         chassisId: 'frigate',
         ownerId: 'p1',
         position: { q: 0, r: 0 },
@@ -100,12 +97,9 @@ function buildBaseState() {
         ordnanceLoadedStatus: {},
         ordnanceLoadedIndicesThisRound: [],
         fighterLaunchCounts: {},
-      } as unknown as ShipState,
+      } as unknown as unknown as unknown as ShipState,
     ],
-    enemyShips: [
-      {
-        id: 'e1',
-        name: 'Enemy Cruiser',
+    enemyShips: [{ kind: 'ship', faction: 'hegemony', id: 'e1', name: 'Enemy Cruiser',
         adversaryId: 'cruiser',
         position: { q: 1, r: 0 },
         facing: 3,
@@ -116,8 +110,7 @@ function buildBaseState() {
         evasionModifiers: 0,
         isDestroyed: false,
         hasDroppedBelow50: false,
-        isAllied: false,
-      } as unknown as EnemyShipState,
+      } as unknown as unknown as unknown as EnemyShipState,
     ],
     terrainMap: new Map(),
     log: [],
