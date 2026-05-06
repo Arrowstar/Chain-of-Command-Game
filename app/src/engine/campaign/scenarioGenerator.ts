@@ -549,7 +549,7 @@ export function generateProceduralScenario(
   const objectiveMarkers: { name: string; position: HexCoord; hull: number; maxHull: number; shieldsPerSector: number }[] = [];
   const terrain: { coord: HexCoord; type: TerrainType }[] = [];
 
-  const objRoll = Math.floor(Math.random() * 8) + 1;
+  const objRoll = difficulty === 'boss' ? 2 : Math.floor(Math.random() * 8) + 1;
   let objectiveType = '';
   let objectiveSummary = '';
   let spawnStationSiege = false;
