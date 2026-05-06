@@ -391,13 +391,20 @@ export default function DrydockView() {
                 })()}
 
                 {/* Market Items */}
-                {campaign.drydockMarket && [...campaign.drydockMarket.weapons.map(id => ({ id, isWeapon: true })), ...campaign.drydockMarket.subsystems.map(id => ({ id, isWeapon: false }))].map(({ id, isWeapon }) => {
+                {campaign.drydockMarket && [...campaign.drydockMarket.weapons.map((id, idx) => ({ id, isWeapon: true, idx })), ...campaign.drydockMarket.subsystems.map((id, idx) => ({ id, isWeapon: false, idx }))].map(({ id, isWeapon, idx }) => {
+                  if (id === null) {
+                    return (
+                      <div key={`market-soldout-${isWeapon ? 'w' : 's'}-${idx}`} className="panel panel--raised" style={{ padding: 'var(--space-md)', opacity: 0.3, display: 'flex', alignItems: 'center', justifyContent: 'center', borderStyle: 'dashed' }}>
+                        <div style={{ ...dimText, fontStyle: 'italic', letterSpacing: '2px', color: 'var(--color-text-dim)' }}>SOLD OUT</div>
+                      </div>
+                    );
+                  }
                   const item = isWeapon ? getWeaponById(id) : getSubsystemById(id);
                   if (!item) return null;
                   const cost = discountedCost(item.rpCost);
                   const isSelected = selectedItem?.id === id && selectedItem?.source === 'market';
                   return (
-                    <ArmoryItemCard key={`market-${id}`} item={item} isWeapon={isWeapon} isSelected={isSelected} onClick={() => setSelectedItem({ id, isWeapon, source: 'market', cost })}>
+                    <ArmoryItemCard key={`market-${id}-${idx}`} item={item} isWeapon={isWeapon} isSelected={isSelected} onClick={() => setSelectedItem({ id, isWeapon, source: 'market', cost })}>
                       <div style={{ ...dimText }}>Cost: <strong style={{ color: 'var(--color-alert-amber)' }}>{cost} RP</strong></div>
                     </ArmoryItemCard>
                   );

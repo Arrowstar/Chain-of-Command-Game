@@ -1102,21 +1102,49 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
       ? -Math.max(0, Math.floor((-result.rpDelta) * (100 - discountPercent) / 100))
       : result.rpDelta;
 
-    set(state => ({
-      campaign: state.campaign ? { ...state.campaign, requisitionPoints: state.campaign.requisitionPoints + discountedDelta } : null,
-      persistedShips: state.persistedShips.map(s => {
-        if (s.id !== shipId) return s;
-        if (isWeapon) {
-          const weapons = [...s.equippedWeapons];
-          weapons[slotIndex] = itemId;
-          return { ...s, equippedWeapons: weapons };
-        } else {
-          const subs = [...s.equippedSubsystems];
-          subs[slotIndex] = itemId;
-          return { ...s, equippedSubsystems: subs };
-        }
-      }),
-    }));
+    set(state => {
+      if (!state.campaign) return state;
+
+      const newMarket = state.campaign.drydockMarket ? {
+        ...state.campaign.drydockMarket,
+        weapons: isWeapon
+          ? (() => {
+              const arr = [...state.campaign.drydockMarket.weapons];
+              const idx = arr.indexOf(itemId);
+              if (idx !== -1) arr[idx] = null;
+              return arr;
+            })()
+          : state.campaign.drydockMarket.weapons,
+        subsystems: !isWeapon
+          ? (() => {
+              const arr = [...state.campaign.drydockMarket.subsystems];
+              const idx = arr.indexOf(itemId);
+              if (idx !== -1) arr[idx] = null;
+              return arr;
+            })()
+          : state.campaign.drydockMarket.subsystems,
+      } : null;
+
+      return {
+        campaign: { 
+          ...state.campaign, 
+          requisitionPoints: state.campaign.requisitionPoints + discountedDelta,
+          drydockMarket: newMarket
+        },
+        persistedShips: state.persistedShips.map(s => {
+          if (s.id !== shipId) return s;
+          if (isWeapon) {
+            const weapons = [...s.equippedWeapons];
+            weapons[slotIndex] = itemId;
+            return { ...s, equippedWeapons: weapons };
+          } else {
+            const subs = [...s.equippedSubsystems];
+            subs[slotIndex] = itemId;
+            return { ...s, equippedSubsystems: subs };
+          }
+        }),
+      };
+    });
     fireToast({ type: 'rp-loss', message: `Purchased: ${itemId} (${discountedDelta} RP)` });
     get().pushCampaignLog({
       type: 'market',

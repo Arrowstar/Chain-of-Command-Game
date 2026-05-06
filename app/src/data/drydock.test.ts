@@ -18,7 +18,7 @@ describe('Drydock Market Generation', () => {
     for (let i = 0; i < 20; i++) {
       const inventory = generateMarketInventory();
       const items = [...inventory.weapons, ...inventory.subsystems];
-      const eventItemsFound = items.filter(id => allEventIds.includes(id));
+      const eventItemsFound = items.filter((id): id is string => id !== null && allEventIds.includes(id));
       
       expect(eventItemsFound.length).toBeGreaterThanOrEqual(1);
       expect(eventItemsFound.length).toBeLessThanOrEqual(2);
@@ -30,7 +30,7 @@ describe('Drydock Market Generation', () => {
     const firstWeapon = inventory.weapons[0];
     const firstSubsystem = inventory.subsystems[0];
 
-    const newInventory = generateMarketInventory([firstWeapon], [firstSubsystem]);
+    const newInventory = generateMarketInventory([firstWeapon!], [firstSubsystem!]);
     expect(newInventory.weapons).not.toContain(firstWeapon);
     expect(newInventory.subsystems).not.toContain(firstSubsystem);
   });

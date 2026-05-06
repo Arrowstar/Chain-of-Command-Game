@@ -581,7 +581,7 @@ describe('generateMarketInventory', () => {
     ];
     
     const items = [...market.weapons, ...market.subsystems];
-    const eventItemsFound = items.filter(id => eventIds.includes(id));
+    const eventItemsFound = items.filter((id): id is string => id !== null && eventIds.includes(id));
     
     expect(eventItemsFound.length).toBeGreaterThanOrEqual(1);
     expect(eventItemsFound.length).toBeLessThanOrEqual(2);

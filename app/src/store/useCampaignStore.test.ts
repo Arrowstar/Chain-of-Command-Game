@@ -241,4 +241,32 @@ describe('useCampaignStore event resolution', () => {
     expect(campaign?.lastCombatReason).toBe('Total Domination');
     expect(campaign?.campaignPhase).toBe('postCombat');
   });
+
+  describe('purchaseMarketItem', () => {
+    it('sets the purchased market slot to null in drydockMarket to enforce one purchase per slot', () => {
+      useCampaignStore.setState(state => ({
+        campaign: state.campaign
+          ? {
+              ...state.campaign,
+              requisitionPoints: 500,
+              drydockMarket: {
+                weapons: ['plasma-battery', 'heavy-railgun', 'seeker-torpedoes'],
+                subsystems: ['ecm', 'medical-bay', 'auto-loader'],
+                techOffer: null,
+              },
+            }
+          : null,
+      }));
+
+      // Purchase the weapon at index 1 ('heavy-railgun') into slot 0
+      useCampaignStore.getState().purchaseMarketItem('heavy-railgun', 's1', true, 0);
+
+      const campaign = useCampaignStore.getState().campaign;
+      expect(campaign?.drydockMarket?.weapons).toEqual(['plasma-battery', null, 'seeker-torpedoes']);
+      expect(campaign?.drydockMarket?.subsystems).toEqual(['ecm', 'medical-bay', 'auto-loader']);
+      
+      const ship = useCampaignStore.getState().persistedShips[0];
+      expect(ship.equippedWeapons[0]).toBe('heavy-railgun');
+    });
+  });
 });

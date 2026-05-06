@@ -208,8 +208,8 @@ export interface DrydockService {
 }
 
 export interface MarketInventory {
-  weapons: string[];    // weapon IDs available to purchase
-  subsystems: string[]; // subsystem IDs available to purchase
+  weapons: (string | null)[];    // weapon IDs available to purchase
+  subsystems: (string | null)[]; // subsystem IDs available to purchase
   techOffer: string | null; // optional Experimental Tech offer for this drydock
 }
 
