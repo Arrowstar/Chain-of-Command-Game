@@ -139,6 +139,7 @@ interface GameStore {
   inertialDampenersTriggeredShipIds: string[];
   hardLightTriggeredShipIds: string[];
   shipsWithHullDamageThisRound: string[];
+  pendingAstroCafPlayers: string[];
 
   // ═ ══ ══ ═ Actions ═ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ═
   initializeGame: (config: GameInitConfig) => void;
@@ -167,6 +168,10 @@ interface GameStore {
 
   // Logging
   addLog: (type: LogEntry['type'], message: string, details?: Record<string, unknown>) => void;
+
+  // Experimental Tech manual resolution
+  resolveAstroCaf: (playerId: string, officerId: string) => void;
+  retroactiveTachyonStrike: (logEntryId: string) => void;
 
   // Phase-specific
   executeBriefingPhase: () => void;
@@ -658,6 +663,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   inertialDampenersTriggeredShipIds: [],
   hardLightTriggeredShipIds: [],
   shipsWithHullDamageThisRound: [],
+  pendingAstroCafPlayers: [],
 
   // ═ ══ ══ ═ Initialize ═ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ═
   initializeGame: (config) => {
@@ -2610,7 +2616,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 if (hullDmg > 0)   combatMsg += ` | -${hullDmg} hull`;
                 if (hullDmg === 0 && shieldDmg === 0) combatMsg += ` | ABSORBED`;
                 if (damageResult.criticalTriggered) combatMsg += ` | ══& CRITICAL!`;
-                get().addLog('combat', combatMsg, { damageResult });
+                get().addLog('combat', combatMsg, { damageResult, targetId: currentTargetId });
             }
 
             const targetId = currentTargetId;
@@ -4152,6 +4158,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
     }
 
+    if (typeof updates.currentHull === 'number' && updates.currentHull < ship.currentHull) {
+      if (!currentState.shipsWithHullDamageThisRound.includes(shipId)) {
+        set(s => ({
+          shipsWithHullDamageThisRound: [...s.shipsWithHullDamageThisRound, shipId]
+        }));
+      }
+    }
+
     set(state => {
       const ship = state.playerShips.find(s => s.id === shipId);
       if (!ship) return state;
@@ -4905,6 +4919,114 @@ export const useGameStore = create<GameStore>((set, get) => ({
     get().addLog('roe', `🔇 RADIO SILENCE VIOLATION: ${officerData?.name ?? 'Sensors'} suffers +${stressPenalty} Stress for open comms! (${newStress} total)`);
   },
 
+  resolveAstroCaf: (playerId, officerId) => {
+    set(state => ({
+      players: state.players.map(p => {
+        if (p.id !== playerId) return p;
+        const newOfficers = p.officers.map(o => {
+          if (o.officerId !== officerId) return o;
+          const data = getOfficerById(o.officerId);
+          return { ...o, currentStress: Math.max(0, o.currentStress - 1) };
+        });
+        return { ...p, officers: newOfficers };
+      }),
+      pendingAstroCafPlayers: state.pendingAstroCafPlayers.filter(id => id !== playerId),
+    }));
+    const p = get().players.find(p => p.id === playerId);
+    const o = p?.officers.find(off => off.officerId === officerId);
+    const oData = getOfficerById(officerId);
+    get().addLog('stress', `☕ ASTRO-CAF: ${oData?.name || officerId} feels refreshed after a hot coffee! (-1 Stress)`);
+  },
+
+  retroactiveTachyonStrike: (logEntryId) => {
+    const state = get();
+    const logEntry = state.log.find(l => l.id === logEntryId);
+    if (!logEntry || !logEntry.details) return;
+
+    const damageResult = logEntry.details.damageResult as any;
+    const targetId = logEntry.details.targetId as string;
+    if (!damageResult || !targetId || state.tachyonMatrixUsedThisScenario) return;
+
+    const volley = damageResult.volleyResult;
+    if (volley.totalStandardHits <= 0) return;
+
+    // 1. Mark as used
+    set({ tachyonMatrixUsedThisScenario: true });
+
+    // 2. Modify volley: convert 1 standard hit to 1 crit
+    const updatedVolley = {
+      ...volley,
+      totalStandardHits: volley.totalStandardHits - 1,
+      totalCrits: volley.totalCrits + 1,
+    };
+
+    // 3. Recalculate damage delta
+    // We need to know how much damage was originally dealt to shields/hull
+    // and how much a crit (hull 1) adds vs a standard hit (shield 1).
+    // In this engine, standard hit = 1 shield damage, critical = 1 hull damage.
+    
+    // We reverse one shield hit (if any) and add one hull damage.
+    const originalShieldHits = damageResult.shieldHits;
+    const originalHullDamage = damageResult.hullDamage;
+
+    let newShieldHits = originalShieldHits;
+    let newHullDamage = originalHullDamage + 1;
+
+    // If there were shield hits, one was from this standard hit. Remove it.
+    if (originalShieldHits > 0) {
+      newShieldHits = originalShieldHits - 1;
+    } else {
+      // If no shield hits, the standard hit might have been an overflow hit or absorbed by armor?
+      // Actually, standard hits ALWAYS hit shields first. If shieldHits was 0, it means shields were already 0.
+      // In that case, the standard hit became an overflow hit.
+      // But a crit ALSO bypasses shields? No, crits are separate.
+    }
+
+    const shieldDelta = originalShieldHits - newShieldHits; // positive means we restore shields
+    const hullDelta = newHullDamage - originalHullDamage; // positive means we take more hull damage
+
+    // 4. Update the target ship
+    const isPlayerTarget = state.playerShips.some(s => s.id === targetId);
+    if (isPlayerTarget) {
+      const ship = state.playerShips.find(s => s.id === targetId)!;
+      const sector = damageResult.struckSector as keyof ShieldState;
+      const newShields = { ...ship.shields, [sector]: Math.min(ship.maxShieldsPerSector, ship.shields[sector] + shieldDelta) };
+      get().updatePlayerShip(targetId, {
+        shields: newShields,
+        currentHull: Math.max(0, ship.currentHull - hullDelta),
+        isDestroyed: ship.currentHull - hullDelta <= 0,
+      });
+    } else {
+      const ship = state.enemyShips.find(s => s.id === targetId)!;
+      const sector = damageResult.struckSector as keyof ShieldState;
+      const newShields = { ...ship.shields, [sector]: Math.min(ship.maxShieldsPerSector, ship.shields[sector] + shieldDelta) };
+      get().updateEnemyShip(targetId, {
+        shields: newShields,
+        currentHull: Math.max(0, ship.currentHull - hullDelta),
+        isDestroyed: ship.currentHull - hullDelta <= 0,
+      });
+    }
+
+    // 5. Update log entry details so UI reflects the change
+    const updatedDetails = {
+      ...logEntry.details,
+      damageResult: {
+        ...damageResult,
+        volleyResult: updatedVolley,
+        shieldHits: newShieldHits,
+        hullDamage: newHullDamage,
+        shieldRemaining: (damageResult.shieldRemaining ?? 0) + shieldDelta,
+      }
+    };
+
+    set(s => ({
+      log: s.log.map(l => l.id === logEntryId ? { ...l, details: updatedDetails } : l)
+    }));
+
+    get().addLog('system', `⚡ TACHYON TARGETING MATRIX: Retroactively converted a standard hit to a critical hit against ${get().getShipName(targetId)}!`);
+    fireCombatToast({ type: 'phase', message: '⚡ Tachyon Matrix Activated!' });
+  },
+
   invokeGhostMaker: (playerId) => {
     set(state => {
       const playerIndex = state.players.findIndex(p => p.id === playerId);
@@ -5448,38 +5570,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
     });
 
     if (hasActiveTech(stateAfterGravity.experimentalTech, 'astro-caf-synthesizer')) {
-      updatedPlayers = updatedPlayers.map(player => {
+      const eligiblePlayerIds: string[] = [];
+      updatedPlayers.forEach(player => {
         const ship = updatedShips.find(s => s.id === player.shipId);
         if (!ship || ship.isDestroyed || !canUseAstroCaf(stateAfterGravity.shipsWithHullDamageThisRound.includes(ship.id), stateAfterGravity.experimentalTech)) {
-          return player;
+          return;
         }
 
-        let recoveredOfficerName: string | null = null;
-        const updatedOfficers = player.officers.map(officer => ({ ...officer }));
-        const stressedOfficer = updatedOfficers
-          .filter(officer => officer.currentStress > 0)
-          .sort((a, b) => b.currentStress - a.currentStress)[0];
-
-        if (!stressedOfficer) {
-          get().addLog('system', `Experimental Tech: Astro-Caf Synthesizer had no stress to clear on ${ship.name}.`);
-          return player;
+        const hasStressedOfficer = player.officers.some(officer => officer.currentStress > 0);
+        if (hasStressedOfficer) {
+          eligiblePlayerIds.push(player.id);
         }
-
-        const stressedOfficerIndex = updatedOfficers.findIndex(officer => officer.officerId === stressedOfficer.officerId);
-        if (stressedOfficerIndex !== -1) {
-          updatedOfficers[stressedOfficerIndex] = {
-            ...updatedOfficers[stressedOfficerIndex],
-            currentStress: Math.max(0, updatedOfficers[stressedOfficerIndex].currentStress - 1),
-          };
-          recoveredOfficerName = getOfficerById(stressedOfficer.officerId)?.name ?? stressedOfficer.station;
-        }
-
-        if (recoveredOfficerName) {
-          get().addLog('system', `Experimental Tech: Astro-Caf Synthesizer removed 1 Stress from ${recoveredOfficerName} aboard ${ship.name}.`);
-        }
-
-        return { ...player, officers: updatedOfficers };
       });
+      
+      if (eligiblePlayerIds.length > 0) {
+        set({ pendingAstroCafPlayers: eligiblePlayerIds });
+        get().addLog('system', `Experimental Tech: Astro-Caf Synthesizer is ready. Commanders may order a coffee on the bridge.`);
+      }
     }
 
     set({ playerShips: updatedShips, enemyShips: updatedEnemyShips, stations: updatedStations, players: updatedPlayers });

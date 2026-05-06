@@ -15,6 +15,7 @@ import CombatScenarioProgressTracker from '../combat/CombatScenarioProgressTrack
 import TechBadge from '../campaign/TechBadge';
 import TutorialOverlay from '../tutorial/TutorialOverlay';
 import CombatToastContainer from '../board/CombatToastContainer';
+import AstroCafNotification from '../campaign/AstroCafNotification';
 import { useGameStore } from '../../store/useGameStore';
 import { useCampaignStore } from '../../store/useCampaignStore';
 import { useTutorialStore } from '../../store/useTutorialStore';
@@ -125,6 +126,7 @@ export default function GameScreen() {
       <GameLog />
       <CombatToastContainer />
       {tutorialActive && <TutorialOverlay />}
+      <AstroCafNotification />
 
       {/* Debug Menu */}
       <DebugMenu onAutoWin={debugAutoWin} />

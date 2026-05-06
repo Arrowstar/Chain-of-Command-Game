@@ -39,6 +39,7 @@ function groupByRound(entries: LogEntry[]): Map<number, LogEntry[]> {
 
 interface DiceDetailProps {
   details: Record<string, unknown>;
+  logEntryId: string;
 }
 
 /** Human-readable labels for known log detail keys */
@@ -84,10 +85,14 @@ function formatDetailValue(key: string, v: unknown, details: Record<string, unkn
   return String(v);
 }
 
-function DiceDetail({ details }: DiceDetailProps) {
+function DiceDetail({ details, logEntryId }: DiceDetailProps) {
   const damageResult = details.damageResult as any;
   const tn = damageResult?.tnBreakdown;
   const volley = damageResult?.volleyResult;
+
+  const { experimentalTech, tachyonMatrixUsedThisScenario, retroactiveTachyonStrike } = useGameStore();
+  const hasTTM = experimentalTech.some(t => t.id === 'tachyon-targeting-matrix');
+  const canUseRetroactiveTTM = hasTTM && !tachyonMatrixUsedThisScenario && (volley?.totalStandardHits > 0);
 
   if (!tn && !volley) {
     // Human-readable generic detail display
@@ -160,6 +165,34 @@ function DiceDetail({ details }: DiceDetailProps) {
                   </span>
                 );
               })}
+            </div>
+          )}
+          {canUseRetroactiveTTM && (
+            <div style={{ marginTop: 8, padding: '8px 0', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+              <button
+                className="btn btn-primary"
+                style={{
+                  width: '100%',
+                  fontSize: '0.7rem',
+                  padding: '6px',
+                  background: 'rgba(0, 204, 255, 0.15)',
+                  borderColor: 'var(--color-holo-cyan)',
+                  color: 'var(--color-holo-cyan)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  retroactiveTachyonStrike(logEntryId);
+                }}
+              >
+                <span>⚡</span> RETROACTIVE TACHYON STRIKE
+              </button>
+              <div style={{ fontSize: '0.6rem', color: 'var(--color-text-dim)', marginTop: 4, textAlign: 'center' }}>
+                Convert 1 standard hit into a critical hit (once per scenario)
+              </div>
             </div>
           )}
         </>
@@ -243,7 +276,7 @@ function LogEntryRow({ entry }: LogEntryRowProps) {
             {expanded ? '▲ hide' : '▼ details'}
           </span>}
         </span>
-        {expanded && hasDetails && <DiceDetail details={entry.details!} />}
+        {expanded && hasDetails && <DiceDetail details={entry.details!} logEntryId={entry.id} />}
       </div>
     </div>
   );
