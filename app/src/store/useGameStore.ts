@@ -2558,13 +2558,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
                         set({ enemyCritDeck: newDeck });
                         const currentEnemy = (target as unknown as unknown as EnemyShipState);
                         const targetId = 'id' in target ? target.id : target.name;
-                        get().updateEnemyShip(targetId, {
-                            criticalDamage: [...currentEnemy.criticalDamage, critCard],
-                            hasDroppedBelow50: ('currentHull' in target ? (target as any).currentHull : 0) > targetMaxHull / 2 && (targetUpdates.currentHull ?? 0) <= targetMaxHull / 2
-                        });
-                        get().addLog('critical', `══& CRITICAL HIT! ${target.name} suffered: ${critCard.name}!`);
-                        fireCombatToast({ type: 'critical', message: `★ CRITICAL HIT — ${target.name}: ${critCard.name}!` });
-                        useUIStore.getState().queueModal('critical', { card: critCard });
+
+                        if (critCard.id === 'enemy-shield-collapse') {
+                          // Immediate one-shot: strip all shields to 0, then discard
+                          const zeroShields = { fore: 0, foreStarboard: 0, aftStarboard: 0, aft: 0, aftPort: 0, forePort: 0 };
+                          get().updateEnemyShip(targetId, { shields: zeroShields });
+                          get().addLog('critical', `══& CRITICAL HIT! ${target.name} suffered: ${critCard.name}! (All shields immediately reduced to 0)`);
+                          fireCombatToast({ type: 'critical', message: `★ CRITICAL HIT — ${target.name}: ${critCard.name}!` });
+                          useUIStore.getState().queueModal('critical', { card: critCard });
+                        } else {
+                          get().updateEnemyShip(targetId, {
+                              criticalDamage: [...currentEnemy.criticalDamage, critCard],
+                              hasDroppedBelow50: ('currentHull' in target ? (target as any).currentHull : 0) > targetMaxHull / 2 && (targetUpdates.currentHull ?? 0) <= targetMaxHull / 2
+                          });
+                          get().addLog('critical', `══& CRITICAL HIT! ${target.name} suffered: ${critCard.name}!`);
+                          fireCombatToast({ type: 'critical', message: `★ CRITICAL HIT — ${target.name}: ${critCard.name}!` });
+                          useUIStore.getState().queueModal('critical', { card: critCard });
+                        }
                     }
                 } else {
                     const targetId = 'id' in target ? target.id : target.name;
@@ -5590,6 +5600,34 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
 
     set({ playerShips: updatedShips, enemyShips: updatedEnemyShips, stations: updatedStations, players: updatedPlayers });
+
+    // ─── Enemy Critical: Engine Fire & Hull Breach — 1 unblockable hull dmg each ────
+    // Both crits stack if a ship has both. Applied after regen so shields don't absorb.
+    get().enemyShips
+      .filter(s => !s.isDestroyed)
+      .forEach(s => {
+        const engineFire = s.criticalDamage?.some(c => c.id === 'enemy-engine-fire');
+        const hullBreach = s.criticalDamage?.some(c => c.id === 'enemy-hull-breach');
+        const totalFireDmg = (engineFire ? 1 : 0) + (hullBreach ? 1 : 0);
+        if (totalFireDmg > 0) {
+          const newHull = Math.max(0, s.currentHull - totalFireDmg);
+          get().updateEnemyShip(s.id, { currentHull: newHull, isDestroyed: newHull === 0 });
+          if (engineFire) get().addLog('damage', `🔥 ENGINE FIRE: ${s.name} takes 1 unblockable hull damage (${s.currentHull - (hullBreach ? 2 : 1)} remaining).`);
+          if (hullBreach) get().addLog('damage', `☠ HULL BREACH: ${s.name} takes 1 unblockable hull damage from decompression.`);
+        }
+      });
+
+    // ─── Enemy Critical: Reactor Overload — +1 pending CT to every player per round ──
+    const reactorShips = get().enemyShips.filter(s => !s.isDestroyed && s.criticalDamage?.some(c => c.id === 'enemy-reactor-overload'));
+    if (reactorShips.length > 0) {
+      set(s => ({
+        players: s.players.map(p => ({
+          ...p,
+          pendingCommandTokenBonus: (p.pendingCommandTokenBonus ?? 0) + reactorShips.length,
+        })),
+      }));
+      get().addLog('system', `⚡ REACTOR OVERLOAD: War Council gains +${reactorShips.length} CT next round (from ${reactorShips.map(s => s.name).join(', ')})!`);
+    }
 
     // Trauma Hook: Claustrophobic — +2 Stress if ship ends Execution adjacent to Asteroid/Debris terrain.
     // Applied AFTER recovery so stress recovery in this same cleanup phase doesn't wipe it.

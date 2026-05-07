@@ -163,12 +163,26 @@ export function executeAITier(
     const adversary = getAdversaryById(aiShip.adversaryId);
     if (!adversary) continue;
 
+    // ── Critical: Crew Casualties — skip entire activation, discard card ──────
+    const crewCasualties = aiShip.criticalDamage?.some(c => c.id === 'enemy-crew-casualties');
+    if (crewCasualties) {
+      const newCriticalDamage = aiShip.criticalDamage.filter(c => c.id !== 'enemy-crew-casualties');
+      const existingUpdates = shipUpdates.get(aiShip.id) ?? {};
+      shipUpdates.set(aiShip.id, { ...existingUpdates, criticalDamage: newCriticalDamage });
+      actions.push({ shipId: aiShip.id, type: 'move', details: { skipped: true, reason: 'crew-casualties' } });
+      continue;
+    }
+
+    // ── Critical: Comms Severed — ignore tactic card bonuses ─────────────────
+    const commsSevered = aiShip.criticalDamage?.some(c => c.id === 'enemy-comms-severed');
+    const effectiveTacticCard = commsSevered ? null : tacticCard;
+
     const possibleTargets = aiShip.faction === 'allied'
       ? allEnemyShips.filter(e => e.faction === 'hegemony' && !e.isDestroyed)
       : [...allPlayerShips, ...allEnemyShips.filter(e => e.faction === 'allied' && !e.isDestroyed)];
 
     // 1. Acquire target
-    const aggroEntries = calculateAggroScores(aiShip, possibleTargets, tacticCard, [], players);
+    const aggroEntries = calculateAggroScores(aiShip, possibleTargets, effectiveTacticCard, [], players);
     if (aggroEntries.length === 0) continue;
     const primaryTarget = aggroEntries[0];
     const target = possibleTargets.find(p => p.id === primaryTarget.targetId);
@@ -176,7 +190,11 @@ export function executeAITier(
 
     // 2. Check if tactic card prevents movement
     const noMovement = false;
-    const extraMove = getTacticMovementBonus(aiShip, target, adversary.size, tacticCard);
+    const extraMove = getTacticMovementBonus(aiShip, target, adversary.size, effectiveTacticCard);
+
+    // ── Critical: Thruster Lockout — halve movement speed ────────────────────
+    const thrusterLockout = aiShip.criticalDamage?.some(c => c.id === 'enemy-thruster-lockout');
+    const effectiveSpeed = thrusterLockout ? Math.floor(adversary.speed / 2) : adversary.speed;
 
     // 3. Move
     if (!noMovement && !aiShip.navLockout) {
@@ -191,7 +209,7 @@ export function executeAITier(
         });
 
       const movePlan = planAIMovement(
-        aiShip.position, aiShip.facing, adversary.speed,
+        aiShip.position, aiShip.facing, effectiveSpeed,
         target.position, adversary.aiTag, adversary.weaponRangeMax,
         occupiedHexes, terrainMap, extraMove > 0 ? extraMove : 0,
         isFighter,
@@ -299,27 +317,32 @@ export function executeAITier(
         if (aiShip.isJammed) {
           namedModifiers.push({ name: 'Jammed', value: 2 });
         }
+        // ── Critical: Fire Control Slagged — +2 to TN ───────────────────────
+        const fireControlSlagged = aiShip.criticalDamage?.some(c => c.id === 'enemy-fire-control-slag');
+        if (fireControlSlagged) {
+          namedModifiers.push({ name: 'Fire Control Slagged', value: 2 });
+        }
         const tn = calculateTN(targetEvasion, dist, defTerrain, 0, 0, 0, namedModifiers, false);
-        // Tactic card extra dice
-        if (tacticCard?.mechanicalEffect.extraDice) {
-          pool.push(...tacticCard.mechanicalEffect.extraDice.map(dt => ({ type: dt, source: 'tactic' })));
+        // Tactic card extra dice (suppressed if Comms Severed)
+        if (effectiveTacticCard?.mechanicalEffect.extraDice) {
+          pool.push(...effectiveTacticCard.mechanicalEffect.extraDice.map(dt => ({ type: dt, source: 'tactic' })));
         }
         if (
-          tacticCard?.mechanicalEffect.longRangeExtraDice &&
-          tacticCard.mechanicalEffect.longRangeMin !== undefined &&
-          dist >= tacticCard.mechanicalEffect.longRangeMin &&
+          effectiveTacticCard?.mechanicalEffect.longRangeExtraDice &&
+          effectiveTacticCard.mechanicalEffect.longRangeMin !== undefined &&
+          dist >= effectiveTacticCard.mechanicalEffect.longRangeMin &&
           (adversary.aiTag === 'artillery' || adversary.aiTag === 'support')
         ) {
-          pool.push(...tacticCard.mechanicalEffect.longRangeExtraDice.map(dt => ({ type: dt, source: 'tactic' })));
+          pool.push(...effectiveTacticCard.mechanicalEffect.longRangeExtraDice.map(dt => ({ type: dt, source: 'tactic' })));
         }
 
         const volley = rollVolley(pool, tn.total);
         if (
-          tacticCard?.mechanicalEffect.flankRearExtraDice &&
+          effectiveTacticCard?.mechanicalEffect.flankRearExtraDice &&
           (sector === 'aft' || sector === 'aftPort' || sector === 'aftStarboard')
         ) {
           const extraVolley = rollVolley(
-            tacticCard.mechanicalEffect.flankRearExtraDice.map(dt => ({ type: dt, source: 'tactic' })),
+            effectiveTacticCard.mechanicalEffect.flankRearExtraDice.map(dt => ({ type: dt, source: 'tactic' })),
             tn.total,
           );
           volley.dice.push(...extraVolley.dice);
@@ -367,7 +390,7 @@ export function executeAITier(
           hullDamage: hullDmg,
           shieldDamage: shieldDmg,
           sector,
-          officerStress: piercingHits > 0 ? tacticCard?.mechanicalEffect.criticalStressBonus : undefined,
+          officerStress: piercingHits > 0 ? effectiveTacticCard?.mechanicalEffect.criticalStressBonus : undefined,
         });
         actions.push({
           shipId: aiShip.id, type: 'attack', details: {
