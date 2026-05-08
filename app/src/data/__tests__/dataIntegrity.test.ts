@@ -100,7 +100,9 @@ describe('Data Integrity', () => {
     it('ensures all weapons have valid range and pool', () => {
       WEAPONS.forEach(w => {
         expect(w.rangeMax).toBeGreaterThanOrEqual(w.rangeMin);
-        expect(w.volleyPool.length).toBeGreaterThan(0);
+        if (!w.tags?.includes('minelayer')) {
+          expect(w.volleyPool.length).toBeGreaterThan(0);
+        }
       });
     });
   });

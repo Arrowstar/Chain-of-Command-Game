@@ -179,7 +179,16 @@ export type WeaponTag =
   | 'pointDefense'
   | 'shieldBreaker'
   | 'areaOfEffect'
-  | 'ordnance';
+  | 'ordnance'
+  | 'disabling'
+  | 'beam'
+  | 'minelayer'
+  | 'vanguard'
+  | 'suppressing'
+  | 'ghostRound'
+  | 'vortex'
+  | 'bomb'
+  | 'desperationShot';
 
 // ─── Internal Subsystems ─────────────────────────────────────────
 
@@ -344,6 +353,18 @@ export interface ShipState {
    * Key is the internal slot index. Only relevant for 'fighter-hangar' subsystems.
    */
   fighterLaunchCounts?: Record<number, number>;
+  
+  // ─── Weapons & Subsystems Expansion Tracking ───
+  dataCharges?: number;
+  dataCounters?: number;
+  boardingMarker?: boolean;
+  inhibitorActive?: boolean;
+  helmBoostActive?: boolean;
+  counterFireUsedThisRound?: boolean;
+  mirrorArrayUsedThisScenario?: boolean;
+  spentWeaponIndices?: number[];
+  speedZeroNextRound?: boolean;
+  suppressedPenalty?: boolean;
 }
 
 export interface CriticalDamageCard {
@@ -374,6 +395,7 @@ export interface PlayerState {
   assignedActions: QueuedAction[];   // actions queued during Command Phase
   usedVersatileThisRound?: boolean;
   commsBlackout?: boolean;           // fumble flag
+  psychicHangover?: boolean;         // psychic dampener debuff
 }
 
 export interface ActionContext {
@@ -522,9 +544,13 @@ export interface TacticMechanicalEffect {
 export interface TacticHazardState {
   id: string;
   name: string;
+  kind?: 'mine' | 'decoy';
   position: HexCoord;
   damage: number;
+  damageDie?: DieType;
   expiresAfterRound: number;
+  ownerShipId?: string; // used for player-deployed mines to enforce limits
+  ownerFaction?: 'player' | 'enemy';
 }
 
 export interface FumbleCard {
@@ -656,6 +682,14 @@ export interface EnemyShipState {
   navLockout?: boolean;
   /** Rounds remaining for navigational lockout. */
   navLockoutDuration?: number;
+  /** Boarding marker applied by Boarding Prep Drill */
+  boardingMarker?: boolean;
+  /** -1 volley dice penalty from Suppression Battery */
+  suppressedPenalty?: boolean;
+  /** From Gravity Tether Cannon */
+  speedZeroNextRound?: boolean;
+  /** From Targeting Inhibitor */
+  inhibitorActive?: boolean;
 }
 
 // ─── Fighter / Small Craft Tokens ────────────────────────────────
@@ -734,6 +768,27 @@ export interface TorpedoToken {
   baseEvasion: number;      // Same as fighter? Let's use 5
   isDestroyed: boolean;
   hasMoved: boolean;        // reset each briefing phase
+}
+
+// ─── Decoy Tokens ────────────────────────────────────────────────
+
+/**
+ * A holographic decoy that absorbs enemy fire.
+ */
+export interface DecoyToken {
+  /** Structural kind — always 'decoy'. */
+  kind: 'decoy';
+  /** Faction: matches the deploying ship's faction. */
+  faction: 'allied' | 'player';
+  id: string;
+  name: string;
+  ownerShipId: string;
+  position: HexCoord;
+  facing: HexFacing;
+  currentHull: number;
+  maxHull: number;
+  baseEvasion: number;
+  isDestroyed: boolean;
 }
 
 // ─── Fleet Assets ────────────────────────────────────────────────
@@ -844,7 +899,7 @@ export interface StationState {
  * The unified combat-entity union. Discriminate on `.kind` for structural type,
  * and on `.faction` for allegiance.
  */
-export type Ship = ShipState | EnemyShipState | FighterToken | StationState | TorpedoToken;
+export type Ship = ShipState | EnemyShipState | FighterToken | StationState | TorpedoToken | DecoyToken;
 
 /** True for any capital ship (player or AI), regardless of faction. */
 export function isCapitalShip(s: Ship): s is ShipState | EnemyShipState {
@@ -859,6 +914,11 @@ export function isFighterShip(s: Ship): s is FighterToken {
 /** True for any station or defense platform. */
 export function isStationShip(s: Ship): s is StationState {
   return s.kind === 'station';
+}
+
+/** True for decoy tokens. */
+export function isDecoyToken(s: Ship): s is DecoyToken {
+  return s.kind === 'decoy';
 }
 
 /** True for player-controlled capital ships only. */

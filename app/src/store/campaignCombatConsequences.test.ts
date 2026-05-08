@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { useGameStore } from './useGameStore';
 import type { EnemyShipState, PlayerState, ShipState } from '../types/game';
 
@@ -67,6 +67,11 @@ function makePlayer(shipId: string): PlayerState {
 describe('combat consequences from campaign events', () => {
   beforeEach(() => {
     useGameStore.getState().resetGame();
+    vi.spyOn(Math, 'random').mockReturnValue(0.00); // Force 'pincer-movement' tactic
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('applies combat modifiers during mission initialization and round-one briefing', () => {

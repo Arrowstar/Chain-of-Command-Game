@@ -99,6 +99,7 @@ export function rollVolley(
   rerolls: number = 0,
   rerollTacticalOnes: boolean = false,
   spoofedFireControlActive: boolean = false,
+  inhibitorActive: boolean = false,
 ): VolleyResult {
   const dice = pool.map(item => {
     const isObject = typeof item === 'object';
@@ -146,6 +147,19 @@ export function rollVolley(
       const rerolled = rollDieExploding(dice[tacticalIndex].dieType, targetNumber);
       dice[tacticalIndex] = { ...rerolled, source: dice[tacticalIndex].source };
     }
+  }
+
+  if (inhibitorActive && dice.length > 0) {
+    let bestIdx = 0;
+    for (let i = 1; i < dice.length; i++) {
+      if (dice[i].total > dice[bestIdx].total) {
+        bestIdx = i;
+      }
+    }
+    const dt = dice[bestIdx].dieType;
+    const source = dice[bestIdx].source;
+    const newResult = rollDieExploding(dt, targetNumber);
+    dice[bestIdx] = { ...newResult, source };
   }
 
   let remainingRerolls = rerolls;

@@ -9,19 +9,19 @@ describe('Drydock Market Generation', () => {
     expect(inventory.subsystems).toHaveLength(3);
   });
 
-  it('should include 1 or 2 event items in the market', () => {
+  it('should include 2 to 4 event items in the market', () => {
     const eventWeapons = getEventWeapons().map(w => w.id);
     const eventSubsystems = getEventSubsystems().map(s => s.id);
     const allEventIds = [...eventWeapons, ...eventSubsystems];
 
-    // Run multiple times to account for randomness (1 or 2 events)
+    // Run multiple times to account for randomness (2, 3, or 4 events)
     for (let i = 0; i < 20; i++) {
       const inventory = generateMarketInventory();
       const items = [...inventory.weapons, ...inventory.subsystems];
       const eventItemsFound = items.filter((id): id is string => id !== null && allEventIds.includes(id));
       
-      expect(eventItemsFound.length).toBeGreaterThanOrEqual(1);
-      expect(eventItemsFound.length).toBeLessThanOrEqual(2);
+      expect(eventItemsFound.length).toBeGreaterThanOrEqual(2);
+      expect(eventItemsFound.length).toBeLessThanOrEqual(4);
     }
   });
 

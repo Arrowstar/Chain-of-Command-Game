@@ -577,7 +577,15 @@ describe('generateMarketInventory', () => {
       'hermit-reactor-baffles',
       'remote-disarm-drone-rig',
       'salvaged-ai-coprocessor',
-      'alien-phase-vanes'
+      'alien-phase-vanes',
+      'neutrino-phase-cannon',
+      'graviton-sling',
+      'quantum-resonance-bomb',
+      'retribution-macrocannon',
+      'astro-caf-synthesizer',
+      'tachyon-targeting-matrix',
+      'kinetic-siphon',
+      'ghost-weave-plating'
     ];
     
     const items = [...market.weapons, ...market.subsystems];

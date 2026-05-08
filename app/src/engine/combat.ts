@@ -321,11 +321,16 @@ export function resolveAttack(
   let shieldHits: number;
   let overflowHits: number;
 
+  const isGhostRound = weapon.tags.includes('ghostRound');
   if (isIonWeapon) {
     // Ion: each hit removes 2 shield points, no hull overflow
     console.log(`DEBUG: Ion shieldHits calculation: totalHits=${totalHits}, currentShield=${currentShield}`);
     shieldHits = Math.min(totalHits * 2, currentShield);
     overflowHits = 0; // Ion cannot damage hull
+  } else if (isGhostRound) {
+    // Ghost Round: shields are completely bypassed
+    shieldHits = 0;
+    overflowHits = totalHits;
   } else {
     shieldHits = Math.min(totalHits, currentShield);
     overflowHits = totalHits - shieldHits;
@@ -333,7 +338,7 @@ export function resolveAttack(
 
   // When inside an Ion Nebula the shield sector is bypassed but NOT depleted:
   // return the real (unchanged) sector value so the store write is a no-op.
-  const shieldRemaining = defenderInIonNebula
+  const shieldRemaining = defenderInIonNebula || isGhostRound
     ? defenderShields[struckSector]
     : Math.max(0, currentShield - (isIonWeapon ? totalHits * 2 : totalHits));
 
@@ -369,7 +374,7 @@ export function resolveAttack(
 
   return {
     // In Ion Nebula: shieldHits = 0 (no shields were actually struck)
-    shieldHits: defenderInIonNebula ? 0 : (isIonWeapon ? Math.min(totalHits * 2, currentShield) : shieldHits),
+    shieldHits: defenderInIonNebula || isGhostRound ? 0 : (isIonWeapon ? Math.min(totalHits * 2, currentShield) : shieldHits),
     struckSector,
     shieldRemaining,
     overflowHits,

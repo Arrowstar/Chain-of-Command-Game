@@ -85,4 +85,41 @@ describe('diceRoller', () => {
     expect(stepDownDie('d6')).toBe('d4');
     expect(stepDownDie('d4')).toBe('d4');
   });
+
+  describe('rollVolley inhibitorActive mechanics', () => {
+    it('does not affect results when inhibitorActive is false', () => {
+      vi.spyOn(Math, 'random').mockReturnValue(0.99);
+      const result = rollVolley([{ type: 'd6', source: 'weapon' }], 2, 0, false, false, false);
+      expect(result.totalHits).toBeGreaterThan(0);
+      vi.restoreAllMocks();
+    });
+
+    it('re-rolls the highest die when inhibitorActive is true — misses after re-roll', () => {
+      let callIdx = 0;
+      vi.spyOn(Math, 'random').mockImplementation(() => {
+        // 1st call: die rolls max (d6 => 6, crit); 2nd call: inhibitor re-roll => miss (d6 => 1)
+        return callIdx++ === 0 ? 0.99 : 0.0;
+      });
+      const result = rollVolley([{ type: 'd6', source: 'weapon' }], 4, 0, false, false, true);
+      // After re-roll, value is 1 which is below TN 4 => miss
+      expect(result.totalHits).toBe(0);
+      vi.restoreAllMocks();
+    });
+
+    it('inhibitorActive with multi-die pool re-rolls only the best die', () => {
+      let callIdx = 0;
+      vi.spyOn(Math, 'random').mockImplementation(() => {
+        // die1: 0.99 => d6=6 (crit hit), die2: 0.5 => d6=4 (standard hit), inhibitor re-rolls die1: 0.0 => d6=1 (miss)
+        return [0.99, 0.5, 0.0][callIdx++] ?? 0.5;
+      });
+      const result = rollVolley(
+        [{ type: 'd6', source: 'weapon' }, { type: 'd6', source: 'weapon' }],
+        4, 0, false, false, true
+      );
+      // die1 re-rolled to miss, die2 still hits at 4 => 1 standard hit
+      expect(result.totalHits).toBe(1);
+      expect(result.totalCrits).toBe(0);
+      vi.restoreAllMocks();
+    });
+  });
 });

@@ -15,7 +15,7 @@ import { calculateStressRecovery, recoverStress, resetOfficerRoundState, applySt
 import { regenerateShields, resolveAttack, assembleVolleyPool, getValidTargetsForWeapon, getAntiSmallCraftTNModifier, type DamageResult } from '../engine/combat';
 import { executeDrift, rotateShip, adjustSpeed, type AsteroidRollResult } from '../engine/movement';
 import { moveTorpedo, resolveTorpedoAttack } from '../engine/torpedoMovement';
-import { hexKey, hexDistance, checkLineOfSight, parseHexKey, isInFiringArc, hexNeighbors, hexEquals } from '../engine/hexGrid';
+import { hexKey, hexDistance, checkLineOfSight, parseHexKey, isInFiringArc, hexNeighbors, hexEquals, hexLineDraw } from '../engine/hexGrid';
 import { applyGravityWellPull } from '../engine/gravityWell';
 import { getChassisById } from '../data/shipChassis';
 import { getWeaponById } from '../data/weapons';
@@ -30,7 +30,7 @@ import { applyDefensiveTraits, applyAuraTNPenalty } from '../engine/ai/traitEffe
 import { getOfficerById } from '../data/officers';
 import { getActionById, calculateActionCosts } from '../data/actions';
 import { getSubsystemById } from '../data/subsystems';
-import { rollDie, rollOfficerSkillProc, rollVolley } from '../utils/diceRoller';
+import { rollDie, rollOfficerSkillProc, rollVolley, stepUpDie, stepDownDie } from '../utils/diceRoller';
 import { resolveFighterMovement, resolveFighterAttack, buildCarrierFighters } from '../engine/ai/fighterAI';
 import { getScenarioById } from '../data/scenarios';
 import { getFleetAssetDefinition } from '../data/fleetAssets';
@@ -2155,7 +2155,58 @@ export const useGameStore = create<GameStore>((set, get) => ({
         const targetingPackages = [...state.targetingPackages];
         let tachyonMatrixUsed = state.tachyonMatrixUsedThisScenario;
         
-        if (isAoE && centerHex) {
+        const isBeam = weapon.tags?.includes('beam');
+        const isMinelayer = weapon.tags?.includes('minelayer');
+
+        if (isMinelayer && centerHex) {
+            const currentHazards = [...state.tacticHazards];
+            const shipMines = currentHazards.filter(h => h.ownerShipId === ship.id);
+            if (shipMines.length >= 3) {
+              const oldest = shipMines.reduce((a, b) => a.id < b.id ? a : b);
+              const idx = currentHazards.findIndex(h => h.id === oldest.id);
+              if (idx !== -1) currentHazards.splice(idx, 1);
+            }
+            currentHazards.push({
+              id: `mine-${Date.now()}`,
+              name: 'Friendly Mine',
+              position: centerHex,
+              damage: 2,
+              expiresAfterRound: 999, // indefinite
+              ownerShipId: ship.id
+            });
+            set({ tacticHazards: currentHazards });
+            get().addLog('combat', `💣 ${ship.name} deployed a Friendly Mine at (${centerHex.q},${centerHex.r}).`);
+            break; // Skip combat resolution
+        }
+
+        if (weapon.tags?.includes('bomb')) {
+            const currentSpent = ship.spentWeaponIndices || [];
+            get().updatePlayerShip(ship.id, { spentWeaponIndices: [...currentSpent, weaponIndex] });
+        }
+        
+        if (isBeam && centerHex) {
+            const lineHexes = hexLineDraw(ship.position, centerHex);
+            state.playerShips.forEach(s => {
+                if (!s.isDestroyed && s.id !== ship.id && lineHexes.some((h: HexCoord) => hexEquals(h, s.position))) {
+                    targetsToEvaluate.push({ id: s.id, target: s, isEnemy: false });
+                }
+            });
+            state.enemyShips.forEach(s => {
+                if (!s.isDestroyed && lineHexes.some((h: HexCoord) => hexEquals(h, s.position))) {
+                    targetsToEvaluate.push({ id: s.id, target: s, isEnemy: true });
+                }
+            });
+            state.fighterTokens.forEach(f => {
+                if (!f.isDestroyed && lineHexes.some((h: HexCoord) => hexEquals(h, f.position))) {
+                    targetsToEvaluate.push({ id: f.id, target: f, isEnemy: f.faction !== 'allied', isFighter: true });
+                }
+            });
+            state.stations.forEach(s => {
+                if (!s.isDestroyed && lineHexes.some((h: HexCoord) => hexEquals(h, s.position))) {
+                    targetsToEvaluate.push({ id: s.id, target: s, isEnemy: true, isStation: true });
+                }
+            });
+        } else if (isAoE && centerHex) {
             const blastHexes = [centerHex, ...hexNeighbors(centerHex)];
             state.playerShips.forEach(s => {
                 if (!s.isDestroyed && blastHexes.some(h => hexEquals(h, s.position))) {
@@ -2193,11 +2244,46 @@ export const useGameStore = create<GameStore>((set, get) => ({
           outOfRange?: boolean;
         }
         const allDamageResults: CombatResolutionRecord[] = [];
-        let usedSurgicalStrike = false;
         // const anyHullDamageThisAction = false; // for Overclocked Reactors crit trigger
+        
+        let usedSurgicalStrike = false;
+
+        let dataChargesUsed = false;
+        if ((ship.dataCharges || 0) >= 3) {
+            dataChargesUsed = true;
+            get().updatePlayerShip(ship.id, { dataCharges: (ship.dataCharges || 0) - 3 });
+            get().addLog('combat', `⚡ Data-Charge Spooling expended 3 charges to upgrade a Volley die for ${weapon.name}!`);
+        }
 
         targetsToEvaluate.forEach(({ id: currentTargetId, target, isEnemy, isMarker, isFighter, isStation }) => {
-            const pool = assembleVolleyPool(weapon, tacOfficer!, false, ship.predictiveVolleyActive);
+            let pool = assembleVolleyPool(weapon, tacOfficer!, false, ship.predictiveVolleyActive);
+            
+            if (dataChargesUsed && pool.length > 0) {
+                // Upgrade a die (prefer weapon die)
+                const dieIdx = pool.findIndex(d => typeof d !== 'string' && (d as any).source === 'weapon');
+                const idxToUpgrade = dieIdx >= 0 ? dieIdx : 0;
+                const d = pool[idxToUpgrade];
+                const type = typeof d === 'string' ? d : d.type;
+                pool[idxToUpgrade] = { ...(typeof d === 'string' ? { type, source: 'weapon' } : d), type: stepUpDie(type) };
+            }
+
+            
+            // Vanguard and Desperation Shot
+            if (weapon.tags?.includes('vanguard')) {
+                const distance = hexDistance(ship.position, target.position);
+                if (distance === 1) {
+                    pool = pool.map(d => typeof d === 'string' ? stepUpDie(d) : { ...d, type: stepUpDie(d.type) });
+                } else if (distance >= 3) {
+                    pool = pool.map(d => typeof d === 'string' ? stepDownDie(d) : { ...d, type: stepDownDie(d.type) });
+                }
+            }
+            if (weapon.tags?.includes('desperationShot')) {
+                const dmgTaken = ship.maxHull - ship.currentHull;
+                const bonusDice = Math.floor(dmgTaken / 3);
+                for (let i = 0; i < Math.min(4, bonusDice); i++) {
+                    pool.push({ type: 'd6', source: 'weapon' });
+                }
+            }
             if (hasScar(ship, 'targeting-array-damaged')) {
               const damagedDieIndex = pool.findIndex(die => typeof die !== 'string' && die.source === 'weapon');
               if (damagedDieIndex >= 0) {
@@ -2279,6 +2365,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
             const genericEvasionMods = (isMarker || isStation || !('evasionModifiers' in target)) ? 0 : (target.evasionModifiers ?? 0);
             if (genericEvasionMods !== 0) {
                 namedModifiers.push({ name: 'Tactics/Events', value: genericEvasionMods });
+            }
+
+            if (ship.suppressedPenalty) {
+                namedModifiers.push({ name: 'Suppressed', value: 1 });
             }
 
             if (isEnemy && !isMarker && state.exposedEnemyShipId === currentTargetId) {
@@ -2627,6 +2717,55 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 if (hullDmg === 0 && shieldDmg === 0) combatMsg += ` | ABSORBED`;
                 if (damageResult.criticalTriggered) combatMsg += ` | ══& CRITICAL!`;
                 get().addLog('combat', combatMsg, { damageResult, targetId: currentTargetId });
+
+                if (weapon.tags?.includes('disabling') && damageResult.criticalTriggered) {
+                    if (!isMarker && !isStation) {
+                        const tShip = target as ShipState | EnemyShipState;
+                        if (isEnemy) get().updateEnemyShip(tShip.id, { speedZeroNextRound: true });
+                        else get().updatePlayerShip(tShip.id, { speedZeroNextRound: true });
+                        get().addLog('combat', `⚡ Gravity Tether Cannon disabled engines on ${target.name} (Speed reduced to 0 next round).`);
+                    }
+                }
+
+                if (weapon.tags?.includes('suppressing') && damageResult.volleyResult.totalStandardHits > 0) {
+                    if (!isMarker && !isStation) {
+                        const tShip = target as ShipState | EnemyShipState;
+                        if (isEnemy) get().updateEnemyShip(tShip.id, { suppressedPenalty: true });
+                        else get().updatePlayerShip(tShip.id, { suppressedPenalty: true });
+                        get().addLog('combat', `⚡ Suppression Battery suppressed ${target.name} (-1 Volley dice on next attack).`);
+                    }
+                }
+
+                if (weapon.tags?.includes('vortex') && damageResult.volleyResult.totalHits > 0) {
+                    if (!isStation && !isMarker) {
+                        const tShip = target as ShipState | EnemyShipState;
+                        if (damageResult.criticalTriggered) {
+                            const neighbors = hexNeighbors(tShip.position);
+                            let furthest = tShip.position;
+                            let maxDist = hexDistance(ship.position, tShip.position);
+                            for (const n of neighbors) {
+                                const d = hexDistance(ship.position, n);
+                                if (d > maxDist) {
+                                    maxDist = d;
+                                    furthest = n;
+                                }
+                            }
+                            if (hexDistance(ship.position, furthest) > hexDistance(ship.position, tShip.position)) {
+                                const tMap = state.terrainMap.get(hexKey(furthest));
+                                if (tMap !== 'asteroids') {
+                                    if (isEnemy) get().updateEnemyShip(tShip.id, { position: furthest });
+                                    else get().updatePlayerShip(tShip.id, { position: furthest });
+                                    get().addLog('combat', `🌪️ Graviton Sling vortex forcefully pushed ${tShip.name} away!`);
+                                }
+                            }
+                        } else {
+                            const newFacing = ((tShip.facing as number) + 1) % 6;
+                            if (isEnemy) get().updateEnemyShip(tShip.id, { facing: newFacing as any });
+                            else get().updatePlayerShip(tShip.id, { facing: newFacing as any });
+                            get().addLog('combat', `🌪️ Graviton Sling vortex forcefully rotated ${tShip.name}!`);
+                        }
+                    }
+                }
             }
 
             const targetId = currentTargetId;
@@ -2643,6 +2782,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
         if (ship.spoofedFireControlActive || (get().playerShips.find(s => s.id === shipId)?.spoofedFireControlActive)) {
             updates.spoofedFireControlActive = false;
+        }
+
+        if ((ship as any).suppressedPenalty) {
+            updates.suppressedPenalty = false as any;
         }
 
         if (tacticalOverrideConsumed) {
@@ -3263,6 +3406,113 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
         break;
       }
+      case 'sensor-ghost-emitter': {
+        const targetHex = context?.targetHex as import('../types/game').HexCoord | undefined;
+        if (!targetHex) {
+          get().addLog('system', `Sensor Ghost Emitter on ${ship.name} ready — select an empty hex to deploy.`);
+          break;
+        }
+        // Deploy decoy
+        const newDecoy: import('../types/game').TacticHazardState = {
+          id: `decoy-${Date.now()}-${Math.random()}`,
+          name: 'Sensor Decoy',
+          kind: 'decoy',
+          position: targetHex,
+          damage: 0,
+          expiresAfterRound: state.round,
+          ownerShipId: ship.id,
+          ownerFaction: 'player',
+        };
+        set(s => ({ tacticHazards: [...s.tacticHazards, newDecoy] }));
+        get().addLog('system', `📡 ${ship.name} deployed a Sensor Decoy to (${targetHex.q},${targetHex.r}).`);
+        break;
+      }
+      case 'helm-thruster-booster': {
+        updates.currentSpeed = ship.currentSpeed + 2;
+        updates.helmBoostActive = true;
+        get().addLog('movement', `🚀 ${ship.name} engaged Emergency Burn! Speed increased by +2 for this round.`);
+        break;
+      }
+      case 'targeting-inhibitor': {
+        const targetId = context?.targetShipId;
+        const target = state.enemyShips.find(s => s.id === targetId);
+        if (target) {
+          const dist = hexDistance(ship.position, target.position);
+          if (dist > 6) {
+            get().addLog('system', `Lock Inhibitor failed — target ${target.name} out of range (dist: ${dist}, max: 6).`);
+          } else {
+            get().updateEnemyShip(target.id, { inhibitorActive: true });
+            get().addLog('system', `🛑 ${ship.name} applied Targeting Inhibitor to ${target.name}. Its next attack will be hampered.`);
+          }
+        } else {
+          get().addLog('system', `Lock Inhibitor failed — no enemy target found.`);
+        }
+        break;
+      }
+      case 'shield-siphon-coil': {
+        const targetId = context?.targetShipId;
+        const target = state.enemyShips.find(s => s.id === targetId);
+        if (target) {
+          const dist = hexDistance(ship.position, target.position);
+          if (dist > 3) {
+            get().addLog('system', `Drain Field failed — target ${target.name} out of range (dist: ${dist}, max: 3).`);
+          } else {
+            // Find an active shield sector on the enemy
+            const activeSectors = Object.entries(target.shields).filter(([_, val]) => val > 0);
+            if (activeSectors.length > 0) {
+              const [sector, val] = activeSectors[0];
+              get().updateEnemyShip(target.id, { shields: { ...target.shields, [sector]: val - 1 } });
+              // Give to player fore shield (simplification)
+              const newFore = Math.min(ship.maxShieldsPerSector, (ship.shields.fore || 0) + 1);
+              updates.shields = { ...ship.shields, fore: newFore };
+              get().addLog('system', `🔋 ${ship.name} siphoned a shield from ${target.name}'s ${ARC_LABELS_STORE[sector as keyof typeof ARC_LABELS_STORE]} sector!`);
+            } else {
+              get().addLog('system', `Drain Field failed — ${target.name} has no active shields to siphon.`);
+            }
+          }
+        } else {
+          get().addLog('system', `Drain Field failed — no enemy target found.`);
+        }
+        break;
+      }
+      case 'boarding-prep-drill': {
+        const targetId = context?.targetShipId;
+        const target = state.enemyShips.find(s => s.id === targetId);
+        if (target) {
+          const dist = hexDistance(ship.position, target.position);
+          if (dist > 1) {
+            get().addLog('system', `Board Threat failed — target ${target.name} out of range (dist: ${dist}, max: 1).`);
+          } else {
+            get().updateEnemyShip(target.id, { boardingMarker: true });
+            get().addLog('system', `⚔️ ${ship.name} initiated Boarding Prep on ${target.name}. It will be crippled next round!`);
+          }
+        } else {
+          get().addLog('system', `Board Threat failed — no enemy target found.`);
+        }
+        break;
+      }
+      case 'mirror-array': {
+        if (ship.mirrorArrayUsedThisScenario) {
+          get().addLog('system', `Mirror Array failed — already used this scenario.`);
+        } else {
+          updates.mirrorArrayUsedThisScenario = true;
+          get().addLog('system', `🪞 ${ship.name} primed Mirror Array. The next enemy attack will be reflected!`);
+        }
+        break;
+      }
+      case 'psychic-dampener': {
+        // Remove 1 stress from every officer across all allied ships
+        const updatedPlayers = state.players.map(p => {
+          return {
+            ...p,
+            officers: p.officers.map(o => ({ ...o, currentStress: Math.max(0, o.currentStress - 1) })),
+            psychicHangover: true,
+          };
+        });
+        set({ players: updatedPlayers });
+        get().addLog('system', `🧠 Psychic Dampener activated by ${ship.name}. All fleet officers recovered 1 Stress, but will suffer next round.`);
+        break;
+      }
       default: {
         const actionDef = getActionById(action.actionId) || getSubsystemById(action.actionId);
         const displayName = actionDef?.name
@@ -3343,7 +3593,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       });
 
       // Apply damage to targets (could be player ships or allied enemy ships)
-      playerDamage.forEach((dmg: { targetId: string; hullDamage: number; shieldDamage: number; sector: import('../types/game').ShipArc; officerStress?: number }) => {
+      playerDamage.forEach((dmg: { targetId: string; hullDamage: number; shieldDamage: number; sector: import('../types/game').ShipArc; officerStress?: number; attackerId: string }) => {
         const liveState = get();
         const playerShip = liveState.playerShips.find(s => s.id === dmg.targetId);
         if (playerShip) {
@@ -3356,6 +3606,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
             if (updates.currentHull === 0) updates.isDestroyed = true;
           }
           get().updatePlayerShip(dmg.targetId, updates);
+
+          // Damage Reflector Grid
+          if (dmg.hullDamage >= 3 && playerShip.equippedSubsystems?.includes('damage-reflector-grid') && !playerShip.counterFireUsedThisRound) {
+            get().updatePlayerShip(playerShip.id, { counterFireUsedThisRound: true });
+            const attackerShip = get().enemyShips.find(e => e.id === dmg.attackerId);
+            if (attackerShip && !attackerShip.isDestroyed) {
+              const newEnemyHull = Math.max(0, attackerShip.currentHull - 1);
+              get().updateEnemyShip(attackerShip.id, { currentHull: newEnemyHull, isDestroyed: newEnemyHull === 0 });
+              get().addLog('combat', `⚡ Damage Reflector Grid dealt 1 unblockable hull damage to ${attackerShip.name}!`);
+            }
+          }
           if ((dmg.officerStress ?? 0) > 0) {
             set(storeState => {
               const playerIndex = storeState.players.findIndex(player => player.shipId === dmg.targetId);
@@ -4658,6 +4919,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
         });
       }
 
+      // Psychic Dampener hangover: all officers take 1 stress next round
+      if (p.psychicHangover) {
+        officers = officers.map(o => {
+          const data = getOfficerById(o.officerId);
+          if (!data) return o;
+          return { ...o, currentStress: applyStress(o, data, 1).newStress };
+        });
+      }
+
       return {
         ...p,
         commandTokens: Math.max(0, p.maxCommandTokens + roeCtMod + roundOneCtModifier - bridgeScarPenalty - roundOneCtZeroPenalty + pendingCommandTokenBonus),
@@ -4668,6 +4938,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         officers,
         usedVersatileThisRound: false,
         commsBlackout: false,
+        psychicHangover: false,
       };
     });
 
@@ -4695,6 +4966,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
         evasionModifiers: 0,
         hasDrifted: false,
         positionAtStartOfRound: s.position,
+        currentSpeed: (() => {
+          let spd = s.speedZeroNextRound ? 0 : s.currentSpeed;
+          if (s.helmBoostActive) spd = Math.max(0, spd - 2);
+          return spd;
+        })(),
+        speedZeroNextRound: false,
+        helmBoostActive: false,
+        inhibitorActive: false,
+        suppressedPenalty: false,
+        boardingMarker: false,
+        dataCharges: s.equippedSubsystems?.includes('data-charge-spooling') ? Math.min(3, (s.dataCharges || 0) + 1) : 0,
+        dataCounters: s.equippedSubsystems?.includes('combat-data-recorder') ? (s.dataCounters || 0) : 0,
+        counterFireUsedThisRound: false,
         firedWeaponPreviousRound: s.firedWeaponThisRound || false,
         firedWeaponThisRound: false,
         firedWeaponIndicesThisRound: [],
@@ -4709,17 +4993,26 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }))
     );
 
-    let updatedEnemyShips: EnemyShipState[] = state.enemyShips.map(s => ({
-      ...s,
-      evasionModifiers: 0,
-      hasDrifted: false,
-      firedWeaponIndicesThisRound: [],
-      isJammed: false,
-      hasMovedThisRound: false,
-      hexesMovedThisRound: 0,
-      navLockout: s.navLockoutDuration ? s.navLockoutDuration > 1 : false,
-      navLockoutDuration: Math.max(0, (s.navLockoutDuration ?? 0) - 1),
-    }));
+    let updatedEnemyShips: EnemyShipState[] = state.enemyShips.map(s => {
+      const wasBoarded = s.boardingMarker;
+      return {
+        ...s,
+        evasionModifiers: 0,
+        hasDrifted: false,
+        speedZeroNextRound: false,
+        inhibitorActive: false,
+        suppressedPenalty: false,
+        // Boarding Prep resolution: boarded ships lose 1 speed next round (min 0)
+        currentSpeed: wasBoarded ? Math.max(0, s.currentSpeed - 1) : s.currentSpeed,
+        boardingMarker: false,
+        navLockout: (s.navLockoutDuration ? s.navLockoutDuration > 1 : false) || (s.speedZeroNextRound ?? false),
+        firedWeaponIndicesThisRound: [],
+        isJammed: false,
+        hasMovedThisRound: false,
+        hexesMovedThisRound: 0,
+        navLockoutDuration: Math.max(0, (s.navLockoutDuration ?? 0) - 1),
+      };
+    });
     updatedEnemyShips = applyNebulaShieldStrip(updatedEnemyShips);
 
     const updatedStations = applyNebulaShieldStrip(

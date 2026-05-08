@@ -74,7 +74,7 @@ export const OFFICER_TRAINING: DrydockService[] = [
 /**
  * Generate a randomly-stocked market inventory for the Drydock.
  * Draws a baseline of 3 weapon cards and 3 subsystem cards, then
- * replaces 1-2 of those with random "Event" availability items.
+ * replaces 2-4 of those with random "Event" availability items.
  *
  * Total inventory remains 6 items (3 weapons, 3 subsystems).
  */
@@ -101,9 +101,9 @@ export function generateMarketInventory(
     ...eventSubsystemPool.map(s => ({ id: s.id, isWeapon: false })),
   ];
 
-  // 3. Replace 1-2 slots with Events
+  // 3. Replace 2-4 slots with Events
   if (combinedEventPool.length > 0) {
-    const numEvents = Math.floor(Math.random() * 2) + 1; // 1 or 2
+    const numEvents = Math.floor(Math.random() * 3) + 2; // 2, 3, or 4
     const shuffledEvents = [...combinedEventPool].sort(() => Math.random() - 0.5);
     const selectedEvents = shuffledEvents.slice(0, numEvents);
 

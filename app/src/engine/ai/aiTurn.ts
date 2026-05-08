@@ -24,7 +24,7 @@ export interface AIAction {
 export interface AITurnResult {
   actions: AIAction[];
   shipUpdates: Map<string, Partial<EnemyShipState>>;
-  playerDamage: { targetId: string; hullDamage: number; shieldDamage: number; sector: ShipArc; officerStress?: number }[];
+  playerDamage: { targetId: string; hullDamage: number; shieldDamage: number; sector: ShipArc; officerStress?: number; attackerId: string }[];
   consumedHazardIds: string[];
 }
 
@@ -317,6 +317,9 @@ export function executeAITier(
         if (aiShip.isJammed) {
           namedModifiers.push({ name: 'Jammed', value: 2 });
         }
+        if (aiShip.suppressedPenalty) {
+          namedModifiers.push({ name: 'Suppressed', value: 1 });
+        }
         // ── Critical: Fire Control Slagged — +2 to TN ───────────────────────
         const fireControlSlagged = aiShip.criticalDamage?.some(c => c.id === 'enemy-fire-control-slag');
         if (fireControlSlagged) {
@@ -336,7 +339,7 @@ export function executeAITier(
           pool.push(...effectiveTacticCard.mechanicalEffect.longRangeExtraDice.map(dt => ({ type: dt, source: 'tactic' })));
         }
 
-        const volley = rollVolley(pool, tn.total);
+        const volley = rollVolley(pool, tn.total, 0, false, false, !!aiShip.inhibitorActive);
         if (
           effectiveTacticCard?.mechanicalEffect.flankRearExtraDice &&
           (sector === 'aft' || sector === 'aftPort' || sector === 'aftStarboard')
@@ -391,6 +394,7 @@ export function executeAITier(
           shieldDamage: shieldDmg,
           sector,
           officerStress: piercingHits > 0 ? effectiveTacticCard?.mechanicalEffect.criticalStressBonus : undefined,
+          attackerId: aiShip.id,
         });
         actions.push({
           shipId: aiShip.id, type: 'attack', details: {
@@ -411,6 +415,10 @@ export function executeAITier(
             }
           }
         });
+        if (aiShip.suppressedPenalty) {
+          const existingUpdates = shipUpdates.get(aiShip.id) ?? {};
+          shipUpdates.set(aiShip.id, { ...existingUpdates, suppressedPenalty: false });
+        }
       }
     }
   }
