@@ -277,6 +277,81 @@ function createPDCAnimation(
   };
 }
 
+/**
+ * Explosion: expanding bright circle with debris lines.
+ */
+function createExplosionAnimation(
+  target: Point2D,
+  color: number,
+  duration = 500,
+  id: string,
+): ActiveFireAnimation {
+  const gfx = new PIXI.Graphics();
+  return {
+    id, gfx, elapsed: 0, duration,
+    update(g, progress) {
+      g.clear();
+      const radius = 30 * easeOutQuad(progress);
+      const alpha = 1 - easeInQuad(progress);
+      
+      g.lineStyle(0);
+      g.beginFill(0xFFFFFF, alpha * 0.8);
+      g.drawCircle(target.x, target.y, radius * 0.5);
+      g.endFill();
+      
+      g.beginFill(color, alpha * 0.5);
+      g.drawCircle(target.x, target.y, radius);
+      g.endFill();
+
+      // little debris lines
+      const angles = [0, 45, 90, 135, 180, 225, 270, 315].map(a => a * Math.PI / 180);
+      angles.forEach(angle => {
+          const ex = target.x + Math.cos(angle) * radius * 1.5;
+          const ey = target.y + Math.sin(angle) * radius * 1.5;
+          const ix = target.x + Math.cos(angle) * radius * 0.8;
+          const iy = target.y + Math.sin(angle) * radius * 0.8;
+          g.lineStyle(2, 0xFFBB00, alpha * 0.9);
+          g.moveTo(ix, iy);
+          g.lineTo(ex, ey);
+      });
+    },
+  };
+}
+
+/**
+ * Torpedo travel: a slow moving dot with a trail.
+ */
+function createTorpedoTravelAnimation(
+  from: Point2D, to: Point2D,
+  duration = 400,
+  id: string,
+): ActiveFireAnimation {
+  const gfx = new PIXI.Graphics();
+  const color = 0xFF8800; // torpedo orange
+  return {
+    id, gfx, elapsed: 0, duration,
+    update(g, progress) {
+      g.clear();
+      const eased = easeOutQuad(progress);
+      const pos = lerpPoint(from, to, eased);
+      
+      // trail
+      const tailT = Math.max(0, eased - 0.3);
+      const tail = lerpPoint(from, to, tailT);
+      
+      g.lineStyle(3, color, 0.6 * (1 - progress));
+      g.moveTo(tail.x, tail.y);
+      g.lineTo(pos.x, pos.y);
+      
+      // torpedo body
+      g.lineStyle(0);
+      g.beginFill(color, 1);
+      g.drawCircle(pos.x, pos.y, 4);
+      g.endFill();
+    },
+  };
+}
+
 // ── Impact flash appended to every animation ─────────────────────────
 
 /**
@@ -329,9 +404,8 @@ export function createWeaponFireAnimation(
 ): ActiveFireAnimation {
   const tags: WeaponTag[] = event.weaponTags;
 
-  // Torpedo has its own token — skip entirely (caller should never pass this,
-  // but guard defensively so we return a zero-duration no-op).
-  if (tags.includes('torpedo')) {
+  // Torpedo token spawn itself does not animate. But travel does.
+  if (tags.includes('torpedo') && !tags.includes('torpedo-travel')) {
     const noop = new PIXI.Graphics();
     return { id: event.id, gfx: noop, elapsed: 0, duration: 0, update: () => {} };
   }
@@ -340,7 +414,11 @@ export function createWeaponFireAnimation(
 
   let base: ActiveFireAnimation;
 
-  if (tags.includes('areaOfEffect')) {
+  if (tags.includes('explosion')) {
+    return createExplosionAnimation(toPx, isEnemy ? ANIM_COLORS.enemy : ANIM_COLORS.broadside, 500, event.id);
+  } else if (tags.includes('torpedo-travel')) {
+    return createTorpedoTravelAnimation(fromPx, toPx, 400, event.id);
+  } else if (tags.includes('areaOfEffect')) {
     base = createFanAnimation(fromPx, toPx, isEnemy ? ANIM_COLORS.enemy : ANIM_COLORS.flak, 380, event.id);
   } else if (tags.includes('shieldBreaker')) {
     base = createRippleAnimation(fromPx, toPx, isEnemy ? ANIM_COLORS.enemy : ANIM_COLORS.ion, 400, event.id);

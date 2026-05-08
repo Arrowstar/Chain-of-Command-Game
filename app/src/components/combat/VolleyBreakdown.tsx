@@ -11,6 +11,7 @@ export interface VolleyResultItem {
   defenderName: string;
   outOfArc: boolean;
   outOfRange?: boolean;
+  logEntryId?: string;
 }
 
 interface VolleyBreakdownProps {
@@ -252,6 +253,44 @@ export default function VolleyBreakdown({ results, damageResult, outOfArc, weapo
                 </div>
               )})}
             </div>
+
+            {(() => {
+              const { experimentalTech, tachyonMatrixUsedThisScenario, retroactiveTachyonStrike } = useGameStore();
+              const hasTTM = experimentalTech.some(t => t.id === 'tachyon-targeting-matrix');
+              const canUseRetroactiveTTM = hasTTM && !tachyonMatrixUsedThisScenario && (volley?.totalStandardHits > 0);
+              
+              if (!canUseRetroactiveTTM || !currentItem.logEntryId) return null;
+              
+              return (
+                <div style={{ marginBottom: 'var(--space-md)', padding: '8px', background: 'rgba(0, 204, 255, 0.05)', border: '1px solid var(--color-holo-cyan)', borderRadius: '4px' }}>
+                  <button
+                    className="btn btn-primary"
+                    style={{
+                      width: '100%',
+                      fontSize: '0.8rem',
+                      padding: '8px',
+                      background: 'rgba(0, 204, 255, 0.15)',
+                      borderColor: 'var(--color-holo-cyan)',
+                      color: 'var(--color-holo-cyan)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px'
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      retroactiveTachyonStrike(currentItem.logEntryId!);
+                      onClose();
+                    }}
+                  >
+                    <span>⚡</span> RETROACTIVE TACHYON STRIKE
+                  </button>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--color-text-dim)', marginTop: 6, textAlign: 'center' }}>
+                    Convert 1 standard hit into a critical hit (once per scenario)
+                  </div>
+                </div>
+              );
+            })()}
 
             {showDamage && (
               <motion.div 

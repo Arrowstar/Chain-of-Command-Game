@@ -176,6 +176,8 @@ export type WeaponTag =
   | 'armorPiercing'
   | 'broadside'
   | 'torpedo'
+  | 'torpedo-travel'
+  | 'explosion'
   | 'pointDefense'
   | 'shieldBreaker'
   | 'areaOfEffect'

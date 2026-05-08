@@ -58,7 +58,9 @@ export function rollDieExploding(dieType: DieType, targetNumber: number): DieRes
   // Explode on max value
   if (value === max) {
     isCritical = true;
-    while (value === max) {
+    let safety = 0;
+    while (value === max && safety < 100) {
+      safety++;
       value = rollDie(dieType);
       rolls.push(value);
       // Each explosion that also hits max continues the chain
@@ -117,7 +119,9 @@ export function rollVolley(
         // It's now a critical! Convert and resolve explosions.
         const explodingRolls = [max];
         let value = max;
-        while (value === max) {
+        let safety = 0;
+        while (value === max && safety < 100) {
+          safety++;
           value = rollDie(dt);
           explodingRolls.push(value);
           if (value !== max) break;

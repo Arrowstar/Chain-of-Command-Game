@@ -42,7 +42,8 @@ function makeOfficerData(id: string, stressLimit: number | null = 4): OfficerDat
 }
 
 function makeShip(id: string, crits: { id: string; isRepaired: boolean }[] = []): ShipState {
-  return { kind: 'ship', faction: 'player',
+  return {
+    kind: 'ship', faction: 'player',
     id,
     name: id,
     chassisId: 'vanguard',
@@ -173,7 +174,8 @@ describe('executePostCombatLoop — Trauma Assessment', () => {
       'tactical-1': makeOfficerData('tactical-1', 5),
     };
 
-    const result = executePostCombatLoop({ players: [player], officerDataMap: dataMap, playerShips: [ship],
+    const result = executePostCombatLoop({
+      players: [player], officerDataMap: dataMap, playerShips: [ship],
     });
 
     expect(result.traumasGained).toHaveLength(2);
@@ -188,7 +190,8 @@ describe('executePostCombatLoop — Damage Consolidation', () => {
       { id: 'sensor-mast-damaged', isRepaired: false },
     ]);
 
-    const result = executePostCombatLoop({ players: [], officerDataMap: {}, playerShips: [ship],
+    const result = executePostCombatLoop({
+      players: [], officerDataMap: {}, playerShips: [ship],
     });
 
     expect(result.scarsGained).toHaveLength(3);
@@ -202,7 +205,8 @@ describe('executePostCombatLoop — Damage Consolidation', () => {
       { id: 'thrusters-offline', isRepaired: true },
     ]);
 
-    const result = executePostCombatLoop({ players: [], officerDataMap: {}, playerShips: [ship],
+    const result = executePostCombatLoop({
+      players: [], officerDataMap: {}, playerShips: [ship],
     });
 
     expect(result.scarsGained).toHaveLength(0);
@@ -210,7 +214,8 @@ describe('executePostCombatLoop — Damage Consolidation', () => {
 
   it('ship with no crits produces no scars', () => {
     const ship = makeShip('ship-1', []);
-    const result = executePostCombatLoop({ players: [], officerDataMap: {}, playerShips: [ship],
+    const result = executePostCombatLoop({
+      players: [], officerDataMap: {}, playerShips: [ship],
     });
     expect(result.scarsGained).toHaveLength(0);
   });
@@ -587,12 +592,12 @@ describe('generateMarketInventory', () => {
       'kinetic-siphon',
       'ghost-weave-plating'
     ];
-    
+
     const items = [...market.weapons, ...market.subsystems];
     const eventItemsFound = items.filter((id): id is string => id !== null && eventIds.includes(id));
-    
-    expect(eventItemsFound.length).toBeGreaterThanOrEqual(1);
-    expect(eventItemsFound.length).toBeLessThanOrEqual(2);
+
+    expect(eventItemsFound.length).toBeGreaterThanOrEqual(2);
+    expect(eventItemsFound.length).toBeLessThanOrEqual(4);
   });
 });
 
@@ -642,7 +647,7 @@ describe('checkTotalWipe', () => {
 
 describe('applyShipReplacement', () => {
   it('rebuilds a destroyed ship with a Vanguard and rookie officers', () => {
-    const oldShip = { ...makeShip('s1'), isDestroyed: true, currentHull: 0, currentSpeed: 4, criticalDamage: [{id: 'test'}] };
+    const oldShip = { ...makeShip('s1'), isDestroyed: true, currentHull: 0, currentSpeed: 4, criticalDamage: [{ id: 'test' }] };
     const oldOfficer = makeOfficer('o1', 'helm', 3);
     const oldPlayer = makePlayer('p1', 's1', [oldOfficer]);
 

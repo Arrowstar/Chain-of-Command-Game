@@ -1276,7 +1276,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ players: updatedPlayers, fumbleDeck: remainingDeck });
   },
 
-  // ═ ══ ══ ═ Command Phase ═ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ═
+  // ═ ══ ══ ═ Command Phase ═ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ═
   assignToken: (playerId, action) => {
 
     set(state => {
@@ -1619,6 +1619,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
           }
           targetUpdates.currentHull = Math.max(0, targetShip.currentHull - symDamage);
           targetUpdates.isDestroyed = targetUpdates.currentHull === 0;
+
+          if (targetUpdates.isDestroyed) {
+              useUIStore.getState().queueFireAnimation({
+                  id: `explosion-collision-${targetShip.id}-${Date.now()}`,
+                  attackerPos: targetShip.position,
+                  targetPos: targetShip.position,
+                  weaponTags: ['explosion'],
+                  isEnemy: !isTargetAllied,
+              });
+          }
+
           if (isTargetAllied) {
             get().updatePlayerShip(targetShip.id, targetUpdates);
           } else {
@@ -1632,6 +1643,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (result.collisionDamage === 0 && result.terrainDamage === 0 && mineDamage > 0) {
       updates.currentHull = Math.max(0, ship.currentHull - mineDamage);
       if (updates.currentHull === 0) updates.isDestroyed = true;
+    }
+
+    if (updates.isDestroyed) {
+        useUIStore.getState().queueFireAnimation({
+            id: `explosion-drift-${shipId}-${Date.now()}`,
+            attackerPos: result.finalPosition,
+            targetPos: result.finalPosition,
+            weaponTags: ['explosion'],
+            isEnemy: !isAllied,
+        });
     }
 
 
@@ -2242,6 +2263,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           defenderName: string;
           outOfArc?: boolean;
           outOfRange?: boolean;
+          logEntryId?: string;
         }
         const allDamageResults: CombatResolutionRecord[] = [];
         // const anyHullDamageThisAction = false; // for Overclocked Reactors crit trigger
@@ -2637,7 +2659,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     targetLocksRerolls: 'targetLocksRerolls' in target ? targetLockRerolls : undefined,
                     targetLockArmorPiercingShots: 'targetLockArmorPiercingShots' in target ? Math.max(0, targetLockArmorPiercingShots - (targetPaintingArmorPiercing ? 1 : 0)) : undefined,
                 };
-                if (targetUpdates.currentHull !== undefined && targetUpdates.currentHull === 0) targetUpdates.isDestroyed = true;
+                if (targetUpdates.currentHull !== undefined && targetUpdates.currentHull === 0) {
+                    targetUpdates.isDestroyed = true;
+                    if ('currentHull' in target && (target.currentHull === 0 || (target as any).isDestroyed)) {
+                        useUIStore.getState().queueFireAnimation({
+                            id: `explosion-${(target as any).id || (target as any).name}-${Date.now()}`,
+                            attackerPos: target.position,
+                            targetPos: target.position,
+                            weaponTags: ['explosion'],
+                            isEnemy: !isPlayerFaction(target as any),
+                        });
+                    }
+                }
 
                 if (isEnemy) {
                     const targetId = 'id' in target ? target.id : target.name;
@@ -2767,6 +2800,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     }
                 }
             }
+            
+            const latestLog = get().log[get().log.length - 1];
+            const logEntryId = latestLog?.id;
 
             const targetId = currentTargetId;
             const targetName = target.name;
@@ -2777,6 +2813,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 defenderName: targetName,
                 outOfArc: damageResult.outOfArc ?? false,
                 outOfRange: damageResult.outOfRange ?? false,
+                logEntryId,
             });
         });
 
@@ -2860,13 +2897,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
 
         if (allDamageResults.length > 0) {
-            useUIStore.getState().showModal('volley', { 
+            useUIStore.getState().queueModal('volley', { 
                 results: allDamageResults, 
                 attackerId: ship.id, 
                 weaponName: weapon.name,
             });
         }
-        
         break;
       }
 
@@ -3785,7 +3821,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       });
     }
 
-    // ═ ══ ═ Station Turns ═ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══
+    // ═ ══ ═ Station Turns ═ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══
     {
       const liveState = get();
       const actingStations = liveState.stations.filter(s => {
@@ -4307,12 +4343,36 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
       
       if (tIdx !== -1) {
+        const finalTorpedoPos = pdcInterceptHex ?? moveResult.newPosition;
+        
+        // Torpedo movement animation
+        if (torpedo.position.q !== finalTorpedoPos.q || torpedo.position.r !== finalTorpedoPos.r) {
+            useUIStore.getState().queueFireAnimation({
+                id: `torpedo-travel-${torpedo.id}-${Date.now()}`,
+                attackerPos: torpedo.position,
+                targetPos: finalTorpedoPos,
+                weaponTags: ['torpedo-travel'],
+                isEnemy: torpedo.faction === 'hegemony',
+            });
+        }
+
         updatedTorpedoes[tIdx] = {
           ...updatedTorpedoes[tIdx],
-          position: pdcInterceptHex ?? moveResult.newPosition,
+          position: finalTorpedoPos,
           isDestroyed: moveResult.isDestroyed || pdcInterceptHex !== null || updatedTorpedoes[tIdx].isDestroyed,
           hasMoved: true,
         };
+
+        // Torpedo intercepted or debris destruction explosion
+        if (pdcInterceptHex !== null || moveResult.isDestroyed) {
+            useUIStore.getState().queueFireAnimation({
+                id: `explosion-torpedo-${torpedo.id}-${Date.now()}`,
+                attackerPos: finalTorpedoPos,
+                targetPos: finalTorpedoPos,
+                weaponTags: ['explosion'],
+                isEnemy: torpedo.faction === 'hegemony',
+            });
+        }
       }
 
       if (moveResult.isDestroyed) {
@@ -4348,6 +4408,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
         if (attackResult.hit) {
           atkMsg += ` | -${attackResult.hullDamage} hull (DIRECT HIT)`;
+
+          useUIStore.getState().queueFireAnimation({
+              id: `explosion-torpedo-hit-${torpedo.id}-${Date.now()}`,
+              attackerPos: target.position,
+              targetPos: target.position,
+              weaponTags: ['explosion'],
+              isEnemy: torpedo.faction === 'hegemony',
+          });
           
           // Apply Damage directly to Hull
           if ('chassisId' in target) {

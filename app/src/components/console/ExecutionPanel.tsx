@@ -651,7 +651,8 @@ export default function ExecutionPanel() {
                               const weapon = getWeaponById(wId);
                               const hasFired = ship.firedWeaponIndicesThisRound?.includes(i);
                               const isLoaded = weapon?.tags?.includes('ordnance') ? (ship.ordnanceLoadedStatus ?? {})[i] !== false : true;
-                              return !hasFired && isLoaded;
+                              const isCycling = weapon?.tags?.includes('ordnance') && ship.ordnanceLoadedIndicesThisRound?.includes(i) && !useGameStore.getState().experimentalTech.some(t => t.id === 'auto-loader-network');
+                              return !hasFired && isLoaded && !isCycling;
                             });
 
                             return (
@@ -681,7 +682,8 @@ export default function ExecutionPanel() {
                                       const hasFired = ship.firedWeaponIndicesThisRound?.includes(i);
                                       const isOrdnance = weapon?.tags?.includes('ordnance');
                                       const isLoaded = isOrdnance ? (ship.ordnanceLoadedStatus ?? {})[i] !== false : true;
-                                      const canFire = !hasFired && isLoaded;
+                                      const isCycling = isOrdnance && ship.ordnanceLoadedIndicesThisRound?.includes(i) && !useGameStore.getState().experimentalTech.some(t => t.id === 'auto-loader-network');
+                                      const canFire = !hasFired && isLoaded && !isCycling;
                                       return (
                                         <button
                                           key={i}
@@ -695,7 +697,8 @@ export default function ExecutionPanel() {
                                         >
                                           <span>{weapon?.name || wId}</span>
                                           {hasFired && <span style={{ marginLeft: 6, color: 'var(--color-text-dim)', fontSize: '0.8em' }}>(FIRED)</span>}
-                                          {!hasFired && isOrdnance && isLoaded && <span style={{ marginLeft: 8, color: 'var(--color-holo-green)', fontSize: '0.75em', fontWeight: 'bold' }}>● LOADED</span>}
+                                          {!hasFired && isOrdnance && isLoaded && !isCycling && <span style={{ marginLeft: 8, color: 'var(--color-holo-green)', fontSize: '0.75em', fontWeight: 'bold' }}>● LOADED</span>}
+                                          {!hasFired && isOrdnance && isCycling && <span style={{ marginLeft: 8, color: 'var(--color-alert-amber)', fontSize: '0.75em', fontWeight: 'bold' }}>⟳ CYCLING</span>}
                                           {!hasFired && isOrdnance && !isLoaded && <span style={{ marginLeft: 8, color: 'var(--color-hostile-red)', fontSize: '0.75em', fontWeight: 'bold' }}>⬡ EMPTY</span>}
                                           {weapon?.tags?.includes('areaOfEffect') && <span style={{ marginLeft: 6, fontSize: '0.8em' }}>(AOE)</span>}
                                         </button>

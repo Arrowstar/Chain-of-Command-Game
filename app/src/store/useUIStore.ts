@@ -135,6 +135,7 @@ export const useUIStore = create<UIStore>((set) => ({
   showModal: (type, data = {}) => set({ activeModal: type, modalData: data ?? {} }),
   queueModal: (type, data = {}) => set(s => {
     if (!s.activeModal) return { activeModal: type, modalData: data };
+    if (s.modalQueue.length >= 20) return s;
     return { modalQueue: [...s.modalQueue, { type, data }] };
   }),
   hideModal: () => set(s => {
@@ -159,8 +160,11 @@ export const useUIStore = create<UIStore>((set) => ({
     selectionPicker: { isOpen: true, hex, targets, position, action, context }
   }),
   closeSelectionPicker: () => set({ selectionPicker: null }),
+  queueFireAnimation: (event) => set(s => {
+    if (s.pendingFireAnimations.length >= 100) return s;
+    return { pendingFireAnimations: [...s.pendingFireAnimations, event] };
+  }),
 
-  queueFireAnimation: (event) => set(s => ({ pendingFireAnimations: [...s.pendingFireAnimations, event] })),
   consumeFireAnimation: (id) => set(s => ({ pendingFireAnimations: s.pendingFireAnimations.filter(e => e.id !== id) })),
   cancelAllFireAnimations: () => set({ pendingFireAnimations: [] }),
 

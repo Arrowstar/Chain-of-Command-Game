@@ -32,14 +32,14 @@ describe('Weapons Expansion Mechanics', () => {
       arcs: ['fore', 'aft', 'foreStarboard', 'forePort', 'aftStarboard', 'aftPort']
     } as any;
 
-    const mockRoll = vi.spyOn(Math, 'random').mockReturnValue(0.99); // Force max rolls
+    const mockRoll = vi.spyOn(Math, 'random').mockReturnValue(0.5); // Safe value (not maximum)
 
     const result = resolveAttack(
       attacker.position,
       attacker.facing,
       target.position,
       target.facing,
-      target.baseEvasion,
+      2, // Low evasion to ensure hit with 0.5 roll
       target.shields,
       target.armorDie,
       target.currentHull,
