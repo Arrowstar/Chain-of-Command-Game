@@ -156,6 +156,7 @@ export const SUBSYSTEMS: Subsystem[] = [
     actionName: 'Passive Reaction',
     effect: 'Once per round, when your ship takes 3 or more Hull damage from a single attack, you may immediately deal 1 unblockable Hull damage back to the attacking ship.',
     isPassive: true,
+    availability: 'event',
     imagePath: '/assets/subsystems/DamageReflectorGrid.png',
   },
   {
@@ -170,6 +171,7 @@ export const SUBSYSTEMS: Subsystem[] = [
     effect: 'Place a Decoy Token in any empty hex within Range 1–4. Until the end of the round, AI ships treat the Decoy as a valid target. It has 2 effective Hull.',
     requiresHexTarget: true,
     rangeMax: 4,
+    availability: 'event',
     imagePath: '/assets/subsystems/SensorGhostEmitter.png',
   },
   {
@@ -182,6 +184,7 @@ export const SUBSYSTEMS: Subsystem[] = [
     dpCost: 14,
     actionName: 'Emergency Burn',
     effect: 'Your ship\'s Speed is increased by +2 for this round\'s movement phase only. You may ignore hazardous terrain movement penalties this round.',
+    availability: 'event',
     imagePath: '/assets/subsystems/HelmThrusterBooster.png',
   },
   {
@@ -196,6 +199,7 @@ export const SUBSYSTEMS: Subsystem[] = [
     effect: 'Target one Enemy ship within Range 1-6. Until the end of the round, that ship must re-roll its highest Volley die result once per attack.',
     requiresTarget: true,
     rangeMax: 6,
+    availability: 'event',
     imagePath: '/assets/subsystems/TargetingInhibitor.png',
   },
   {
@@ -209,6 +213,7 @@ export const SUBSYSTEMS: Subsystem[] = [
     actionName: 'Passive',
     effect: 'Passive: Once per round, when an Enemy ship within Range 1–8 fires a weapon, place a Data Counter on your ship (max 3 per combat). For each Data Counter, Sensors actions cost 1 fewer Stress.',
     isPassive: true,
+    availability: 'event',
     imagePath: '/assets/subsystems/CombatDataRecorder.png',
   },
   {
@@ -223,6 +228,7 @@ export const SUBSYSTEMS: Subsystem[] = [
     effect: 'Target an enemy ship within Range 1–3. Reduce one of its Shield sectors by 1 point, and immediately restore 1 Shield point to your own ship.',
     requiresTarget: true,
     rangeMax: 3,
+    availability: 'event',
     imagePath: '/assets/subsystems/ShieldSiphonCoil.png',
   },
   {
@@ -237,6 +243,7 @@ export const SUBSYSTEMS: Subsystem[] = [
     effect: 'Target an enemy ship within Range 1. Place a Boarding Marker on it. At the start of the next round, that enemy suffers a -2 penalty to all Volley dice and its Speed is reduced to 0.',
     requiresTarget: true,
     rangeMax: 1,
+    availability: 'event',
     imagePath: '/assets/subsystems/BoardingPrepDrill.png',
   },
   {

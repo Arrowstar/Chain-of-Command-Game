@@ -166,6 +166,7 @@ export const WEAPONS: WeaponModule[] = [
     dpCost: 15,
     effect: 'Disabling. On a Critical Hit, instead of drawing a Critical Damage card, you may choose to reduce the target enemy ship\'s Speed to 0 for its next activation.',
     tags: ['disabling'],
+    availability: 'event',
     imagePath: '/assets/weapons/GravityTetherCannon.png',
   },
   {
@@ -179,6 +180,7 @@ export const WEAPONS: WeaponModule[] = [
     dpCost: 20,
     effect: 'Beam. Choose a target hex at least 2 hexes directly ahead. The attack fires in a straight line through every hex between you and the target hex. Every ship in those hexes is subject to the volley roll.',
     tags: ['beam'],
+    availability: 'event',
     imagePath: '/assets/weapons/SpinalLance.png',
   },
   {
@@ -192,6 +194,7 @@ export const WEAPONS: WeaponModule[] = [
     dpCost: 18,
     effect: 'Minelayer. Instead of rolling a volley, place a Friendly Mine token in any hex within Range 1 of your aft arc. Max 3 mines in play per Mine Ejector.',
     tags: ['minelayer'],
+    availability: 'event',
     imagePath: '/assets/weapons/MineEjector.png',
   },
   {
@@ -205,6 +208,7 @@ export const WEAPONS: WeaponModule[] = [
     dpCost: 19,
     effect: 'Vanguard. At Range 1, all dice in the volley pool are upgraded one tier. At Range 3, all dice are downgraded one tier.',
     tags: ['vanguard'],
+    availability: 'event',
     imagePath: '/assets/weapons/VanguardLances.png',
   },
   {
@@ -218,6 +222,7 @@ export const WEAPONS: WeaponModule[] = [
     dpCost: 14,
     effect: 'Suppressing. On any Standard Hit, the firing player may forgo 1 point of damage to instead impose a -1 penalty to all Volley dice on the target enemy\'s next attack.',
     tags: ['suppressing'],
+    availability: 'event',
     imagePath: '/assets/weapons/SuppressionBattery.png',
   },
   {

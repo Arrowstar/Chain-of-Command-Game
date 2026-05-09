@@ -590,7 +590,21 @@ describe('generateMarketInventory', () => {
       'astro-caf-synthesizer',
       'tachyon-targeting-matrix',
       'kinetic-siphon',
-      'ghost-weave-plating'
+      'ghost-weave-plating',
+      'gravity-tether-cannon',
+      'spinal-lance',
+      'mine-ejector',
+      'vanguard-lances',
+      'suppression-battery',
+      'damage-reflector-grid',
+      'sensor-ghost-emitter',
+      'helm-thruster-booster',
+      'targeting-inhibitor',
+      'combat-data-recorder',
+      'shield-siphon-coil',
+      'boarding-prep-drill',
+      'mirror-array',
+      'psychic-dampener'
     ];
 
     const items = [...market.weapons, ...market.subsystems];
