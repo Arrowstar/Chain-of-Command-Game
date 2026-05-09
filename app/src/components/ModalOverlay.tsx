@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useUIStore } from '../store/useUIStore';
 import VolleyBreakdown from './combat/VolleyBreakdown';
 import SkillProcResolution from './combat/SkillProcResolution';
+import CriticalCardReveal from './combat/CriticalCardReveal';
 
 export default function ModalOverlay() {
   const activeModal = useUIStore(s => s.activeModal);
@@ -79,6 +80,14 @@ export default function ModalOverlay() {
         <SkillProcResolution
           data={(visibleData as any).data as any}
           onClose={hideModal}
+        />
+      )}
+      
+      {/* Critical Modal */}
+      {visibleModal === 'critical' && visibleData && (visibleData as any).card && (
+        <CriticalCardReveal
+          card={(visibleData as any).card}
+          onAcknowledge={hideModal}
         />
       )}
       
