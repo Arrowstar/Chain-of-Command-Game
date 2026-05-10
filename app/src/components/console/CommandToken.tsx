@@ -1,5 +1,6 @@
 import React from 'react';
 import { useDraggable } from '@dnd-kit/core';
+import { useTokenSelectionStore } from '../../store/useTokenSelectionStore';
 
 interface CommandTokenProps {
   id: string;
@@ -12,6 +13,25 @@ export default function CommandToken({ id, isAssigned = false }: CommandTokenPro
     disabled: isAssigned,
   });
 
+  const selectedTokenId = useTokenSelectionStore(s => s.selectedTokenId);
+  const selectToken = useTokenSelectionStore(s => s.selectToken);
+  const clearSelection = useTokenSelectionStore(s => s.clearSelection);
+
+  const isSelected = selectedTokenId === id;
+
+  const handleClick = (e: React.MouseEvent) => {
+    // Only activate tap-to-assign on coarse pointer (touch).
+    // Mouse users use drag-and-drop; clicks here are just cosmetic.
+    if (isAssigned) return;
+    if (!window.matchMedia('(pointer: coarse)').matches) return;
+    e.stopPropagation();
+    if (isSelected) {
+      clearSelection();
+    } else {
+      selectToken(id);
+    }
+  };
+
   const style: React.CSSProperties = {
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     opacity: isAssigned ? 0.2 : isDragging ? 0.5 : 1,
@@ -21,14 +41,28 @@ export default function CommandToken({ id, isAssigned = false }: CommandTokenPro
     height: '32px',
     borderRadius: '50%',
     background: isAssigned ? 'var(--color-bg-deep)' : 'var(--color-bg-surface)',
-    border: `2px solid ${isAssigned ? 'var(--color-border)' : 'var(--color-holo-cyan)'}`,
+    border: `2px solid ${
+      isAssigned
+        ? 'var(--color-border)'
+        : isSelected
+        ? 'var(--color-crit-gold)'
+        : 'var(--color-holo-cyan)'
+    }`,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: isAssigned ? 'none' : isDragging ? 'none' : 'var(--glow-cyan)',
-    transition: 'opacity 0.2s, box-shadow 0.2s',
+    boxShadow: isAssigned
+      ? 'none'
+      : isSelected
+      ? 'var(--glow-gold)'
+      : isDragging
+      ? 'none'
+      : 'var(--glow-cyan)',
+    transition: 'opacity 0.2s, box-shadow 0.2s, border-color 0.15s',
     flexShrink: 0,
     position: 'relative',
+    // Enlarge touch target on coarse-pointer devices without changing visual size
+    touchAction: 'none',
   };
 
   return (
@@ -37,14 +71,25 @@ export default function CommandToken({ id, isAssigned = false }: CommandTokenPro
       style={style}
       {...listeners}
       {...attributes}
+      onClick={handleClick}
       data-testid={`command-token-${id}`}
-      title={isAssigned ? 'Token spent' : 'Drag to assign action'}
+      title={
+        isAssigned
+          ? 'Token spent'
+          : isSelected
+          ? 'Tap an action slot to assign'
+          : 'Drag to assign action (or tap on touch screens)'
+      }
     >
       <div style={{
         width: '16px',
         height: '16px',
         borderRadius: '50%',
-        background: isAssigned ? 'var(--color-text-dim)' : 'var(--color-holo-cyan)',
+        background: isAssigned
+          ? 'var(--color-text-dim)'
+          : isSelected
+          ? 'var(--color-crit-gold)'
+          : 'var(--color-holo-cyan)',
         opacity: isAssigned ? 0.4 : 0.8,
       }} />
     </div>

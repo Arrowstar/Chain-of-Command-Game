@@ -8,9 +8,10 @@ import { getChassisById } from '../../data/shipChassis';
 import { getSubsystemById } from '../../data/subsystems';
 import { getWeaponById } from '../../data/weapons';
 import { calculateActionCosts } from '../../data/actions';
-import type { OfficerState, ActionDefinition } from '../../types/game';
+import type { OfficerState, ActionDefinition, OfficerStation, QueuedAction } from '../../types/game';
 import { applyRecycledCoolant, getStimInjectorBonus } from '../../engine/techEffects';
 import { getScarImpactLegendText, getScarStatusMeta, getScarTooltip, getStationScars } from './scarStatus';
+import { useTokenSelectionStore } from '../../store/useTokenSelectionStore';
 
 interface OfficerStationPanelProps {
   officerState: OfficerState;
@@ -20,6 +21,7 @@ interface OfficerStationPanelProps {
 export default function OfficerStationPanel({ officerState, playerId }: OfficerStationPanelProps) {
   const officerData = getOfficerById(officerState.officerId);
   const unassignToken = useGameStore(s => s.unassignToken);
+  const assignToken = useGameStore(s => s.assignToken);
   const players = useGameStore(s => s.players);
   const playerShips = useGameStore(s => s.playerShips);
   const experimentalTech = useGameStore(s => s.experimentalTech);
@@ -31,6 +33,9 @@ export default function OfficerStationPanel({ officerState, playerId }: OfficerS
   const player = players.find(p => p.id === playerId);
 
   const [cicTargetPlayerId, setCicTargetPlayerId] = useState<string | null>(null);
+  // Inline speed-direction picker for tap-to-assign on Lead Foot officers
+  const [pendingTapAdjustSpeed, setPendingTapAdjustSpeed] = useState(false);
+  const clearTokenSelection = useTokenSelectionStore(s => s.clearSelection);
 
   if (!officerData || !player) return null;
 
@@ -373,20 +378,113 @@ export default function OfficerStationPanel({ officerState, playerId }: OfficerS
 
           const displayAction = { ...action, ctCost: displayCtCost, stressCost: displayStressCost };
 
+          const isSlotDisabled = officerState.isLocked || tacticLockout || (action.id === 'reroute-power' && assignments.length > 0);
+
+          const handleTapAssign = () => {
+            if (isSlotDisabled || !player || player.commandTokens < action.ctCost) return;
+
+            const isLeadFoot = officerData.traitName === 'Lead Foot' && action.id === 'adjust-speed';
+            if (isLeadFoot) {
+              // Show inline speed direction picker instead of assigning immediately
+              setPendingTapAdjustSpeed(true);
+              return;
+            }
+
+            const newAction: QueuedAction = {
+              id: crypto.randomUUID(),
+              station: action.station as OfficerStation,
+              actionId: action.id,
+              ctCost: action.ctCost,
+              stressCost: action.stressCost,
+              subsystemSlotIndex: action.subsystemSlotIndex,
+            };
+            assignToken(player.id, newAction);
+          };
+
           return (
-            <ActionSlot
-              key={action.id}
-              action={displayAction}
-              dragAction={action}
-              costNote={ctAdjustments.length > 0 ? ctAdjustments.join(' | ') : undefined}
-              assignedTokenIds={assignments.map(a => a.id)}
-              onUnassign={(tokenId) => {
-                // Remove the specific assignment, or the most-recent if no ID provided
-                const idToRemove = tokenId || assignments[assignments.length - 1]?.id;
-                if (idToRemove) unassignToken(player.id, idToRemove);
-              }}
-              disabled={officerState.isLocked || tacticLockout || (action.id === 'reroute-power' && assignments.length > 0)}
-            />
+            <React.Fragment key={action.id}>
+              <ActionSlot
+                action={displayAction}
+                dragAction={action}
+                costNote={ctAdjustments.length > 0 ? ctAdjustments.join(' | ') : undefined}
+                assignedTokenIds={assignments.map(a => a.id)}
+                onUnassign={(tokenId) => {
+                  // Remove the specific assignment, or the most-recent if no ID provided
+                  const idToRemove = tokenId || assignments[assignments.length - 1]?.id;
+                  if (idToRemove) unassignToken(player.id, idToRemove);
+                }}
+                onTapAssign={handleTapAssign}
+                disabled={isSlotDisabled}
+              />
+              {/* Inline Lead Foot speed-direction picker (tap-to-assign path only) */}
+              {pendingTapAdjustSpeed && action.id === 'adjust-speed' && officerData.traitName === 'Lead Foot' && (
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 'var(--space-xs)',
+                    padding: 'var(--space-sm)',
+                    background: 'var(--color-bg-raised)',
+                    border: '1px solid var(--color-holo-cyan)',
+                    borderRadius: 'var(--radius-sm)',
+                    animation: 'fadeIn 0.15s ease-out',
+                  }}
+                >
+                  <span className="label" style={{ color: 'var(--color-holo-cyan)' }}>Adjust Speed — Choose Direction</span>
+                  <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+                    <button
+                      className="btn btn--execute"
+                      style={{ flex: 1 }}
+                      onClick={() => {
+                        const newAction: QueuedAction = {
+                          id: crypto.randomUUID(),
+                          station: action.station as OfficerStation,
+                          actionId: action.id,
+                          ctCost: action.ctCost,
+                          stressCost: action.stressCost,
+                          context: { delta: 1 },
+                          subsystemSlotIndex: action.subsystemSlotIndex,
+                        };
+                        assignToken(player.id, newAction);
+                        setPendingTapAdjustSpeed(false);
+                        clearTokenSelection();
+                      }}
+                    >
+                      Accelerate (+)
+                    </button>
+                    <button
+                      className="btn"
+                      style={{ flex: 1 }}
+                      onClick={() => {
+                        const newAction: QueuedAction = {
+                          id: crypto.randomUUID(),
+                          station: action.station as OfficerStation,
+                          actionId: action.id,
+                          ctCost: action.ctCost,
+                          stressCost: action.stressCost,
+                          context: { delta: -1 },
+                          subsystemSlotIndex: action.subsystemSlotIndex,
+                        };
+                        assignToken(player.id, newAction);
+                        setPendingTapAdjustSpeed(false);
+                        clearTokenSelection();
+                      }}
+                    >
+                      Decelerate (−)
+                    </button>
+                    <button
+                      className="btn"
+                      onClick={() => {
+                        setPendingTapAdjustSpeed(false);
+                        clearTokenSelection();
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </React.Fragment>
           );
         })}
       </div>

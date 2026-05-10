@@ -1290,3 +1290,87 @@ h4 { font-size: 1rem;   font-weight: 500; }
   clip: rect(0, 0, 0, 0);
   border: 0;
 }
+
+/* ─── Touch / Tablet Overrides ────────────────────────────────────── */
+/* Applied only when primary pointer is coarse (touch screen).         */
+
+@media (pointer: coarse) {
+  /* Prevent 300ms tap delay on all interactive elements */
+  button,
+  .btn,
+  [role="button"],
+  select,
+  input,
+  a {
+    touch-action: manipulation;
+  }
+
+  /* Minimum 44×44 px tap target on every button */
+  .btn {
+    min-height: 44px;
+    padding: 10px var(--space-lg);
+    font-size: 0.9rem;
+  }
+
+  /* Larger label text */
+  .label {
+    font-size: 0.8rem;
+  }
+
+  /* Suppress hover lift animations — no hover on touch */
+  .btn:hover {
+    transform: none;
+  }
+
+  /* Wider, easier-to-hit scrollbar thumb */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsla(185, 50%, 40%, 0.45);
+  }
+
+  /* Fleet status cards — slightly wider on narrow landscape tablets */
+  .fleet-status-card {
+    width: 210px;
+  }
+
+  /* Sector map node sizes handled via inline SVG, but the legend needs room */
+  .sector-map-legend {
+    padding: 10px 14px;
+    gap: 6px;
+  }
+
+  .legend-item {
+    font-size: 0.7rem;
+  }
+
+  /* Give the game-log pull tab a larger hit area */
+  .game-log-tab {
+    padding: 16px 8px;
+  }
+
+  /* Enlarge unassign × buttons inside action slots */
+  .action-slot-unassign-btn {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 14px !important;
+    top: -10px !important;
+    right: -12px !important;
+  }
+
+  /* Ensure action slot drop zones are tall enough to finger-tap */
+  .action-slot-dropzone {
+    min-height: 48px !important;
+  }
+
+  /* Campaign screen: larger tab buttons in DrydockView */
+  .drydock-tab-btn {
+    min-height: 44px;
+    padding: 10px 16px;
+    font-size: 0.85rem;
+  }
+}
+

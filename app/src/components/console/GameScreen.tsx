@@ -1,5 +1,5 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
-import { DndContext } from '@dnd-kit/core';
+import { DndContext, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
 import HexMap from '../board/HexMap';
 import GameLog from '../board/GameLog';
@@ -21,6 +21,7 @@ import { useCampaignStore } from '../../store/useCampaignStore';
 import { useTutorialStore } from '../../store/useTutorialStore';
 import { getOfficerById } from '../../data/officers';
 import type { QueuedAction, OfficerStation } from '../../types/game';
+import { useViewport } from '../../utils/useViewport';
 
 export default function GameScreen() {
   const players = useGameStore(s => s.players);
@@ -48,6 +49,16 @@ export default function GameScreen() {
 
   const [activePlayerId, setActivePlayerId] = useState(players[0]?.id);
   const player = players.find(p => p.id === activePlayerId) || players[0];
+
+  const { isTablet, isCoarsePointer } = useViewport();
+
+  // Configure dnd sensors: PointerSensor for mouse, TouchSensor for touch.
+  // TouchSensor uses a hold delay so that a quick tap is NOT treated as a drag,
+  // allowing tap-to-assign to fire the onClick on CommandToken instead.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
+  );
 
   useLayoutEffect(() => {
     const previousTacticId = previousTacticIdRef.current;
@@ -173,8 +184,9 @@ export default function GameScreen() {
               className="btn"
               style={{
                 pointerEvents: 'auto',
-                padding: '6px 14px',
-                fontSize: '0.75rem',
+                padding: isCoarsePointer ? '10px 16px' : '6px 14px',
+                minHeight: isCoarsePointer ? '44px' : undefined,
+                fontSize: isCoarsePointer ? '0.82rem' : '0.75rem',
                 borderColor: 'rgba(0, 204, 255, 0.35)',
                 background: 'rgba(12, 18, 28, 0.92)',
                 color: 'var(--color-holo-cyan)',
@@ -187,8 +199,9 @@ export default function GameScreen() {
               className="btn"
               style={{
                 pointerEvents: 'auto',
-                padding: '6px 14px',
-                fontSize: '0.75rem',
+                padding: isCoarsePointer ? '10px 16px' : '6px 14px',
+                minHeight: isCoarsePointer ? '44px' : undefined,
+                fontSize: isCoarsePointer ? '0.82rem' : '0.75rem',
                 borderColor: 'rgba(230, 160, 0, 0.35)',
                 background: 'rgba(12, 18, 28, 0.92)',
                 color: 'var(--color-alert-amber)',
@@ -201,8 +214,9 @@ export default function GameScreen() {
               className="btn"
               style={{
                 pointerEvents: 'auto',
-                padding: '6px 14px',
-                fontSize: '0.75rem',
+                padding: isCoarsePointer ? '10px 16px' : '6px 14px',
+                minHeight: isCoarsePointer ? '44px' : undefined,
+                fontSize: isCoarsePointer ? '0.82rem' : '0.75rem',
                 borderColor: 'rgba(210, 72, 72, 0.35)',
                 background: 'rgba(12, 18, 28, 0.92)',
                 color: 'var(--color-hostile-red)',
@@ -293,14 +307,21 @@ export default function GameScreen() {
       )}
 
       {/* Left Interface: Holo-table (PixiJS) */}
-      <div id="hex-map-container" style={{ width: 'var(--holotable-width)', position: 'relative', borderRight: '1px solid var(--color-border)' }}>
+      <div
+        id="hex-map-container"
+        style={{
+          width: isTablet ? '55%' : 'var(--holotable-width)',
+          position: 'relative',
+          borderRight: '1px solid var(--color-border)',
+        }}
+      >
         <HexMap />
       </div>
 
       {/* Right Interface: Captain's Console or Execution Panel */}
       <div
         style={{
-          width: 'var(--console-width)',
+          width: isTablet ? '45%' : 'var(--console-width)',
           height: '100%',
           background: 'var(--color-bg-panel)',
           display: 'flex',
@@ -331,7 +352,7 @@ export default function GameScreen() {
             onConfirm={confirmDeployment}
           />
         ) : (
-          <DndContext onDragEnd={handleDragEnd}>
+          <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
             {/* Player Tabs (Multiplayer only) */}
             {players.length > 1 && (
               <div style={{ display: 'flex', gap: '4px', marginBottom: '8px' }}>

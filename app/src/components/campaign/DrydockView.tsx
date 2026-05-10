@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useCampaignStore } from '../../store/useCampaignStore';
+import { useViewport } from '../../utils/useViewport';
 import { getHullPatchCost, PSYCH_EVAL_COST, DEEP_REPAIR_COST, OFFICER_TRAINING_COSTS } from '../../data/drydock';
 import { SHIP_CHASSIS } from '../../data/shipChassis';
 import { getWeaponById } from '../../data/weapons';
@@ -39,6 +40,8 @@ export default function DrydockView() {
 
   const [activeTab, setActiveTab] = useState<Tab>('ships');
   const [selectedItem, setSelectedItem] = useState<SelectedItem>(null);
+
+  const { isTablet } = useViewport();
 
   if (!campaign) return null;
 
@@ -87,7 +90,7 @@ export default function DrydockView() {
     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', background: '#080a0f' }}>
       
       {/* ── SIDEBAR ─────────────────────────────────────────────────── */}
-      <div style={{ width: '280px', borderRight: '1px solid var(--color-border)', background: 'rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', padding: 'var(--space-md)' }}>
+      <div style={{ width: isTablet ? '220px' : '280px', borderRight: '1px solid var(--color-border)', background: 'rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', padding: 'var(--space-md)' }}>
         <h2 style={{ color: 'var(--color-holo-green)', margin: '0 0 var(--space-xl) 0', fontSize: '1.5rem', lineHeight: 1.2 }}>
           WAR COUNCIL<br/>
           <span style={{ fontSize: '1rem', color: 'var(--color-text-secondary)' }}>DRYDOCK COMMAND</span>
@@ -97,7 +100,7 @@ export default function DrydockView() {
           {TABS.map(t => (
             <button
               key={t.id}
-              className={`btn ${activeTab === t.id ? '' : 'btn--outline'}`}
+              className={`btn drydock-tab-btn ${activeTab === t.id ? '' : 'btn--outline'}`}
               onClick={() => { setActiveTab(t.id); setSelectedItem(null); }}
               style={{ padding: 'var(--space-md) var(--space-sm)', fontSize: '0.9rem', textAlign: 'left', display: 'flex', justifyContent: 'flex-start', alignItems: 'center', gap: 'var(--space-sm)' }}
             >
@@ -108,7 +111,7 @@ export default function DrydockView() {
         </div>
 
         <button
-          className="btn"
+          className="btn drydock-tab-btn"
           style={{ width: '100%', padding: 'var(--space-md)', fontSize: '1.1rem', marginTop: 'var(--space-lg)' }}
           onClick={completeDrydock}
         >

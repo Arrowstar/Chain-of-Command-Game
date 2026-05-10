@@ -94,6 +94,10 @@ export default function HexMap() {
   const [isTooltipLocked, setIsTooltipLocked] = useState(false);
   const isLockedRef = useRef(false);
 
+  // Multi-touch tracking for pinch-to-zoom
+  const activePointers = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const lastPinchDistRef = useRef<number | null>(null);
+
   // Subscribe to pending fire animation queue
   const pendingFireAnimations = useUIStore(s => s.pendingFireAnimations);
 
@@ -1206,20 +1210,45 @@ export default function HexMap() {
   }, [zoomCamera]);
 
   const handlePointerDown = (e: React.PointerEvent) => {
-    setIsPanning(true);
-    setPointerDown({ x: e.clientX, y: e.clientY });
-    setLastMouse({ x: e.clientX, y: e.clientY });
+    // Track every pointer (finger / pen / mouse) for pinch detection
+    activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (activePointers.current.size === 1) {
+      // Single pointer — begin pan
+      setIsPanning(true);
+      setPointerDown({ x: e.clientX, y: e.clientY });
+      setLastMouse({ x: e.clientX, y: e.clientY });
+    } else if (activePointers.current.size === 2) {
+      // Second finger arrived — initialise pinch distance
+      const pts = Array.from(activePointers.current.values());
+      lastPinchDistRef.current = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      // Cancel pan so we don't drift while pinching
+      setIsPanning(false);
+    }
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
-    const hoverState = getHoverTarget(e.clientX, e.clientY);
+    // Update stored position for this pointer
+    activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
-    if (!isLockedRef.current) {
+    if (activePointers.current.size >= 2) {
+      // ── Pinch-to-zoom ────────────────────────────────────────────
+      const pts = Array.from(activePointers.current.values());
+      const newDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      if (lastPinchDistRef.current !== null) {
+        const delta = (newDist - lastPinchDistRef.current) / 180;
+        if (Math.abs(delta) > 0.001) zoomCamera(delta);
+      }
+      lastPinchDistRef.current = newDist;
+      return; // skip pan and hover while pinching
+    }
+
+    // ── Hover tooltip — mouse only ───────────────────────────────
+    if (e.pointerType === 'mouse' && !isLockedRef.current) {
+      const hoverState = getHoverTarget(e.clientX, e.clientY);
       useUIStore.getState().hoverHex(hoverState?.hex ?? null);
-      
       const firstShip = hoverState?.targets.find(t => t.kind === 'ship');
       useUIStore.getState().hoverShip(firstShip?.kind === 'ship' ? firstShip.ship.id : null);
-
       if (hoverState?.targets.length && hoverState.position) {
         setHoverTooltip({ targets: hoverState.targets, position: hoverState.position });
       } else {
@@ -1227,24 +1256,64 @@ export default function HexMap() {
       }
     }
 
+    // ── Single-pointer pan ───────────────────────────────────────
     if (!isPanning) return;
     panCamera(e.clientX - lastMouse.x, e.clientY - lastMouse.y);
     setLastMouse({ x: e.clientX, y: e.clientY });
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
+    activePointers.current.delete(e.pointerId);
+
+    // Reset pinch distance when any finger lifts
+    if (activePointers.current.size < 2) {
+      lastPinchDistRef.current = null;
+    }
+
+    // If a second finger lifted but first is still down, resume panning from current pos
+    if (activePointers.current.size === 1) {
+      const remaining = Array.from(activePointers.current.values())[0];
+      setIsPanning(true);
+      setLastMouse({ x: remaining.x, y: remaining.y });
+      return;
+    }
+
     setIsPanning(false);
-    
-    // If we barely moved, it's a click
+
+    // Click / tap detection — larger threshold on touch for finger imprecision
+    const clickThreshold = e.pointerType === 'touch' ? 12 : 5;
     const dx = e.clientX - pointerDown.x;
     const dy = e.clientY - pointerDown.y;
-    if (Math.abs(dx) < 5 && Math.abs(dy) < 5) {
+    if (Math.abs(dx) < clickThreshold && Math.abs(dy) < clickThreshold) {
       if (containerRef.current) {
         const bounds = containerRef.current.getBoundingClientRect();
-        
+
         // Convert screen coordinates to world coordinates
         const screenX = e.clientX - bounds.left;
         const screenY = e.clientY - bounds.top;
+
+        // On touch, show/toggle the info tooltip at the tapped hex (tap-to-lock)
+        if (e.pointerType === 'touch') {
+          const tapState = getHoverTarget(e.clientX, e.clientY);
+          if (tapState?.targets.length && tapState.position) {
+            const alreadyLocked = isLockedRef.current;
+            // Toggle: if already showing this hex's info, dismiss it
+            if (alreadyLocked) {
+              setHoverTooltip(null);
+              isLockedRef.current = false;
+              setIsTooltipLocked(false);
+            } else {
+              setHoverTooltip({ targets: tapState.targets, position: tapState.position });
+              isLockedRef.current = true;
+              setIsTooltipLocked(true);
+            }
+          } else {
+            // Tapped empty space — dismiss any locked tooltip
+            setHoverTooltip(null);
+            isLockedRef.current = false;
+            setIsTooltipLocked(false);
+          }
+        }
         
         const worldX = (screenX - cameraX) / cameraZoom;
         const worldY = (screenY - cameraY) / cameraZoom;
@@ -1500,6 +1569,15 @@ export default function HexMap() {
     }
   };
 
+  /** Clean up tracking state when a pointer is cancelled (e.g. system gesture). */
+  const handlePointerCancel = (e: React.PointerEvent) => {
+    activePointers.current.delete(e.pointerId);
+    if (activePointers.current.size === 0) {
+      setIsPanning(false);
+      lastPinchDistRef.current = null;
+    }
+  };
+
   const getHoverTarget = (clientX: number, clientY: number) => {
     if (!containerRef.current) return null;
     const bounds = containerRef.current.getBoundingClientRect();
@@ -1565,11 +1643,12 @@ export default function HexMap() {
   return (
     <div
       ref={containerRef}
-      style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}
+      style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden', touchAction: 'none' }}
       onWheel={handleWheel}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
       onPointerLeave={(e) => {
         handlePointerUp(e);
         setHoverTooltip(null);

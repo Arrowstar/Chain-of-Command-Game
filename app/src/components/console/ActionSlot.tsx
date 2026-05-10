@@ -1,6 +1,7 @@
 import React from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import type { ActionDefinition } from '../../types/game';
+import { useTokenSelectionStore } from '../../store/useTokenSelectionStore';
 
 interface ActionSlotProps {
   action: ActionDefinition;
@@ -9,10 +10,20 @@ interface ActionSlotProps {
   /** All QueuedAction IDs currently assigned to this slot (one per CT spent). */
   assignedTokenIds: string[];
   onUnassign: (tokenId?: string) => void; // removes a specific or most-recent assignment
+  /** Called when a previously-tapped token should be assigned here (touch model). */
+  onTapAssign?: () => void;
   disabled?: boolean;
 }
 
-export default function ActionSlot({ action, dragAction, costNote, assignedTokenIds, onUnassign, disabled = false }: ActionSlotProps) {
+export default function ActionSlot({
+  action,
+  dragAction,
+  costNote,
+  assignedTokenIds,
+  onUnassign,
+  onTapAssign,
+  disabled = false,
+}: ActionSlotProps) {
   const count = assignedTokenIds.length;
   const isOccupied = count > 0;
 
@@ -23,7 +34,12 @@ export default function ActionSlot({ action, dragAction, costNote, assignedToken
     disabled: disabled,
   });
 
+  const selectedTokenId = useTokenSelectionStore(s => s.selectedTokenId);
+  const clearSelection = useTokenSelectionStore(s => s.clearSelection);
+
   const isActive = isOver && !disabled;
+  // Highlight the slot while a token is tapped-selected and the slot is ready
+  const isTapReady = !!selectedTokenId && !disabled;
 
   // Cumulative stress paid: base + 0 + 1 + 2 + ... + (count-1) = base*count + count*(count-1)/2
   // We just display count and let the store tooltip (title) show the math.
@@ -31,6 +47,14 @@ export default function ActionSlot({ action, dragAction, costNote, assignedToken
     count > 0
       ? Array.from({ length: count }, (_, i) => action.stressCost + i).reduce((a, b) => a + b, 0)
       : 0;
+
+  const handleDropZoneClick = () => {
+    if (disabled) return;
+    if (selectedTokenId && onTapAssign) {
+      onTapAssign();
+      clearSelection();
+    }
+  };
 
   return (
     <div
@@ -48,9 +72,15 @@ export default function ActionSlot({ action, dragAction, costNote, assignedToken
         minHeight: '80px',
         borderColor: isActive
           ? 'var(--color-holo-cyan)'
+          : isTapReady
+          ? 'hsla(185, 90%, 55%, 0.5)'
           : isOccupied
           ? 'var(--color-alert-amber)'
           : 'var(--color-border)',
+        // Subtle pulse border to invite tap when a token is selected
+        boxShadow: isTapReady && !isActive
+          ? '0 0 8px hsla(185, 90%, 55%, 0.25)'
+          : undefined,
       }}
       data-testid={`action-slot-${action.id}`}
     >
@@ -74,17 +104,27 @@ export default function ActionSlot({ action, dragAction, costNote, assignedToken
         {action.effect}
       </div>
 
+      {/* Drop zone / tap-assign zone */}
       <div
+        className="action-slot-dropzone"
+        onClick={handleDropZoneClick}
         style={{
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          height: '40px',
+          minHeight: '40px',
           background: 'var(--color-bg-deep)',
           borderRadius: 'var(--radius-sm)',
-          border: `1px dashed ${isOccupied ? 'var(--color-alert-amber)' : 'var(--color-border)'}`,
+          border: `1px dashed ${
+            isTapReady
+              ? 'var(--color-holo-cyan)'
+              : isOccupied
+              ? 'var(--color-alert-amber)'
+              : 'var(--color-border)'
+          }`,
           marginTop: 'auto',
           gap: 'var(--space-xs)',
+          cursor: isTapReady ? 'pointer' : 'default',
         }}
       >
         {isOccupied ? (
@@ -112,20 +152,21 @@ export default function ActionSlot({ action, dragAction, costNote, assignedToken
                         boxShadow: '0 0 4px var(--color-alert-amber)',
                         zIndex: ctIdx,
                       }}
-                >
-                  <div style={{
-                    width: '14px',
-                    height: '14px',
-                    borderRadius: '50%',
-                    background: 'var(--color-alert-amber)',
-                  }} />
+                    >
+                      <div style={{
+                        width: '14px',
+                        height: '14px',
+                        borderRadius: '50%',
+                        background: 'var(--color-alert-amber)',
+                      }} />
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
 
                 {/* Unassign button for this specific assignment */}
                 <button
-                  onClick={() => onUnassign(tokenId)}
+                  className="action-slot-unassign-btn"
+                  onClick={(e) => { e.stopPropagation(); onUnassign(tokenId); }}
                   style={{
                     position: 'absolute',
                     top: '-6px',
@@ -159,7 +200,9 @@ export default function ActionSlot({ action, dragAction, costNote, assignedToken
             </div>
           </>
         ) : (
-          <span className="label" style={{ opacity: 0.3 }}>Drop CT Here</span>
+          <span className="label" style={{ opacity: isTapReady ? 0.7 : 0.3 }}>
+            {isTapReady ? 'TAP TO ASSIGN' : 'Drop CT Here'}
+          </span>
         )}
       </div>
     </div>

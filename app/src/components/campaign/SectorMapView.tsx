@@ -5,6 +5,7 @@ import type { SectorNode } from '../../engine/mapGenerator';
 import { useCampaignStore } from '../../store/useCampaignStore';
 import type { CampaignState } from '../../types/campaignTypes';
 import type { OfficerData, OfficerState, PlayerState, ShipArc, ShipState } from '../../types/game';
+import { useViewport } from '../../utils/useViewport';
 import { getMaxStress } from '../../engine/stress';
 import { getOfficerById } from '../../data/officers';
 import { getWeaponById } from '../../data/weapons';
@@ -135,6 +136,8 @@ export default function SectorMapView() {
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  const { isCoarsePointer } = useViewport();
+
   if (!mapData || !campaign) return null;
 
   const currentNode      = mapData.nodes.find(n => n.id === campaign.currentNodeId);
@@ -242,6 +245,20 @@ export default function SectorMapView() {
     }
   };
 
+  // Touch: tap once to show tooltip, tap again to dismiss
+  const handleNodeTap = useCallback((e: React.PointerEvent, node: SectorNode) => {
+    if (e.pointerType !== 'touch') return;
+    e.stopPropagation();
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setHoveredNodeId(prev => prev === node.id ? null : node.id);
+    setTooltip(prev =>
+      prev.visible && prev.node?.id === node.id
+        ? { ...prev, visible: false, node: null }
+        : { visible: true, x: e.clientX - rect.left + 16, y: e.clientY - rect.top - 10, node }
+    );
+  }, []);
+
   // ── Render a single SVG path line ────────────────────────────────
   const renderPath = (fromNode: SectorNode, toId: string) => {
     const toNode = mapData.nodes.find(n => n.id === toId);
@@ -326,6 +343,7 @@ export default function SectorMapView() {
           transformBox: 'fill-box',
         }}
         onClick={() => handleNodeClick(node.id)}
+        onPointerUp={e => handleNodeTap(e, node)}
         onMouseEnter={e => handleNodeEnter(e, node)}
         onMouseMove={handleNodeMove}
         onMouseLeave={handleNodeLeave}
@@ -378,6 +396,15 @@ export default function SectorMapView() {
           hexCorners(NODE_RADIUS + 5).map(([cx, cy], i) => (
             <circle key={i} cx={cx} cy={cy} r={2} fill={color} opacity={0.6} />
           ))
+        )}
+        {/* Invisible larger tap-target — improves finger accuracy on touch screens */}
+        {isCoarsePointer && (
+          <circle
+            r={NODE_RADIUS + 14}
+            fill="transparent"
+            style={{ pointerEvents: 'all' }}
+            aria-hidden="true"
+          />
         )}
       </g>
     );
