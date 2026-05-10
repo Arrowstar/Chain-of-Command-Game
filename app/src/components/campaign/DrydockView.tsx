@@ -296,7 +296,7 @@ export default function DrydockView() {
                 return (
                   <div key={ship.id} className="panel panel--raised" style={{ padding: 'var(--space-md)' }}>
                     <div style={{ display: 'flex', gap: 'var(--space-md)', borderBottom: '1px solid var(--color-border)', paddingBottom: 'var(--space-md)', marginBottom: 'var(--space-md)' }}>
-                      {currentChassis?.image && <img src={currentChassis.image} alt={currentChassis.name} style={{ width: '120px', objectFit: 'contain' }} />}
+                      {currentChassis?.image && <img src={currentChassis.image} alt={currentChassis.name} style={{ width: '120px', objectFit: 'contain', filter: 'drop-shadow(0 0 10px rgba(0,255,100,0.2))' }} />}
                       <div>
                         <h3 style={{ margin: '0 0 var(--space-xs) 0', color: 'var(--color-text-primary)' }}>{ship.name}</h3>
                         <div style={{ ...dimText }}>
@@ -322,7 +322,7 @@ export default function DrydockView() {
 
                         return (
                           <div key={chassis.id} className="panel" style={{ ...panelStyle, opacity: canAfford ? 1 : 0.6, display: 'flex', flexDirection: 'row', gap: 'var(--space-sm)' }}>
-                            {chassis.image && <img src={chassis.image} alt={chassis.name} style={{ width: '80px', objectFit: 'contain' }} />}
+                            {chassis.image && <img src={chassis.image} alt={chassis.name} style={{ width: '80px', objectFit: 'contain', filter: 'drop-shadow(0 0 10px rgba(0,255,100,0.2))' }} />}
                             <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                               <div style={{ fontWeight: 'bold', color: 'var(--color-text-primary)', fontSize: '0.9rem' }}>{chassis.className}</div>
                               <div style={{ ...dimText, fontSize: '0.75rem' }}>
