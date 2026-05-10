@@ -301,7 +301,8 @@ export default function DrydockView() {
                         <h3 style={{ margin: '0 0 var(--space-xs) 0', color: 'var(--color-text-primary)' }}>{ship.name}</h3>
                         <div style={{ ...dimText }}>
                           Current: <strong style={{ color: 'var(--color-holo-cyan)' }}>{currentChassis?.className ?? ship.chassisId}</strong>
-                          <br/>Hull {currentChassis?.baseHull} · Shields {currentChassis?.shieldsPerSector}/sector
+                          <br/><span title="Total damage the ship can take before being destroyed." style={{ cursor: 'help' }}>Hull {currentChassis?.baseHull}</span> · <span title="Damage absorbed per sector before Hull is damaged." style={{ cursor: 'help' }}>Shields {currentChassis?.shieldsPerSector}/sector</span>
+                          <br/><span title="Maximum hexes this ship can move in a single turn." style={{ cursor: 'help' }}>Speed {currentChassis?.maxSpeed}</span> · <span title="Base evasion value added to defense rolls." style={{ cursor: 'help' }}>Evasion {currentChassis?.baseEvasion}</span>
                           <br/>{currentChassis?.weaponSlots}W / {currentChassis?.internalSlots}I slots
                           {currentChassis && (
                             <div>
@@ -325,7 +326,7 @@ export default function DrydockView() {
                             <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                               <div style={{ fontWeight: 'bold', color: 'var(--color-text-primary)', fontSize: '0.9rem' }}>{chassis.className}</div>
                               <div style={{ ...dimText, fontSize: '0.75rem' }}>
-                                Hull {chassis.baseHull} · Shld {chassis.shieldsPerSector} · Spd {chassis.maxSpeed}
+                                <span title="Total damage the ship can take before being destroyed." style={{ cursor: 'help' }}>Hull {chassis.baseHull}</span> · <span title="Damage absorbed per sector before Hull is damaged." style={{ cursor: 'help' }}>Shld {chassis.shieldsPerSector}</span> · <span title="Maximum hexes this ship can move in a single turn." style={{ cursor: 'help' }}>Spd {chassis.maxSpeed}</span> · <span title="Base evasion value added to defense rolls." style={{ cursor: 'help' }}>Eva {chassis.baseEvasion}</span>
                                 <br />
                                 {chassis.weaponSlots}W / {chassis.internalSlots}I slots
                               </div>
