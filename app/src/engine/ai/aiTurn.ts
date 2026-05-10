@@ -24,7 +24,7 @@ export interface AIAction {
 export interface AITurnResult {
   actions: AIAction[];
   shipUpdates: Map<string, Partial<EnemyShipState>>;
-  playerDamage: { targetId: string; hullDamage: number; shieldDamage: number; sector: ShipArc; officerStress?: number; attackerId: string }[];
+  playerDamage: { targetId: string; hullDamage: number; shieldDamage: number; sector: ShipArc; officerStress?: number; attackerId: string; criticalTriggered?: boolean }[];
   consumedHazardIds: string[];
 }
 
@@ -395,6 +395,7 @@ export function executeAITier(
           sector,
           officerStress: piercingHits > 0 ? effectiveTacticCard?.mechanicalEffect.criticalStressBonus : undefined,
           attackerId: aiShip.id,
+          criticalTriggered: piercingHits > 0,
         });
         actions.push({
           shipId: aiShip.id, type: 'attack', details: {

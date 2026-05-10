@@ -1334,6 +1334,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
       const ship = state.playerShips.find(s => s.id === player.shipId);
       
+      // Reroute Power restriction
+      if (action.actionId === 'reroute-power') {
+        const alreadyQueued = player.assignedActions.some(a => a.actionId === 'reroute-power');
+        if (alreadyQueued) {
+          get().addLog('system', `[CMD] Reroute Power can only be queued once per round.`);
+          return state;
+        }
+      }
+
       // Fumble Lockouts
       if (ship) {
         if (ship.navLockout && (action.actionId === 'adjust-speed' || action.actionId === 'rotate')) {
@@ -1814,9 +1823,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
         if (scarSpeedCap !== null && delta > 0 && ship.currentSpeed >= scarSpeedCap) {
           get().addLog('system', `Buckled Structural Spine: ${get().getShipName(shipId)} speed is capped at ${scarSpeedCap}.`);
         }
-        const newSpeed = adjustSpeed(ship.currentSpeed, delta, effectiveMaxSpeed);
-        updates.currentSpeed = newSpeed;
-        get().addLog('movement', `${get().getShipName(shipId)} speed adjusted ${ship.currentSpeed} ═   ${newSpeed} (${delta > 0 ? '+' : ''}${delta})`);
+        
+        const hasThrustersOffline = ship.criticalDamage.some(c => c.id === 'thrusters-offline');
+        if (hasThrustersOffline) {
+          get().addLog('system', `🚫 MAIN THRUSTERS OFFLINE: ${ship.name} cannot move!`);
+          updates.currentSpeed = 0;
+        } else {
+          const newSpeed = adjustSpeed(ship.currentSpeed, delta, effectiveMaxSpeed);
+          updates.currentSpeed = newSpeed;
+          get().addLog('movement', `${get().getShipName(shipId)} speed adjusted ${ship.currentSpeed} ═   ${newSpeed} (${delta > 0 ? '+' : ''}${delta})`);
+        }
         break;
       }
       case 'rotate': {
@@ -1845,14 +1861,26 @@ export const useGameStore = create<GameStore>((set, get) => ({
           const snapProc = snapOfficer ? rollOfficerSkillProc(snapOfficer.currentTier) : null;
           if (snapProc) {
             const outcome = snapProc.isCritical ? 'CRITICAL' : snapProc.isSuccess ? 'SUCCESS' : 'FAIL';
-            if (snapProc.isSuccess) {
-              updates.facing = rotateShip(updates.facing as import('../types/game').HexFacing, dir);
-              get().addLog('movement', `Snap Maneuver: ${snapOfficerData?.name ?? 'Helm'} executed a free second rotation ${dirLabel}.`);
-            }
             if (snapProc.isCritical) {
               updates.evasiveManeuvers = (ship.evasiveManeuvers ?? 0) + 1;
-              get().addLog('system', `Snap Maneuver: ${snapOfficerData?.name ?? 'Helm'} gained +1 Evasion bonus from the snap rotation.`);
+              get().addLog('system', `Snap Maneuver: ${snapOfficerData?.name ?? 'Helm'} gained +1 Evasion bonus from the snap maneuver.`);
             }
+
+            const optionalAction = snapProc.isSuccess ? {
+              label: `Execute ${dirLabel} Rotation`,
+              onAccept: () => {
+                const currentShip = get().playerShips.find(s => s.id === shipId);
+                if (currentShip) {
+                  const newFacing = rotateShip(currentShip.facing, dir);
+                  get().updatePlayerShip(shipId, { facing: newFacing });
+                  get().addLog('movement', `Snap Maneuver: ${snapOfficerData?.name ?? 'Helm'} executed a free second rotation ${dirLabel}.`);
+                }
+              },
+              onDecline: () => {
+                get().addLog('system', `Snap Maneuver: ${snapOfficerData?.name ?? 'Helm'} declined the free second rotation.`);
+              }
+            } : undefined;
+
             useUIStore.getState().queueModal('skill-proc', {
               data: {
                 title: 'Snap Maneuver',
@@ -1860,9 +1888,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 station: 'helm',
                 actionName: 'Rotate',
                 result: snapProc,
-                standardEffect: 'Free second rotation in the same direction.',
+                standardEffect: 'Option to take a free second rotation in the same direction.',
                 failureEffect: 'Base action resolves at a single 60° rotation.',
-                criticalEffect: `Free second rotation and +1 Evasion (TN) until the start of this ship's next Execution Phase turn.`,
+                criticalEffect: `Option for free second rotation and immediate +1 Evasion (TN) until the start of this ship's next Execution Phase turn.`,
+                optionalAction,
               },
             });
             get().addLog('system', `Snap Maneuver: ${snapOfficerData?.name ?? 'Helm'} rolled ${snapProc.roll} on ${snapProc.dieType.toUpperCase()} (${outcome}).`);
@@ -2744,6 +2773,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     targetLocks?: number[];
                     targetLocksRerolls?: number;
                     targetLockArmorPiercingShots?: number;
+                    criticalDamage?: import('../types/game').CriticalDamageCard[];
+                    hasDroppedBelow50?: boolean;
                 }
                 const targetUpdates: CommonUpdate = {
                     shields: 'shields' in target ? { ...target.shields, [damageResult.struckSector]: damageResult.shieldRemaining } : undefined,
@@ -2794,6 +2825,35 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     }
                 } else {
                     const targetId = 'id' in target ? target.id : target.name;
+                    
+                    if (damageResult.criticalTriggered && !targetUpdates.isDestroyed && ('currentHull' in target ? (target as any).currentHull : 0) > 0) {
+                        const { card: critCard, remainingDeck: newDeck } = drawCriticalCard(get().playerCritDeck, 'player');
+                        set({ playerCritDeck: newDeck });
+                        const currentPlayerShip = (target as unknown as unknown as ShipState);
+
+                        if (critCard.id === 'magazine-explosion') {
+                            const oldHull = targetUpdates.currentHull ?? currentPlayerShip.currentHull;
+                            const newHull = Math.max(0, oldHull - 2);
+                            targetUpdates.currentHull = newHull;
+                            if (newHull === 0) targetUpdates.isDestroyed = true;
+                            
+                            get().addLog('critical', `══& CRITICAL HIT! ${target.name} suffered: ${critCard.name}! (Immediate 2 Hull Damage)`);
+                            fireCombatToast({ type: 'critical', message: `★ CRITICAL HIT — ${target.name}: ${critCard.name}!` });
+                            useUIStore.getState().queueModal('critical', { card: critCard });
+                        } else {
+                            targetUpdates.criticalDamage = [...(currentPlayerShip.criticalDamage || []), critCard];
+                            targetUpdates.hasDroppedBelow50 = ('currentHull' in target ? (target as any).currentHull : 0) > targetMaxHull / 2 && (targetUpdates.currentHull ?? 0) <= targetMaxHull / 2;
+                            
+                            if (critCard.id === 'thrusters-offline') {
+                                targetUpdates.currentSpeed = 0;
+                            }
+                            
+                            get().addLog('critical', `══& CRITICAL HIT! ${target.name} suffered: ${critCard.name}!`);
+                            fireCombatToast({ type: 'critical', message: `★ CRITICAL HIT — ${target.name}: ${critCard.name}!` });
+                            useUIStore.getState().queueModal('critical', { card: critCard });
+                        }
+                    }
+
                     get().updatePlayerShip(targetId, targetUpdates);
                 }
 
@@ -3759,7 +3819,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       });
 
       // Apply damage to targets (could be player ships or allied enemy ships)
-      playerDamage.forEach((dmg: { targetId: string; hullDamage: number; shieldDamage: number; sector: import('../types/game').ShipArc; officerStress?: number; attackerId: string }) => {
+      playerDamage.forEach((dmg: { targetId: string; hullDamage: number; shieldDamage: number; sector: import('../types/game').ShipArc; officerStress?: number; attackerId: string; criticalTriggered?: boolean }) => {
         const liveState = get();
         const playerShip = liveState.playerShips.find(s => s.id === dmg.targetId);
         if (playerShip) {
@@ -3771,7 +3831,45 @@ export const useGameStore = create<GameStore>((set, get) => ({
             updates.currentHull = Math.max(0, playerShip.currentHull - dmg.hullDamage);
             if (updates.currentHull === 0) updates.isDestroyed = true;
           }
+
+          if (dmg.criticalTriggered && !updates.isDestroyed && (!updates.currentHull || updates.currentHull > 0)) {
+            const { card: critCard, remainingDeck: newDeck } = drawCriticalCard(get().playerCritDeck, 'player');
+            set({ playerCritDeck: newDeck });
+            
+            if (critCard.id === 'magazine-explosion') {
+              // Immediate one-shot 2 hull damage, then discard
+              const oldHull = updates.currentHull ?? playerShip.currentHull;
+              const newHull = Math.max(0, oldHull - 2);
+              updates.currentHull = newHull;
+              if (newHull === 0) updates.isDestroyed = true;
+              
+              get().addLog('critical', `══& CRITICAL HIT! ${playerShip.name} suffered: ${critCard.name}! (Immediate 2 Hull Damage)`);
+              fireCombatToast({ type: 'critical', message: `★ CRITICAL HIT — ${playerShip.name}: ${critCard.name}!` });
+              useUIStore.getState().queueModal('critical', { card: critCard });
+            } else {
+              updates.criticalDamage = [...playerShip.criticalDamage, critCard];
+              
+              if (critCard.id === 'thrusters-offline') {
+                updates.currentSpeed = 0;
+              }
+              
+              get().addLog('critical', `══& CRITICAL HIT! ${playerShip.name} suffered: ${critCard.name}!`);
+              fireCombatToast({ type: 'critical', message: `★ CRITICAL HIT — ${playerShip.name}: ${critCard.name}!` });
+              useUIStore.getState().queueModal('critical', { card: critCard });
+            }
+          }
+
           get().updatePlayerShip(dmg.targetId, updates);
+
+          if (updates.isDestroyed) {
+             useUIStore.getState().queueFireAnimation({
+                 id: `explosion-${playerShip.id || playerShip.name}-${Date.now()}`,
+                 attackerPos: playerShip.position,
+                 targetPos: playerShip.position,
+                 weaponTags: ['explosion'],
+                 isEnemy: false,
+             });
+          }
 
           // Damage Reflector Grid
           if (dmg.hullDamage >= 3 && playerShip.equippedSubsystems?.includes('damage-reflector-grid') && !playerShip.counterFireUsedThisRound) {
@@ -6120,6 +6218,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }));
       get().addLog('system', `⚡ REACTOR OVERLOAD: War Council gains +${reactorShips.length} CT next round (from ${reactorShips.map(s => s.name).join(', ')})!`);
     }
+
+    // ─── Enemy Critical: End of Round Discards ──────────────────────────────────────
+    get().enemyShips
+      .filter(s => !s.isDestroyed)
+      .forEach(s => {
+        const hasTempCrit = s.criticalDamage?.some(c => c.id === 'enemy-weapons-disabled' || c.id === 'enemy-comms-severed');
+        if (hasTempCrit) {
+          get().updateEnemyShip(s.id, {
+            criticalDamage: s.criticalDamage.filter(c => c.id !== 'enemy-weapons-disabled' && c.id !== 'enemy-comms-severed')
+          });
+          get().addLog('system', `${s.name} systems recovering: temporary critical damage cleared.`);
+        }
+      });
 
     // Trauma Hook: Claustrophobic — +2 Stress if ship ends Execution adjacent to Asteroid/Debris terrain.
     // Applied AFTER recovery so stress recovery in this same cleanup phase doesn't wipe it.

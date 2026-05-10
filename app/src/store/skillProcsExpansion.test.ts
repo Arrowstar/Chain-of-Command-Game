@@ -116,7 +116,7 @@ describe('Skill Proc Expansion — Snap Maneuver, Overcharge Conduit, Deep Intru
     expect((modal.modalData as any)?.data?.result?.isSuccess).toBe(false);
   });
 
-  it('Snap Maneuver SUCCESS: ship rotates 120° (two faces) clockwise when proc succeeds', () => {
+  it('Snap Maneuver SUCCESS: ship rotates 120° (two faces) clockwise when proc succeeds and is accepted', () => {
     // Veteran helm = d8; roll 5 ≥ 4 = success but not max face → isSuccess true, isCritical false
     vi.spyOn(Math, 'random').mockReturnValue(4 / 8); // (4/8)*8+1 = 5 → success on d8
 
@@ -130,8 +130,8 @@ describe('Skill Proc Expansion — Snap Maneuver, Overcharge Conduit, Deep Intru
     useGameStore.getState().resolveAction('p1', 's1', 'h2', { direction: 'clockwise' });
 
     const ship = useGameStore.getState().playerShips[0];
-    // Two clockwise rotations = facing + 2 (mod 6)
-    expect(ship.facing).toBe((initialFacing + 2) % 6);
+    // First rotation happens immediately
+    expect(ship.facing).toBe((initialFacing + 1) % 6);
     expect(ship.evasiveManeuvers ?? 0).toBe(0); // success only — no evasion bonus
 
     const modal = useUIStore.getState();
@@ -139,9 +139,17 @@ describe('Skill Proc Expansion — Snap Maneuver, Overcharge Conduit, Deep Intru
     expect((modal.modalData as any)?.data?.title).toBe('Snap Maneuver');
     expect((modal.modalData as any)?.data?.result?.isSuccess).toBe(true);
     expect((modal.modalData as any)?.data?.result?.isCritical).toBe(false);
+
+    // Now execute the optional action
+    const optionalAction = (modal.modalData as any)?.data?.optionalAction;
+    expect(optionalAction).toBeDefined();
+    optionalAction.onAccept();
+
+    const updatedShip = useGameStore.getState().playerShips[0];
+    expect(updatedShip.facing).toBe((initialFacing + 2) % 6);
   });
 
-  it('Snap Maneuver CRITICAL: ship rotates 120° AND gains +1 Evasion TN', () => {
+  it('Snap Maneuver CRITICAL: ship rotates 120° AND gains +1 Evasion TN when proc succeeds and is accepted', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.99); // veteran helm d8 → 8 = critical
 
     useGameStore.setState(s => {
@@ -155,13 +163,21 @@ describe('Skill Proc Expansion — Snap Maneuver, Overcharge Conduit, Deep Intru
     useGameStore.getState().resolveAction('p1', 's1', 'h3', { direction: 'counterclockwise' });
 
     const ship = useGameStore.getState().playerShips[0];
-    // Two counter-clockwise rotations = facing - 2 (mod 6)
-    expect(ship.facing).toBe(((initialFacing - 2) % 6 + 6) % 6);
+    // Initial rotation only
+    expect(ship.facing).toBe(((initialFacing - 1) % 6 + 6) % 6);
     expect(ship.evasiveManeuvers).toBe(1); // +1 from critical
 
     const modal = useUIStore.getState();
     expect((modal.modalData as any)?.data?.result?.isCritical).toBe(true);
     expect((modal.modalData as any)?.data?.title).toBe('Snap Maneuver');
+
+    // Execute optional action
+    const optionalAction = (modal.modalData as any)?.data?.optionalAction;
+    expect(optionalAction).toBeDefined();
+    optionalAction.onAccept();
+
+    const updatedShip = useGameStore.getState().playerShips[0];
+    expect(updatedShip.facing).toBe(((initialFacing - 2) % 6 + 6) % 6);
   });
 
   // ─────────────────────────────────────────────────────────────────

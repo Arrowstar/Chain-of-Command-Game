@@ -6,7 +6,7 @@ export const PLAYER_CRITICAL_DECK: CriticalDamageCard[] = [
   {
     id: 'thrusters-offline',
     name: 'Main Thrusters Offline',
-    effect: 'Ship cannot move forward. Helm "Ahead Standard" action is locked.',
+    effect: 'Ship speed is reduced to 0 and it cannot move until repaired.',
     isRepaired: false,
   },
   {

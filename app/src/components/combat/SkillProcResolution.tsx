@@ -12,6 +12,11 @@ export interface SkillProcResolutionData {
   standardEffect: string;
   failureEffect?: string;
   criticalEffect?: string;
+  optionalAction?: {
+    label: string;
+    onAccept: () => void;
+    onDecline?: () => void;
+  };
 }
 
 interface SkillProcResolutionProps {
@@ -133,7 +138,22 @@ export default function SkillProcResolution({ data, onClose }: SkillProcResoluti
           </motion.div>
         )}
 
-        {showOutcome && (
+        {showOutcome && data.optionalAction ? (
+          <div style={{ marginTop: 'var(--space-md)', display: 'flex', gap: 'var(--space-sm)' }}>
+            <button className="btn btn--primary" style={{ flex: 1 }} onClick={() => {
+              data.optionalAction!.onAccept();
+              onClose();
+            }}>
+              {data.optionalAction.label}
+            </button>
+            <button className="btn" style={{ flex: 1 }} onClick={() => {
+              data.optionalAction!.onDecline?.();
+              onClose();
+            }}>
+              Decline
+            </button>
+          </div>
+        ) : showOutcome && (
           <button className="btn" style={{ marginTop: 'var(--space-md)', width: '100%' }} onClick={onClose}>
             Acknowledge
           </button>

@@ -385,7 +385,7 @@ export default function OfficerStationPanel({ officerState, playerId }: OfficerS
                 const idToRemove = tokenId || assignments[assignments.length - 1]?.id;
                 if (idToRemove) unassignToken(player.id, idToRemove);
               }}
-              disabled={officerState.isLocked || tacticLockout}
+              disabled={officerState.isLocked || tacticLockout || (action.id === 'reroute-power' && assignments.length > 0)}
             />
           );
         })}
