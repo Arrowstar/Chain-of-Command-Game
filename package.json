@@ -6,5 +6,12 @@
     "dev": "npm --prefix app run dev",
     "test": "npm --prefix app run test",
     "lint": "npm --prefix app run lint"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.3.3",
+    "@capacitor/core": "^8.3.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.3.3"
   }
 }

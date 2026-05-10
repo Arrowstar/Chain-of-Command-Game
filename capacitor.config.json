@@ -1,0 +1,5 @@
+{
+  "appId": "com.harden.adam.chainofcommand",
+  "appName": "Chain of Command",
+  "webDir": "./app/dist"
+}
