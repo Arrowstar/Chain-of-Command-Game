@@ -2775,6 +2775,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     targetLockArmorPiercingShots?: number;
                     criticalDamage?: import('../types/game').CriticalDamageCard[];
                     hasDroppedBelow50?: boolean;
+                    currentSpeed?: number;
                 }
                 const targetUpdates: CommonUpdate = {
                     shields: 'shields' in target ? { ...target.shields, [damageResult.struckSector]: damageResult.shieldRemaining } : undefined,
