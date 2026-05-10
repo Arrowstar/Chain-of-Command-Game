@@ -240,7 +240,7 @@ export const OFFICERS: OfficerData[] = [
     name: "Chief Petty Officer D'Vesh",
     station: 'sensors',
     traitName: 'Ghost Maker',
-    traitEffect: 'You may spend 1 CT during Phase 1 to completely cancel the Hegemony AI Tactic Card as it is revealed. If you do, D\'Vesh immediately takes 3 Stress.',
+    traitEffect: 'You may spend 1 CT during the Briefing Phase to completely cancel the Hegemony AI Tactic Card as it is revealed. If you do, D\'Vesh immediately takes 3 Stress.',
     stressLimit: 6,
     defaultTier: 'veteran',
     avatar: dveshAvatar,

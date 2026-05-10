@@ -18,7 +18,7 @@ export const PLAYER_CRITICAL_DECK: CriticalDamageCard[] = [
   {
     id: 'bridge-hit',
     name: 'Bridge Hit',
-    effect: 'The Captain is injured. Maximum Command Tokens generated during Phase 1 is permanently reduced by 1.',
+    effect: 'The Captain is injured. Maximum Command Tokens generated during the Briefing Phase is permanently reduced by 1.',
     isRepaired: false,
   },
   {
@@ -30,7 +30,7 @@ export const PLAYER_CRITICAL_DECK: CriticalDamageCard[] = [
   {
     id: 'shield-generator-offline',
     name: 'Shield Generator Offline',
-    effect: 'Shields no longer naturally regenerate 1 point during Phase 4.',
+    effect: 'Shields no longer naturally regenerate 1 point during the Cleanup Phase.',
     isRepaired: false,
   },
   {
@@ -94,7 +94,7 @@ export const ENEMY_CRITICAL_DECK: CriticalDamageCard[] = [
   {
     id: 'enemy-weapons-disabled',
     name: 'Weapons Disabled',
-    effect: 'Ship cannot fire weapons during its next activation step. The weapons lockout clears automatically at the end of Phase 4.',
+    effect: 'Ship cannot fire weapons during its next activation step. The weapons lockout clears automatically at the end of the Cleanup Phase.',
     isRepaired: false,
   },
   {

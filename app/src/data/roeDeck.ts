@@ -4,7 +4,7 @@ import type { RoECard } from '../types/game';
 // Admiral's Deck: Rules of Engagement
 //
 // One card is drawn at game setup and persists for the entire mission.
-// Players may Override the RoE at the start of Phase 1 (Briefing)
+// Players may Override the RoE at the start of the Briefing Phase
 // at a cost of -2 Fleet Favor. If never overridden, they earn +2 FF
 // at end of game for exemplary obedience.
 // ═══════════════════════════════════════════════════════════════════
@@ -17,7 +17,7 @@ export const ROE_DECK: RoECard[] = [
     name: 'Zero-Tolerance for Cowardice',
     doctrine: 'maximumAggression',
     flavorText: 'The Hegemony does not retreat. Hold the line or bear the consequences.',
-    rule: 'If any Player Ship ends Phase 3 (Execution) at a Current Speed of 0, OR further from the nearest Enemy Ship than it started the round, the Helm Officer immediately suffers 2 Stress.',
+    rule: 'If any Player Ship ends the Execution Phase at a Current Speed of 0, OR further from the nearest Enemy Ship than it started the round, the Helm Officer immediately suffers 2 Stress.',
     mechanicalEffect: {
       stressOnRetreatOrStationary: 2,
     },
@@ -106,7 +106,7 @@ export const ROE_DECK: RoECard[] = [
     name: 'Strict Radio Silence',
     doctrine: 'totalControl',
     flavorText: 'Comms are monitored and encrypted. Speak only when the Admiral permits.',
-    rule: 'During Phase 2 (The Command Phase), players are completely forbidden from speaking or gesturing to each other while assigning Command Tokens. If a player speaks, report the violation — their ship\'s Sensors officer gains 1 Stress.',
+    rule: 'During the Command Phase, players are completely forbidden from speaking or gesturing to each other while assigning Command Tokens. If a player speaks, report the violation — their ship\'s Sensors officer gains 1 Stress.',
     mechanicalEffect: {
       commsBlackoutDuringCommand: true,
       commsViolationStress: 1,

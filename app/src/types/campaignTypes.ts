@@ -38,7 +38,7 @@ export interface CombatModifiers {
   playerActsFirst?: boolean;
   /** Event 23 (Solar Flare Option A): all player ships start Round 1 at Speed 3 */
   playerStartSpeed3?: boolean;
-  /** Event 20 (Mutated Contagion Option A): all players generate -1 CT in Phase 1 for entire scenario */
+  /** Event 20 (Mutated Contagion Option A): all players generate -1 CT during the Briefing Phase for entire scenario */
   playerCTRound1Modifier?: number;
   /** Event 16 (Failing Reactor Option B): max speed of all player ships reduced by 1 */
   playerMaxSpeedReduction?: number;

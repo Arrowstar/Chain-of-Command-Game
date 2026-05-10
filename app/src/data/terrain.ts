@@ -35,7 +35,7 @@ export const TERRAIN_DATA: Record<TerrainType, TerrainData> = {
     blocksLoS: false,
     tnModifier: 0,
     movementEffect: 'Forced Pull',
-    special: 'At the start of Phase 4, any ship inside or adjacent is pulled 1 hex toward the center.',
+    special: 'At the start of the Cleanup Phase, any ship inside or adjacent is pulled 1 hex toward the center.',
   },
 };
 

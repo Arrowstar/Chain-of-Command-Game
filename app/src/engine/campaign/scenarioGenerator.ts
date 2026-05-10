@@ -532,7 +532,7 @@ function generateEnvironment(
         const pocket = pickRandom(getRandomHexes(1, 2, 6)) ?? { q: 2, r: 1 };
         planner.addCluster(pocket, 'ionNebula', planner.getCount() + rollD4(), 0.56);
       }
-      rules.push('Solar Flare Activity: At the start of Phase 4, roll a D6. On a 1 or 2, ALL ships take 1 unblockable Hull damage.');
+      rules.push('Solar Flare Activity: At the start of the Cleanup Phase, roll a D6. On a 1 or 2, ALL ships take 1 unblockable Hull damage.');
       return 'Solar flare activity lashes a cluttered combat zone, forcing both fleets to fight through intermittent space weather.';
     }
   }

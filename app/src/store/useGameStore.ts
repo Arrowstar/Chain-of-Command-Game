@@ -5253,7 +5253,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const state = get();
     if (state.roeOverridden || !state.activeRoE) return; // already overridden
     if (state.phase !== 'briefing') {
-      get().addLog('system', 'Override can only be declared at the start of Phase 1 (Briefing).');
+      get().addLog('system', 'Override can only be declared at the start of the Briefing Phase.');
       return;
     }
     const roeName = state.activeRoE.name;

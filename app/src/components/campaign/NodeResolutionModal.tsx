@@ -209,7 +209,7 @@ export default function NodeResolutionModal({ onStartCombat }: Props) {
                 if (mods.enemyShieldsZeroRound1) lines.push(`All enemy ships start Round 1 with 0 Shields.`);
                 if (mods.playerActsFirst) lines.push(`Player fleet acts first in all Initiative steps during Round 1.`);
                 if (mods.playerStartSpeed3) lines.push(`All player ships begin Round 1 at Speed 3.`);
-                if (mods.playerCTRound1Modifier) lines.push(`All players generate ${mods.playerCTRound1Modifier} Command Tokens during Phase 1 for the entire scenario.`);
+                if (mods.playerCTRound1Modifier) lines.push(`All players generate ${mods.playerCTRound1Modifier} Command Tokens during the Briefing Phase for the entire scenario.`);
                 if (mods.playerMaxSpeedReduction) lines.push(`Max speed of all player ships is permanently reduced by ${mods.playerMaxSpeedReduction} for this scenario.`);
                 if (mods.playerCTZeroRound1) lines.push(`All player ships start Round 1 with 0 Command Tokens.`);
                 if (mods.flagshipBonus) lines.push(`Enemy flagship gains +${mods.flagshipBonus.evasion} Evasion and +${mods.flagshipBonus.hull} Max Hull.`);
