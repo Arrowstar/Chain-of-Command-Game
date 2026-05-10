@@ -12,6 +12,7 @@ import type { OfficerState, ActionDefinition, OfficerStation, QueuedAction } fro
 import { applyRecycledCoolant, getStimInjectorBonus } from '../../engine/techEffects';
 import { getScarImpactLegendText, getScarStatusMeta, getScarTooltip, getStationScars } from './scarStatus';
 import { useTokenSelectionStore } from '../../store/useTokenSelectionStore';
+import { useViewport } from '../../utils/useViewport';
 
 interface OfficerStationPanelProps {
   officerState: OfficerState;
@@ -36,6 +37,7 @@ export default function OfficerStationPanel({ officerState, playerId }: OfficerS
   // Inline speed-direction picker for tap-to-assign on Lead Foot officers
   const [pendingTapAdjustSpeed, setPendingTapAdjustSpeed] = useState(false);
   const clearTokenSelection = useTokenSelectionStore(s => s.clearSelection);
+  const { isCoarsePointer } = useViewport();
 
   if (!officerData || !player) return null;
 
@@ -186,7 +188,7 @@ export default function OfficerStationPanel({ officerState, playerId }: OfficerS
             </span>
           </div>
           <div className="mono" style={{ fontSize: '0.68rem', color: 'var(--color-text-secondary)' }}>
-            Hover a scar tag for the full penalty, or the ? for shorthand help.
+            {isCoarsePointer ? 'Tap a scar tag for the full penalty, or the ? for shorthand help.' : 'Hover a scar tag for the full penalty, or the ? for shorthand help.'}
           </div>
           {stationScars.map(scar => {
             const meta = getScarStatusMeta(scar.fromCriticalId);

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { useTokenSelectionStore } from '../../store/useTokenSelectionStore';
+import { useViewport } from '../../utils/useViewport';
 
 interface CommandTokenProps {
   id: string;
@@ -16,6 +17,7 @@ export default function CommandToken({ id, isAssigned = false }: CommandTokenPro
   const selectedTokenId = useTokenSelectionStore(s => s.selectedTokenId);
   const selectToken = useTokenSelectionStore(s => s.selectToken);
   const clearSelection = useTokenSelectionStore(s => s.clearSelection);
+  const { isCoarsePointer } = useViewport();
 
   const isSelected = selectedTokenId === id;
 
@@ -37,8 +39,8 @@ export default function CommandToken({ id, isAssigned = false }: CommandTokenPro
     opacity: isAssigned ? 0.2 : isDragging ? 0.5 : 1,
     zIndex: isDragging ? 999 : 1,
     cursor: isAssigned ? 'default' : isDragging ? 'grabbing' : 'grab',
-    width: '32px',
-    height: '32px',
+    width: isCoarsePointer ? '40px' : '32px',
+    height: isCoarsePointer ? '40px' : '32px',
     borderRadius: '50%',
     background: isAssigned ? 'var(--color-bg-deep)' : 'var(--color-bg-surface)',
     border: `2px solid ${
@@ -82,8 +84,8 @@ export default function CommandToken({ id, isAssigned = false }: CommandTokenPro
       }
     >
       <div style={{
-        width: '16px',
-        height: '16px',
+        width: isCoarsePointer ? '20px' : '16px',
+        height: isCoarsePointer ? '20px' : '16px',
         borderRadius: '50%',
         background: isAssigned
           ? 'var(--color-text-dim)'

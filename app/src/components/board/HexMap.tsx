@@ -90,7 +90,7 @@ export default function HexMap() {
   const [isPanning, setIsPanning] = useState(false);
   const [lastMouse, setLastMouse] = useState({ x: 0, y: 0 });
   const [pointerDown, setPointerDown] = useState({ x: 0, y: 0 });
-  const [hoverTooltip, setHoverTooltip] = useState<{ targets: MapHoverTarget[]; position: { x: number; y: number } } | null>(null);
+  const [hoverTooltip, setHoverTooltip] = useState<{ targets: MapHoverTarget[]; position: { x: number; y: number }; hex: import('../../types/game').HexCoord } | null>(null);
   const [isTooltipLocked, setIsTooltipLocked] = useState(false);
   const isLockedRef = useRef(false);
 
@@ -1250,7 +1250,7 @@ export default function HexMap() {
       const firstShip = hoverState?.targets.find(t => t.kind === 'ship');
       useUIStore.getState().hoverShip(firstShip?.kind === 'ship' ? firstShip.ship.id : null);
       if (hoverState?.targets.length && hoverState.position) {
-        setHoverTooltip({ targets: hoverState.targets, position: hoverState.position });
+        setHoverTooltip({ targets: hoverState.targets, position: hoverState.position, hex: hoverState.hex });
       } else {
         setHoverTooltip(null);
       }
@@ -1292,29 +1292,6 @@ export default function HexMap() {
         const screenX = e.clientX - bounds.left;
         const screenY = e.clientY - bounds.top;
 
-        // On touch, show/toggle the info tooltip at the tapped hex (tap-to-lock)
-        if (e.pointerType === 'touch') {
-          const tapState = getHoverTarget(e.clientX, e.clientY);
-          if (tapState?.targets.length && tapState.position) {
-            const alreadyLocked = isLockedRef.current;
-            // Toggle: if already showing this hex's info, dismiss it
-            if (alreadyLocked) {
-              setHoverTooltip(null);
-              isLockedRef.current = false;
-              setIsTooltipLocked(false);
-            } else {
-              setHoverTooltip({ targets: tapState.targets, position: tapState.position });
-              isLockedRef.current = true;
-              setIsTooltipLocked(true);
-            }
-          } else {
-            // Tapped empty space — dismiss any locked tooltip
-            setHoverTooltip(null);
-            isLockedRef.current = false;
-            setIsTooltipLocked(false);
-          }
-        }
-        
         const worldX = (screenX - cameraX) / cameraZoom;
         const worldY = (screenY - cameraY) / cameraZoom;
         
@@ -1459,7 +1436,6 @@ export default function HexMap() {
                 const subsystem = (subsystemId && attackerShip?.equippedSubsystems.includes(subsystemId)) ? getSubsystemById(subsystemId) : null;
                 
                 if (subsystem?.rangeMax) {
-                  const attackerShip = useGameStore.getState().playerShips.find(s => s.id === actionData.shipId);
                   if (attackerShip) {
                     const allEntities = [
                       ...useGameStore.getState().playerShips,
@@ -1556,13 +1532,35 @@ export default function HexMap() {
           }
         }
         
-        // Non-targeting selection
-        const hexTargets = collectHexTargets();
-        if (hexTargets.length > 1) {
-          useUIStore.getState().openSelectionPicker(clickedHex, hexTargets, { x: screenX, y: screenY });
-        } else if (hexTargets.length === 1 && hexTargets[0].kind === 'ship') {
-          useUIStore.getState().selectShip(hexTargets[0].ship.id);
+        // Not in targeting or deployment mode.
+        // Tapping/clicking a hex should toggle tooltip lock.
+        const tapState = getHoverTarget(e.clientX, e.clientY);
+        if (tapState?.targets.length && tapState.position) {
+          const alreadyLocked = isLockedRef.current && hoverTooltip?.hex && hexKey(hoverTooltip.hex) === hexKey(tapState.hex);
+          if (alreadyLocked) {
+            // Dismiss
+            setHoverTooltip(null);
+            isLockedRef.current = false;
+            setIsTooltipLocked(false);
+            useUIStore.getState().selectShip(null);
+          } else {
+            // Lock onto this hex
+            setHoverTooltip({ targets: tapState.targets, position: tapState.position, hex: tapState.hex });
+            isLockedRef.current = true;
+            setIsTooltipLocked(true);
+            
+            // Also select ship if it's the only target, to maintain existing behavior
+            if (tapState.targets.length === 1 && tapState.targets[0].kind === 'ship') {
+               useUIStore.getState().selectShip(tapState.targets[0].ship.id);
+            } else {
+               useUIStore.getState().selectShip(null);
+            }
+          }
         } else {
+          // Tapped empty space — dismiss any locked tooltip
+          setHoverTooltip(null);
+          isLockedRef.current = false;
+          setIsTooltipLocked(false);
           useUIStore.getState().selectShip(null);
         }
       }
@@ -1651,11 +1649,11 @@ export default function HexMap() {
       onPointerCancel={handlePointerCancel}
       onPointerLeave={(e) => {
         handlePointerUp(e);
-        setHoverTooltip(null);
-        isLockedRef.current = false;
-        setIsTooltipLocked(false);
-        useUIStore.getState().hoverHex(null);
-        useUIStore.getState().hoverShip(null);
+        if (!isLockedRef.current) {
+          setHoverTooltip(null);
+          useUIStore.getState().hoverHex(null);
+          useUIStore.getState().hoverShip(null);
+        }
       }}
     >
       <div className="scanline-overlay" />

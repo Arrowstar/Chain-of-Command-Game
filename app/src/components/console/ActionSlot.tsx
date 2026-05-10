@@ -2,6 +2,7 @@ import React from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import type { ActionDefinition } from '../../types/game';
 import { useTokenSelectionStore } from '../../store/useTokenSelectionStore';
+import { useViewport } from '../../utils/useViewport';
 
 interface ActionSlotProps {
   action: ActionDefinition;
@@ -36,6 +37,7 @@ export default function ActionSlot({
 
   const selectedTokenId = useTokenSelectionStore(s => s.selectedTokenId);
   const clearSelection = useTokenSelectionStore(s => s.clearSelection);
+  const { isCoarsePointer } = useViewport();
 
   const isActive = isOver && !disabled;
   // Highlight the slot while a token is tapped-selected and the slot is ready
@@ -60,6 +62,7 @@ export default function ActionSlot({
     <div
       className={`panel ${isActive ? 'panel--glow' : ''}`}
       ref={setNodeRef}
+      onClick={isTapReady ? handleDropZoneClick : undefined}
       style={{
         opacity: disabled ? 0.5 : 1,
         padding: 'var(--space-sm)',
@@ -107,7 +110,7 @@ export default function ActionSlot({
       {/* Drop zone / tap-assign zone */}
       <div
         className="action-slot-dropzone"
-        onClick={handleDropZoneClick}
+        onClick={!isTapReady ? handleDropZoneClick : undefined}
         style={{
           display: 'flex',
           justifyContent: 'center',
@@ -169,16 +172,16 @@ export default function ActionSlot({
                   onClick={(e) => { e.stopPropagation(); onUnassign(tokenId); }}
                   style={{
                     position: 'absolute',
-                    top: '-6px',
-                    right: '-10px',
-                    width: '16px',
-                    height: '16px',
+                    top: isCoarsePointer ? '-12px' : '-6px',
+                    right: isCoarsePointer ? '-16px' : '-10px',
+                    width: isCoarsePointer ? '32px' : '16px',
+                    height: isCoarsePointer ? '32px' : '16px',
                     borderRadius: '50%',
                     background: 'var(--color-hostile-red)',
                     color: 'white',
                     border: 'none',
                     cursor: 'pointer',
-                    fontSize: '10px',
+                    fontSize: isCoarsePointer ? '20px' : '10px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -201,7 +204,7 @@ export default function ActionSlot({
           </>
         ) : (
           <span className="label" style={{ opacity: isTapReady ? 0.7 : 0.3 }}>
-            {isTapReady ? 'TAP TO ASSIGN' : 'Drop CT Here'}
+            {isTapReady ? 'TAP TO ASSIGN' : isCoarsePointer ? 'Tap CT, then tap here' : 'Drop CT Here'}
           </span>
         )}
       </div>

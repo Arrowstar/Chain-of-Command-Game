@@ -166,146 +166,6 @@ export default function GameScreen() {
         </div>
       )}
 
-      {phase !== 'briefing' && (
-        <div
-          id="top-center-buttons"
-          style={{
-            position: 'fixed',
-            top: 8,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 180,
-            width: 'min(760px, calc(100vw - 140px))',
-            pointerEvents: 'none',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: (showScenarioTracker || showEnemyTactic || showRoE) ? '8px' : 0 }}>
-            <button
-              className="btn"
-              style={{
-                pointerEvents: 'auto',
-                padding: isCoarsePointer ? '10px 16px' : '6px 14px',
-                minHeight: isCoarsePointer ? '44px' : undefined,
-                fontSize: isCoarsePointer ? '0.82rem' : '0.75rem',
-                borderColor: 'rgba(0, 204, 255, 0.35)',
-                background: 'rgba(12, 18, 28, 0.92)',
-                color: 'var(--color-holo-cyan)',
-              }}
-              onClick={() => setShowRoE(open => !open)}
-            >
-              {showRoE ? 'HIDE ROE' : 'SHOW ROE'}
-            </button>
-            <button
-              className="btn"
-              style={{
-                pointerEvents: 'auto',
-                padding: isCoarsePointer ? '10px 16px' : '6px 14px',
-                minHeight: isCoarsePointer ? '44px' : undefined,
-                fontSize: isCoarsePointer ? '0.82rem' : '0.75rem',
-                borderColor: 'rgba(230, 160, 0, 0.35)',
-                background: 'rgba(12, 18, 28, 0.92)',
-                color: 'var(--color-alert-amber)',
-              }}
-              onClick={() => setShowScenarioTracker(open => !open)}
-            >
-              {showScenarioTracker ? 'HIDE OBJECTIVES' : 'SHOW OBJECTIVES'}
-            </button>
-            <button
-              className="btn"
-              style={{
-                pointerEvents: 'auto',
-                padding: isCoarsePointer ? '10px 16px' : '6px 14px',
-                minHeight: isCoarsePointer ? '44px' : undefined,
-                fontSize: isCoarsePointer ? '0.82rem' : '0.75rem',
-                borderColor: 'rgba(210, 72, 72, 0.35)',
-                background: 'rgba(12, 18, 28, 0.92)',
-                color: 'var(--color-hostile-red)',
-              }}
-              onClick={() => {
-                setShowEnemyTactic(open => {
-                  const nextOpen = !open;
-                  if (nextOpen) {
-                    setHasUnreadEnemyTactic(false);
-                  }
-                  return nextOpen;
-                });
-              }}
-            >
-              {hasUnreadEnemyTactic && (
-                <span
-                  data-testid="enemy-tactic-unread-indicator"
-                  aria-label="New enemy tactic"
-                  title="New enemy tactic"
-                  style={{
-                    display: 'inline-flex',
-                    width: '8px',
-                    height: '8px',
-                    borderRadius: '999px',
-                    background: 'var(--color-hostile-red)',
-                    boxShadow: '0 0 10px rgba(210, 72, 72, 0.75)',
-                    marginRight: '8px',
-                    flexShrink: 0,
-                  }}
-                />
-              )}
-              {showEnemyTactic ? 'HIDE ENEMY TACTIC' : 'SHOW ENEMY TACTIC'}
-            </button>
-          </div>
-
-          <div
-            style={{
-              display: 'grid',
-              gap: '8px',
-            }}
-          >
-            <div
-              style={{
-                pointerEvents: showRoE ? 'auto' : 'none',
-                opacity: showRoE ? 1 : 0,
-                maxHeight: showRoE ? '320px' : '0px',
-                overflow: 'hidden',
-                transform: showRoE ? 'translateY(0)' : 'translateY(-18px)',
-                transition: 'opacity 180ms ease, transform 180ms ease, max-height 180ms ease',
-              }}
-            >
-              {showRoE && (
-                <div style={{ width: 'min(540px, 100%)', margin: '0 auto' }}>
-                  <RoEPanel showOverrideAction={isCampaign} />
-                </div>
-              )}
-            </div>
-            <div
-              style={{
-                pointerEvents: showScenarioTracker ? 'auto' : 'none',
-                opacity: showScenarioTracker ? 1 : 0,
-                maxHeight: showScenarioTracker ? '320px' : '0px',
-                overflow: 'hidden',
-                transform: showScenarioTracker ? 'translateY(0)' : 'translateY(-18px)',
-                transition: 'opacity 180ms ease, transform 180ms ease, max-height 180ms ease',
-              }}
-            >
-              {showScenarioTracker && <CombatScenarioProgressTracker variant="overlay" />}
-            </div>
-            <div
-              style={{
-                pointerEvents: showEnemyTactic ? 'auto' : 'none',
-                opacity: showEnemyTactic ? 1 : 0,
-                maxHeight: showEnemyTactic ? '280px' : '0px',
-                overflow: 'hidden',
-                transform: showEnemyTactic ? 'translateY(0)' : 'translateY(-18px)',
-                transition: 'opacity 180ms ease, transform 180ms ease, max-height 180ms ease',
-              }}
-            >
-              {showEnemyTactic && (
-                <div style={{ width: 'min(540px, 100%)', margin: '0 auto' }}>
-                  <EnemyTacticPanel />
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Left Interface: Holo-table (PixiJS) */}
       <div
         id="hex-map-container"
@@ -315,6 +175,145 @@ export default function GameScreen() {
           borderRight: '1px solid var(--color-border)',
         }}
       >
+        {phase !== 'briefing' && (
+          <div
+            id="top-center-buttons"
+            style={{
+              position: 'absolute',
+              top: 8,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 180,
+              width: 'min(760px, calc(100% - 16px))',
+              pointerEvents: 'none',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: (showScenarioTracker || showEnemyTactic || showRoE) ? '8px' : 0 }}>
+              <button
+                className="btn"
+                style={{
+                  pointerEvents: 'auto',
+                  padding: isCoarsePointer ? '10px 16px' : '6px 14px',
+                  minHeight: isCoarsePointer ? '44px' : undefined,
+                  fontSize: isCoarsePointer ? '0.82rem' : '0.75rem',
+                  borderColor: 'rgba(0, 204, 255, 0.35)',
+                  background: 'rgba(12, 18, 28, 0.92)',
+                  color: 'var(--color-holo-cyan)',
+                }}
+                onClick={() => setShowRoE(open => !open)}
+              >
+                {showRoE ? 'HIDE ROE' : 'SHOW ROE'}
+              </button>
+              <button
+                className="btn"
+                style={{
+                  pointerEvents: 'auto',
+                  padding: isCoarsePointer ? '10px 16px' : '6px 14px',
+                  minHeight: isCoarsePointer ? '44px' : undefined,
+                  fontSize: isCoarsePointer ? '0.82rem' : '0.75rem',
+                  borderColor: 'rgba(230, 160, 0, 0.35)',
+                  background: 'rgba(12, 18, 28, 0.92)',
+                  color: 'var(--color-alert-amber)',
+                }}
+                onClick={() => setShowScenarioTracker(open => !open)}
+              >
+                {showScenarioTracker ? 'HIDE OBJECTIVES' : 'SHOW OBJECTIVES'}
+              </button>
+              <button
+                className="btn"
+                style={{
+                  pointerEvents: 'auto',
+                  padding: isCoarsePointer ? '10px 16px' : '6px 14px',
+                  minHeight: isCoarsePointer ? '44px' : undefined,
+                  fontSize: isCoarsePointer ? '0.82rem' : '0.75rem',
+                  borderColor: 'rgba(210, 72, 72, 0.35)',
+                  background: 'rgba(12, 18, 28, 0.92)',
+                  color: 'var(--color-hostile-red)',
+                }}
+                onClick={() => {
+                  setShowEnemyTactic(open => {
+                    const nextOpen = !open;
+                    if (nextOpen) {
+                      setHasUnreadEnemyTactic(false);
+                    }
+                    return nextOpen;
+                  });
+                }}
+              >
+                {hasUnreadEnemyTactic && (
+                  <span
+                    data-testid="enemy-tactic-unread-indicator"
+                    aria-label="New enemy tactic"
+                    title="New enemy tactic"
+                    style={{
+                      display: 'inline-flex',
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '999px',
+                      background: 'var(--color-hostile-red)',
+                      boxShadow: '0 0 10px rgba(210, 72, 72, 0.75)',
+                      marginRight: '8px',
+                      flexShrink: 0,
+                    }}
+                  />
+                )}
+                {showEnemyTactic ? 'HIDE ENEMY TACTIC' : 'SHOW ENEMY TACTIC'}
+              </button>
+            </div>
+
+            <div
+              style={{
+                display: 'grid',
+                gap: '8px',
+              }}
+            >
+              <div
+                style={{
+                  pointerEvents: showRoE ? 'auto' : 'none',
+                  opacity: showRoE ? 1 : 0,
+                  maxHeight: showRoE ? '320px' : '0px',
+                  overflow: 'hidden',
+                  transform: showRoE ? 'translateY(0)' : 'translateY(-18px)',
+                  transition: 'opacity 180ms ease, transform 180ms ease, max-height 180ms ease',
+                }}
+              >
+                {showRoE && (
+                  <div style={{ width: 'min(540px, 100%)', margin: '0 auto' }}>
+                    <RoEPanel showOverrideAction={isCampaign} />
+                  </div>
+                )}
+              </div>
+              <div
+                style={{
+                  pointerEvents: showScenarioTracker ? 'auto' : 'none',
+                  opacity: showScenarioTracker ? 1 : 0,
+                  maxHeight: showScenarioTracker ? '320px' : '0px',
+                  overflow: 'hidden',
+                  transform: showScenarioTracker ? 'translateY(0)' : 'translateY(-18px)',
+                  transition: 'opacity 180ms ease, transform 180ms ease, max-height 180ms ease',
+                }}
+              >
+                {showScenarioTracker && <CombatScenarioProgressTracker variant="overlay" />}
+              </div>
+              <div
+                style={{
+                  pointerEvents: showEnemyTactic ? 'auto' : 'none',
+                  opacity: showEnemyTactic ? 1 : 0,
+                  maxHeight: showEnemyTactic ? '280px' : '0px',
+                  overflow: 'hidden',
+                  transform: showEnemyTactic ? 'translateY(0)' : 'translateY(-18px)',
+                  transition: 'opacity 180ms ease, transform 180ms ease, max-height 180ms ease',
+                }}
+              >
+                {showEnemyTactic && (
+                  <div style={{ width: 'min(540px, 100%)', margin: '0 auto' }}>
+                    <EnemyTacticPanel />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
         <HexMap />
       </div>
 
@@ -361,7 +360,7 @@ export default function GameScreen() {
                     key={p.id}
                     className="btn"
                     style={{
-                      padding: '6px 12px',
+                      padding: isCoarsePointer ? '10px 16px' : '6px 12px',
                       fontSize: '0.8rem',
                       borderColor: p.id === activePlayerId ? 'var(--color-holo-cyan)' : 'transparent',
                       background: p.id === activePlayerId ? 'rgba(0, 204, 255, 0.1)' : 'transparent',
