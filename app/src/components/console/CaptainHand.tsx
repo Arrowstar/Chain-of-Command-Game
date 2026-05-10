@@ -89,8 +89,8 @@ export default function CaptainHand({ playerId }: { playerId?: string }) {
         }}
       >
         {allTokenIds.map((id, idx) => {
-          // Spent tokens are the earliest-indexed ones (left side)
-          const isSpent = idx < spentCount;
+          // Available tokens are the earliest-indexed ones (left side)
+          const isSpent = idx >= player.commandTokens;
           return (
             <CommandToken key={id} id={id} isAssigned={isSpent} />
           );

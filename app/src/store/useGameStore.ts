@@ -1014,6 +1014,33 @@ export const useGameStore = create<GameStore>((set, get) => ({
     } else {
       set({ executionStep: nextStep });
       get().addLog('phase', `══ Execution Step: ${nextStep.toUpperCase()}`);
+
+      // Clear evasiveManeuvers at the START of each ship's own execution step.
+      // This ensures the Evasive Pattern bonus lasts until the ship's next turn,
+      // persisting through Cleanup, Briefing, and Command phases of the next round.
+      const stepSize = getShipSizeForStep(nextStep);
+      if (nextStep.endsWith('Allied')) {
+        // Reset player ships of this size class
+        const updatedPlayerShips = get().playerShips.map(ship => {
+          const size = getChassisById(ship.chassisId)?.size;
+          if (size === stepSize && (ship.evasiveManeuvers ?? 0) > 0) {
+            get().addLog('system', `${ship.name}: Evasive Maneuvers bonus expired (start of execution turn).`);
+            return { ...ship, evasiveManeuvers: 0 };
+          }
+          return ship;
+        });
+        set({ playerShips: updatedPlayerShips });
+      } else if (nextStep.endsWith('Enemy')) {
+        // Reset enemy ships of this size class
+        const updatedEnemyShips = get().enemyShips.map(ship => {
+          const size = getAdversaryById(ship.adversaryId)?.size;
+          if (size === stepSize && (ship.evasiveManeuvers ?? 0) > 0) {
+            return { ...ship, evasiveManeuvers: 0 };
+          }
+          return ship;
+        });
+        set({ enemyShips: updatedEnemyShips });
+      }
     }
   },
 
@@ -1810,6 +1837,37 @@ export const useGameStore = create<GameStore>((set, get) => ({
         updates.facing = rotateShip(ship.facing, dir);
         const dirLabel = dir === 'clockwise' ? 'STARBOARD (CW)' : 'PORT (CCW)';
         get().addLog('movement', `${get().getShipName(shipId)} rotated ${dirLabel}`);
+
+        // ─── Snap Maneuver skill proc ─────────────────────────────────
+        {
+          const snapOfficer = player.officers.find(o => o.station === action.station);
+          const snapOfficerData = snapOfficer ? getOfficerById(snapOfficer.officerId) : null;
+          const snapProc = snapOfficer ? rollOfficerSkillProc(snapOfficer.currentTier) : null;
+          if (snapProc) {
+            const outcome = snapProc.isCritical ? 'CRITICAL' : snapProc.isSuccess ? 'SUCCESS' : 'FAIL';
+            if (snapProc.isSuccess) {
+              updates.facing = rotateShip(updates.facing as import('../types/game').HexFacing, dir);
+              get().addLog('movement', `Snap Maneuver: ${snapOfficerData?.name ?? 'Helm'} executed a free second rotation ${dirLabel}.`);
+            }
+            if (snapProc.isCritical) {
+              updates.evasiveManeuvers = (ship.evasiveManeuvers ?? 0) + 1;
+              get().addLog('system', `Snap Maneuver: ${snapOfficerData?.name ?? 'Helm'} gained +1 Evasion bonus from the snap rotation.`);
+            }
+            useUIStore.getState().queueModal('skill-proc', {
+              data: {
+                title: 'Snap Maneuver',
+                officerName: snapOfficerData?.name ?? 'Helm',
+                station: 'helm',
+                actionName: 'Rotate',
+                result: snapProc,
+                standardEffect: 'Free second rotation in the same direction.',
+                failureEffect: 'Base action resolves at a single 60° rotation.',
+                criticalEffect: `Free second rotation and +1 Evasion (TN) until the start of this ship's next Execution Phase turn.`,
+              },
+            });
+            get().addLog('system', `Snap Maneuver: ${snapOfficerData?.name ?? 'Helm'} rolled ${snapProc.roll} on ${snapProc.dieType.toUpperCase()} (${outcome}).`);
+          }
+        }
         break;
       }
       case 'evasive-pattern': {
@@ -2016,16 +2074,51 @@ export const useGameStore = create<GameStore>((set, get) => ({
         const sector = context?.sector;
         if (!sector) break;
 
+        // ─── Overcharge Conduit skill proc ────────────────────────────
+        const ocProc = officer ? rollOfficerSkillProc(officer.currentTier) : null;
+
         let amount = 2;
         if (officerData?.traitName === 'Deflector Specialist' && (sector === 'fore' || sector === 'aft')) {
+          amount = 3;
+        } else if (ocProc?.isSuccess) {
           amount = 3;
         }
         const newShields = { ...ship.shields } as Record<string, number>;
         newShields[sector] = Math.min(ship.maxShieldsPerSector, (newShields[sector] ?? 0) + amount);
         updates.shields = newShields as unknown as typeof ship.shields;
         get().addLog('system', `${officerData?.name ?? 'Engineering'} reinforced ${sector.toUpperCase()} shields on ${get().getShipName(shipId)} (+${amount} ═   ${newShields[sector]})`);
+
+        if (ocProc) {
+          const outcome = ocProc.isCritical ? 'CRITICAL' : ocProc.isSuccess ? 'SUCCESS' : 'FAIL';
+          const critIds = ['shield-generator-offline', 'power-bus-leak'] as const;
+          let clearedCrit: import('../types/game').CriticalDamageCard | null = null;
+          if (ocProc.isCritical) {
+            const idx = ship.criticalDamage.findIndex(c => (critIds as readonly string[]).includes(c.id));
+            if (idx !== -1) {
+              clearedCrit = ship.criticalDamage[idx];
+              updates.criticalDamage = ship.criticalDamage.filter((_, i) => i !== idx);
+              get().addLog('repair', `Overcharge Conduit: ${officerData?.name ?? 'Engineering'} surge cleared "${clearedCrit!.name}" from ${ship.name}!`);
+            } else {
+              get().addLog('system', `Overcharge Conduit: ${officerData?.name ?? 'Engineering'} critical surge — no eligible critical to clear.`);
+            }
+          }
+          useUIStore.getState().queueModal('skill-proc', {
+            data: {
+              title: 'Overcharge Conduit',
+              officerName: officerData?.name ?? 'Engineering',
+              station: 'engineering',
+              actionName: 'Reinforce Shields',
+              result: ocProc,
+              standardEffect: 'Restore 3 Shield points instead of 2.',
+              failureEffect: 'Base action resolves at 2 Shield points restored.',
+              criticalEffect: 'Restore 3 Shield points and immediately clear one Shield Generator Offline or Power Bus Leak critical.',
+            },
+          });
+          get().addLog('system', `Overcharge Conduit: ${officerData?.name ?? 'Engineering'} rolled ${ocProc.roll} on ${ocProc.dieType.toUpperCase()} (${outcome}).`);
+        }
         break;
       }
+
       case 'rotate-shields': {
         const tacOfficer = player.officers.find(o => o.station === action.station);
         const tacOfficerData = tacOfficer ? getOfficerById(tacOfficer.officerId) : null;
@@ -3006,8 +3099,45 @@ export const useGameStore = create<GameStore>((set, get) => ({
         
         get().addLog('system',
           `${cwOfficerData?.name ?? 'Sensors'}: Cyber Warfare ═  ${sector.toUpperCase()} shields on ${target.name} stripped (was ${prevShield})`);
+
+        // ─── Deep Intrusion skill proc ────────────────────────────────
+        {
+          const diProc = cwOfficer ? rollOfficerSkillProc(cwOfficer.currentTier) : null;
+          if (diProc) {
+            const outcome = diProc.isCritical ? 'CRITICAL' : diProc.isSuccess ? 'SUCCESS' : 'FAIL';
+            if (diProc.isSuccess) {
+              const jamUpdates: { isJammed: boolean; speedZeroNextRound?: boolean } = { isJammed: true };
+              if (diProc.isCritical) {
+                jamUpdates.speedZeroNextRound = true;
+                get().addLog('system', `Deep Intrusion: ${cwOfficerData?.name ?? 'Sensors'} hacked ${target.name}'s nav-core — Speed reduced to 0 next round!`);
+              }
+              if (state.enemyShips.some(s => s.id === target.id)) {
+                get().updateEnemyShip(target.id, jamUpdates);
+              } else if (state.stations.some(s => s.id === target.id)) {
+                get().updateStation(target.id, jamUpdates);
+              } else {
+                get().updatePlayerShip(target.id, jamUpdates);
+              }
+              get().addLog('system', `Deep Intrusion: ${cwOfficerData?.name ?? 'Sensors'} jammed ${target.name}'s fire control (+2 TN this round).`);
+            }
+            useUIStore.getState().queueModal('skill-proc', {
+              data: {
+                title: 'Deep Intrusion',
+                officerName: cwOfficerData?.name ?? 'Sensors',
+                station: 'sensors',
+                actionName: 'Cyber-Warfare',
+                result: diProc,
+                standardEffect: 'Target is Jammed — +2 TN to all its attacks this round.',
+                failureEffect: 'Base action resolves: shield sector stripped only.',
+                criticalEffect: 'Target is Jammed this round and its Speed is reduced to 0 next round.',
+              },
+            });
+            get().addLog('system', `Deep Intrusion: ${cwOfficerData?.name ?? 'Sensors'} rolled ${diProc.roll} on ${diProc.dieType.toUpperCase()} (${outcome}).`);
+          }
+        }
         break;
       }
+
       case 'load-ordinance': {
         // Identify which ordnance weapon slot to reload.
         // Prefer an explicit weaponIndex from context (player picked one),
@@ -5778,7 +5908,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
         ...ship,
         shields: newShields,
         evasionModifiers: 0,
-        evasiveManeuvers: 0, // reset evasive maneuvers
+        // evasiveManeuvers is NOT reset here — it persists until the start of
+        // that ship's next Execution Phase step (cleared in advanceExecutionStep).
         targetLocks: [],
         targetLocksRerolls: 0,
         targetLockArmorPiercingShots: 0,
@@ -5800,7 +5931,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         targetLocksRerolls: 0,
         targetLockArmorPiercingShots: 0,
         evasionModifiers: 0,
-        evasiveManeuvers: 0,
+        // evasiveManeuvers is NOT reset here — cleared at start of next enemy execution step.
       };
     });
 

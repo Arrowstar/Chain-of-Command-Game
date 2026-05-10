@@ -51,6 +51,7 @@ describe('Trauma Effects', () => {
       playerCritDeck: [],
       enemyCritDeck: [],
       activeRoE: null,
+      currentTactic: null,
       roeOverridden: false,
       log: [],
       fleetFavor: 2,

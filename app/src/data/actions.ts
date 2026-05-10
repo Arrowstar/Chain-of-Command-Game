@@ -20,7 +20,7 @@ export const STANDARD_ACTIONS: ActionDefinition[] = [
     name: 'Rotate',
     ctCost: 1,
     stressCost: 1,
-    effect: 'Rotate the ship 60 degrees (one face) in either direction.',
+    effect: 'Rotate the ship 60 degrees (one face) in either direction. Snap Maneuver: roll Helm Skill Die on 4+ for a free second rotation in the same direction; crit also grants +1 Evasion (TN) until the start of this ship\'s next Execution Phase turn.',
   },
   {
     id: 'evasive-pattern',
@@ -28,7 +28,7 @@ export const STANDARD_ACTIONS: ActionDefinition[] = [
     name: 'Evasive Pattern',
     ctCost: 2,
     stressCost: 2,
-    effect: '+2 Base Evasion (TN) for this round. Precision Maneuvering: roll Helm Skill Die on 4+ for +3 instead; crit refunds Stress.',
+    effect: '+2 Base Evasion (TN) until the start of this ship\'s next Execution Phase turn. Precision Maneuvering: roll Helm Skill Die on 4+ for +3 instead; crit refunds Stress.',
   },
 
   // ─── Tactical ──────────────────────────────────────
@@ -78,7 +78,7 @@ export const STANDARD_ACTIONS: ActionDefinition[] = [
     name: 'Reinforce Shields',
     ctCost: 1,
     stressCost: 1,
-    effect: 'Restore 2 Shield points to any single Shield Sector.',
+    effect: 'Restore 2 Shield points to any single Shield Sector. Overcharge Conduit: roll Engineering Skill Die on 4+ to restore 3 points instead; crit also immediately clears one Shield Generator Offline or Power Bus Leak critical damage from the target.',
     requiresShieldSector: true,
   },
   {
@@ -122,7 +122,7 @@ export const STANDARD_ACTIONS: ActionDefinition[] = [
     name: 'Cyber-Warfare',
     ctCost: 2,
     stressCost: 2,
-    effect: 'Disable one enemy Shield Sector (reduce to 0) for the current round.',
+    effect: 'Disable one enemy Shield Sector (reduce to 0). Deep Intrusion: roll Sensors Skill Die on 4+ to also Jam the target (+2 TN to all its attacks this round); crit also sets the target\'s speed to 0 for the next round.',
     requiresTarget: true,
     requiresShieldSector: true,
   },

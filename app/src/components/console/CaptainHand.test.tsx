@@ -46,22 +46,25 @@ describe('CaptainHand', () => {
     });
   });
 
-  it('renders all maxCommandTokens slots, with spent ones marked as assigned', () => {
+  it('renders all maxCommandTokens slots, with available tokens on the left and spent on the right', () => {
     render(
       <DndContext>
         <CaptainHand />
       </DndContext>
     );
     expect(screen.getByText('Command Token Pool')).toBeInTheDocument();
-    // maxCommandTokens = 5, so 5 token slots rendered
+    // maxCommandTokens = 5, commandTokens = 3, so 5 token slots rendered total
     const tokens = screen.getAllByTestId(/command-token-ct-/);
     expect(tokens.length).toBe(5);
-    // 2 spent (5 max - 3 remaining) should have "Token spent" title
-    const spent = tokens.filter(t => t.title === 'Token spent');
-    expect(spent.length).toBe(2);
-    // 3 available should have drag tooltip
-    const available = tokens.filter(t => t.title !== 'Token spent');
-    expect(available.length).toBe(3);
+    
+    // First 3 should be available (not spent)
+    expect(tokens[0]).not.toHaveAttribute('title', 'Token spent');
+    expect(tokens[1]).not.toHaveAttribute('title', 'Token spent');
+    expect(tokens[2]).not.toHaveAttribute('title', 'Token spent');
+    
+    // Last 2 should be spent
+    expect(tokens[3]).toHaveAttribute('title', 'Token spent');
+    expect(tokens[4]).toHaveAttribute('title', 'Token spent');
   });
 
   it('renders all tokens as spent when commandTokens is 0', () => {

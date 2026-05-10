@@ -96,10 +96,10 @@ describe('Evasive Maneuvers (Evasive Pattern) Separation', () => {
     expect(updatedShip.evasionModifiers).toBe(0);
   });
 
-  it('resets evasiveManeuvers at the end of the round', () => {
+  it('does NOT reset evasiveManeuvers during cleanup — bonus persists until the ship\'s next execution turn', () => {
     const store = useGameStore.getState();
     
-    // 1. Setup a ship with existing maneuvers
+    // Setup a ship with an active evasiveManeuvers bonus
     const shipId = 'test-ship';
     const mockShip: any = {
       id: shipId,
@@ -124,13 +124,13 @@ describe('Evasive Maneuvers (Evasive Pattern) Separation', () => {
       scenarioRules: []
     });
 
-    // 2. Trigger cleanup (run the cleanup logic)
-    // In the store, cleanup is part of executeCleanupPhase()
     store.executeCleanupPhase();
 
-    // 3. Verify reset
+    // evasiveManeuvers should SURVIVE cleanup — it only clears at the start of
+    // that ship's next Execution Phase sub-step (via advanceExecutionStep).
     const updatedShip = useGameStore.getState().playerShips.find(s => s.id === shipId)!;
-    expect(updatedShip.evasiveManeuvers).toBe(0);
+    expect(updatedShip.evasiveManeuvers).toBe(3);
+    // evasionModifiers (generic) still resets in cleanup as before
     expect(updatedShip.evasionModifiers).toBe(0);
   });
 });
