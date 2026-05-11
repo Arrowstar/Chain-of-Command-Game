@@ -1648,7 +1648,11 @@ export default function HexMap() {
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerCancel}
       onPointerLeave={(e) => {
-        handlePointerUp(e);
+        activePointers.current.delete(e.pointerId);
+        if (activePointers.current.size === 0) {
+          setIsPanning(false);
+          lastPinchDistRef.current = null;
+        }
         if (!isLockedRef.current) {
           setHoverTooltip(null);
           useUIStore.getState().hoverHex(null);
