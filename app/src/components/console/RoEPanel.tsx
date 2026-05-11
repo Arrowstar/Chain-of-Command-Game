@@ -38,7 +38,7 @@ export default function RoEPanel({ showOverrideAction = false }: RoEPanelProps) 
               style={{ width: '100%', fontSize: '0.8rem', padding: 'var(--space-sm)' }}
               onClick={overrideRoE}
             >
-              INSUBORDINATION: OVERRIDE RoE (-3 Fleet Favor)
+              INSUBORDINATION: OVERRIDE RoE (-2 Fleet Favor)
             </button>
           )}
         </>

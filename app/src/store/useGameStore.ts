@@ -178,7 +178,7 @@ interface GameStore {
   executeCleanupPhase: () => void;
   
   // RoE
-  /** Override the active RoE. Costs -3 FF; may only be called during Briefing. */
+  /** Override the active RoE. Costs -2 FF; may only be called during Briefing or Command. */
   overrideRoE: () => void;
   /** Report a Radio Silence violation during the Command Phase. Applies stress to Sensors officer. */
   reportRadioSilenceViolation: (playerId: string) => void;
@@ -5481,8 +5481,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   overrideRoE: () => {
     const state = get();
     if (state.roeOverridden || !state.activeRoE) return; // already overridden
-    if (state.phase !== 'briefing') {
-      get().addLog('system', 'Override can only be declared at the start of the Briefing Phase.');
+    if (state.phase !== 'briefing' && state.phase !== 'command') {
+      get().addLog('system', 'Override can only be declared during the Briefing or Command Phases.');
       return;
     }
     const roeName = state.activeRoE.name;

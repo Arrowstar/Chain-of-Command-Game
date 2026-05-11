@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useViewport } from '../../utils/useViewport';
 import { useCampaignStore } from '../../store/useCampaignStore';
 import { useGameStore } from '../../store/useGameStore';
 import { NodeType } from '../../engine/mapGenerator';
@@ -25,6 +26,8 @@ export default function NodeResolutionModal({ onStartCombat }: Props) {
   const initializeGame = useGameStore(s => s.initializeGame);
   
   const [resolutionNarrative, setResolutionNarrative] = useState<string | null>(null);
+  const [activePillTooltip, setActivePillTooltip] = useState<string | null>(null);
+  const { isCoarsePointer } = useViewport();
 
   if (!campaign || !sectorMap) return null;
 
@@ -126,7 +129,7 @@ export default function NodeResolutionModal({ onStartCombat }: Props) {
 
     if (resolutionNarrative) {
       return (
-        <div className="panel panel--glow" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '600px', maxWidth: '90vw', padding: 'var(--space-lg)', zIndex: 100 }}>
+        <div className="panel panel--glow" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '600px', maxWidth: '90vw', maxHeight: '90vh', overflowY: 'auto', padding: 'var(--space-lg)', zIndex: 100 }}>
           <h2 style={{ color: 'var(--color-holo-cyan)', marginTop: 0 }}>EVENT RESOLVED</h2>
           <p style={{ color: 'var(--color-text-primary)' }}>{resolutionNarrative}</p>
           <button className="btn" style={{ width: '100%', marginTop: 'var(--space-md)' }} onClick={() => useCampaignStore.setState({ campaign: { ...useCampaignStore.getState().campaign!, campaignPhase: 'sectorMap' } })}>
@@ -171,7 +174,11 @@ export default function NodeResolutionModal({ onStartCombat }: Props) {
     };
 
     return (
-      <div className="panel panel--glow" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '600px', maxWidth: '90vw', padding: 'var(--space-lg)', zIndex: 100 }}>
+      <div 
+        className="panel panel--glow" 
+        onClick={() => isCoarsePointer && setActivePillTooltip(null)}
+        style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '600px', maxWidth: '90vw', maxHeight: '90vh', overflowY: 'auto', padding: 'var(--space-lg)', zIndex: 100 }}
+      >
         <h2 style={{ color: 'var(--color-alert-amber)', marginTop: 0 }}>{event.title.toUpperCase()}</h2>
         
         {/* EVENT ART */}
@@ -355,15 +362,86 @@ export default function NodeResolutionModal({ onStartCombat }: Props) {
                   break;
               }
 
+              const isTooltipActive = activePillTooltip === tooltip.trim();
+
+              const pillStyle: React.CSSProperties = {
+                fontSize: '0.75rem',
+                padding: '2px 6px',
+                borderRadius: '4px',
+                whiteSpace: 'nowrap',
+                cursor: isCoarsePointer ? 'pointer' : 'help',
+                position: 'relative',
+              };
+
+              const tooltipOverlay = isCoarsePointer && isTooltipActive && (
+                <div style={{
+                  position: 'absolute',
+                  bottom: 'calc(100% + 10px)',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  backgroundColor: 'var(--color-bg-deep)',
+                  border: '1px solid var(--color-holo-cyan)',
+                  color: 'var(--color-text-primary)',
+                  padding: '8px 12px',
+                  borderRadius: '4px',
+                  fontSize: '0.72rem',
+                  zIndex: 110,
+                  width: 'max-content',
+                  maxWidth: '240px',
+                  boxShadow: '0 4px 15px rgba(0,0,0,0.8)',
+                  pointerEvents: 'none',
+                  textAlign: 'center',
+                  lineHeight: '1.4',
+                  whiteSpace: 'normal',
+                }}>
+                  {tooltip.trim()}
+                  <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    borderLeft: '6px solid transparent',
+                    borderRight: '6px solid transparent',
+                    borderTop: '6px solid var(--color-holo-cyan)',
+                  }} />
+                </div>
+              );
+
               if (effect.type === 'nothing') {
-                return <span key="nothing" title={tooltip.trim()} style={{ fontSize: '0.75rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: 'var(--color-surface-raised)', color: 'var(--color-text-dim)', whiteSpace: 'nowrap', cursor: 'help' }}>No Effect</span>;
+                return (
+                  <span 
+                    key="nothing" 
+                    title={isCoarsePointer ? undefined : tooltip.trim()} 
+                    onClick={(e) => {
+                      if (isCoarsePointer) {
+                        e.stopPropagation();
+                        setActivePillTooltip(isTooltipActive ? null : tooltip.trim());
+                      }
+                    }}
+                    style={{ ...pillStyle, backgroundColor: 'var(--color-surface-raised)', color: 'var(--color-text-dim)' }}
+                  >
+                    No Effect
+                    {tooltipOverlay}
+                  </span>
+                );
               }
 
               const finalColor = isGood ? 'var(--color-holo-green)' : 'var(--color-hostile-red)';
 
               return (
-                <span key={`${effect.type}-${effect.value}-${effect.target}`} title={tooltip.trim()} style={{ fontSize: '0.75rem', padding: '2px 6px', borderRadius: '4px', backgroundColor: 'rgba(0,0,0,0.3)', border: `1px solid ${finalColor}`, color: finalColor, whiteSpace: 'nowrap', cursor: 'help' }}>
+                <span 
+                  key={`${effect.type}-${effect.value}-${effect.target}`} 
+                  title={isCoarsePointer ? undefined : tooltip.trim()} 
+                  onClick={(e) => {
+                    if (isCoarsePointer) {
+                      e.stopPropagation();
+                      setActivePillTooltip(isTooltipActive ? null : tooltip.trim());
+                    }
+                  }}
+                  style={{ ...pillStyle, backgroundColor: 'rgba(0,0,0,0.3)', border: `1px solid ${finalColor}`, color: finalColor }}
+                >
                   {text}
+                  {tooltipOverlay}
                 </span>
               );
             };
@@ -469,7 +547,7 @@ export default function NodeResolutionModal({ onStartCombat }: Props) {
   }
 
   return (
-    <div className="panel panel--glow" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '400px', maxWidth: '90vw', padding: 'var(--space-lg)', zIndex: 100, textAlign: 'center' }}>
+    <div className="panel panel--glow" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '400px', maxWidth: '90vw', maxHeight: '90vh', overflowY: 'auto', padding: 'var(--space-lg)', zIndex: 100, textAlign: 'center' }}>
       <h2 style={{ color: currentNode.type === NodeType.Haven ? 'var(--color-holo-green)' : 'var(--color-hostile-red)', marginTop: 0 }}>
         {title}
       </h2>
