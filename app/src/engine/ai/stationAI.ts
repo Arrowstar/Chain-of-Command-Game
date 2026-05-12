@@ -142,7 +142,7 @@ export function executeStationTurn(
         let hullDmg = 0;
         if (overflow > 0) {
           const armorDisabled = target.criticalDamage?.some(c => c.id === 'armor-compromised');
-          if (!armorDisabled) {
+          if (!armorDisabled && target.armorDie) {
             armorRoll = rollDie(target.armorDie);
           }
           hullDmg = Math.max(1, overflow - armorRoll);
@@ -225,7 +225,7 @@ export function executeStationTurn(
         let hullDmg = 0;
         if (overflow > 0) {
           const armorDisabled = target.criticalDamage?.some(c => c.id === 'armor-compromised');
-          if (!armorDisabled) {
+          if (!armorDisabled && target.armorDie) {
             armorRoll = rollDie(target.armorDie);
           }
           hullDmg = Math.max(1, overflow - armorRoll);

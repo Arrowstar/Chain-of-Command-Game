@@ -376,7 +376,7 @@ export function executeAITier(
         if (overflow > 0) {
           // Check for armor disabled crit (e.g. 'armor-compromised') or trait armor piercing
           const armorDisabled = target.criticalDamage?.some(c => c.id === 'armor-compromised');
-          if (!armorDisabled && !traitArmorPiercing) {
+          if (!armorDisabled && !traitArmorPiercing && target.armorDie) {
             armorRoll = rollDie(target.armorDie);
           }
           hullDmg = Math.max(1, overflow - armorRoll);

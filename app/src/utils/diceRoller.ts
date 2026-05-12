@@ -220,7 +220,7 @@ export function rollVolley(
  * Step a skill die up one tier.
  */
 export function stepUpDie(dieType: DieType): DieType {
-  const order: DieType[] = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20'];
+  const order: DieType[] = ['d2', 'd4', 'd6', 'd8', 'd10', 'd12', 'd20'];
   const idx = order.indexOf(dieType);
   if (idx < order.length - 1) return order[idx + 1];
   return dieType; // already max
@@ -230,7 +230,7 @@ export function stepUpDie(dieType: DieType): DieType {
  * Step a skill die down one tier.
  */
 export function stepDownDie(dieType: DieType): DieType {
-  const order: DieType[] = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20'];
+  const order: DieType[] = ['d2', 'd4', 'd6', 'd8', 'd10', 'd12', 'd20'];
   const idx = order.indexOf(dieType);
   if (idx > 0) return order[idx - 1];
   return dieType; // already min

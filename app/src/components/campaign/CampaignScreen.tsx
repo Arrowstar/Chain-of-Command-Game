@@ -9,6 +9,7 @@ import FleetFavorConversionPanel from './FleetFavorConversionPanel';
 import TechBadge from './TechBadge';
 import CampaignStoryScreen from './CampaignStoryScreen';
 import { CampaignSaveManager } from '../../utils/CampaignSaveManager';
+import SettingsButton from '../SettingsButton';
 
 interface Props {
   onStartCombat: () => void;
@@ -83,6 +84,7 @@ export default function CampaignScreen({ onStartCombat }: Props) {
               </button>
             </>
           )}
+          <SettingsButton />
         </div>
       </header>
 

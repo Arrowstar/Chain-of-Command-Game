@@ -83,7 +83,8 @@ describe('diceRoller', () => {
 
   it('stepDownDie steps down correctly', () => {
     expect(stepDownDie('d6')).toBe('d4');
-    expect(stepDownDie('d4')).toBe('d4');
+    expect(stepDownDie('d4')).toBe('d2');
+    expect(stepDownDie('d2')).toBe('d2'); // floor
   });
 
   describe('rollVolley inhibitorActive mechanics', () => {

@@ -64,10 +64,11 @@ export type RangeBand = (typeof RangeBand)[keyof typeof RangeBand];
 // ─── Dice ────────────────────────────────────────────────────────
 
 /** Polyhedral die types used in the game */
-export type DieType = 'd4' | 'd6' | 'd8' | 'd10' | 'd12' | 'd20';
+export type DieType = 'd2' | 'd4' | 'd6' | 'd8' | 'd10' | 'd12' | 'd20';
 
 /** Map die type to its max face value */
 export const DIE_MAX: Record<DieType, number> = {
+  d2: 2,
   d4: 4,
   d6: 6,
   d8: 8,
@@ -628,7 +629,7 @@ export interface AdversaryData {
   shieldsPerSector: number;
   shieldsAllSectors: boolean;     // true = all sectors, false = specific sectors only
   shieldSectors?: ShipArc[];      // if not all sectors, which ones
-  armorDie: DieType;
+  armorDie?: DieType;
   speed: number;
   baseEvasion: number;
   volleyPool: DieType[];
@@ -669,7 +670,7 @@ export interface EnemyShipState {
   targetLocksRerolls?: number;
   targetLockArmorPiercingShots?: number;
   baseEvasion: number;
-  armorDie: DieType;
+  armorDie?: DieType;
   evasionModifiers?: number;       // temporary modifiers this round
   evasiveManeuvers?: number;       // explicit bonus from Evasive Pattern action
   isJammed?: boolean;              // true if affected by ECM Active Jamming this round

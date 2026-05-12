@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useBgm } from './utils/useBgm';
 import { useGameStore } from './store/useGameStore';
 import { useUIStore } from './store/useUIStore';
 import { useTutorialStore } from './store/useTutorialStore';
@@ -23,6 +24,13 @@ function App() {
   // App-level routing state
   const [appMode, setAppMode] = useState<'menu' | 'editor' | 'skirmish-builder' | 'campaign-builder' | 'skirmish' | 'campaign' | 'campaign-combat' | 'tutorial'>('menu');
   const [scenarioConfig, setScenarioConfig] = useState<CustomScenarioConfig | null>(null);
+
+  const menuModes = ['menu', 'editor', 'skirmish-builder', 'campaign-builder'];
+  const isMenuMode = menuModes.includes(appMode);
+
+  // Play lobby music during all pre-game screens; hook unmounts/remounts
+  // automatically to stop when switching away.
+  useBgm(isMenuMode ? '/assets/music/Below_The_Permafrost.mp3' : '', 0.15);
 
   const startCampaign = useCampaignStore(s => s.startNewCampaign);
   const onCombatEnd = useCampaignStore(s => s.onCombatEnd);

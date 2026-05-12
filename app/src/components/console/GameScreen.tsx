@@ -22,6 +22,8 @@ import { useTutorialStore } from '../../store/useTutorialStore';
 import { getOfficerById } from '../../data/officers';
 import type { QueuedAction, OfficerStation } from '../../types/game';
 import { useViewport } from '../../utils/useViewport';
+import { useBgm } from '../../utils/useBgm';
+import SettingsButton from '../SettingsButton';
 
 export default function GameScreen() {
   const players = useGameStore(s => s.players);
@@ -51,6 +53,8 @@ export default function GameScreen() {
   const player = players.find(p => p.id === activePlayerId) || players[0];
 
   const { isTablet, isCoarsePointer } = useViewport();
+
+  useBgm('/assets/music/Iron_Perimeter.mp3', 0.15);
 
   // Configure dnd sensors: PointerSensor for mouse, TouchSensor for touch.
   // TouchSensor uses a hold delay so that a quick tap is NOT treated as a drag,
@@ -575,6 +579,7 @@ function DebugMenu({ onAutoWin }: { onAutoWin: () => void }) {
       >
         {open ? 'DEV ^' : 'DEV'}
       </button>
+      <SettingsButton />
       {open && (
         <div style={{
           background: 'rgba(10,10,20,0.95)',

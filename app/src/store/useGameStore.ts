@@ -2554,7 +2554,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
             const targetArmorDie = isMarker ? 'd4' : isStation
                 ? (target as unknown as StationState).armorDie
-                : (adversaryData ? adversaryData.armorDie : (target as unknown as unknown as ShipState).armorDie) || 'd4';
+                : (adversaryData ? adversaryData.armorDie : (target as unknown as unknown as ShipState).armorDie);
             let targetLockModifier = 0;
             const finalTargetLocks = (!isMarker && 'targetLocks' in target) ? [...(target.targetLocks || [])] : [];
             if (finalTargetLocks.length > 0) {

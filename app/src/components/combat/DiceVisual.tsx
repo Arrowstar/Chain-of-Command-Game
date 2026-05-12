@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 
 export interface DiceVisualProps {
-  dieType: 'd4' | 'd6' | 'd8' | 'd10' | 'd12' | 'd20';
+  dieType: 'd2' | 'd4' | 'd6' | 'd8' | 'd10' | 'd12' | 'd20';
   finalResult: number;
   isExploded?: boolean;
   isHit?: boolean;

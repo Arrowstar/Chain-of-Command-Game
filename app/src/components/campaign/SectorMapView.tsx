@@ -12,6 +12,7 @@ import { getWeaponById } from '../../data/weapons';
 import { getSubsystemById } from '../../data/subsystems';
 import { getChassisById } from '../../data/shipChassis';
 import { ASSET_MAP } from '../../engine/pixiGraphics';
+import { useBgm } from '../../utils/useBgm';
 
 // ── SVG Icon Paths (inline, no external deps) ────────────────────────────────
 
@@ -137,6 +138,8 @@ export default function SectorMapView() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const { isCoarsePointer } = useViewport();
+
+  useBgm('/assets/music/Iron_Steps_on_Frozen_Ground.mp4', 0.15);
 
   if (!mapData || !campaign) return null;
 

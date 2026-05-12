@@ -1,0 +1,58 @@
+﻿
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.4 [39m[90mC:/Users/Adam/Dropbox/Documents/homework/Personal Projects/Chain of Command Game/app[39m
+
+node.exe : Not implemented: HTMLMediaElement's play() method
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Not implemented...s play() method:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Not implemented: HTMLMediaElement's play() method
+Not implemented: HTMLMediaElement's play() method
+ [31mΓ¥»[39m src/components/console/GameScreen.test.tsx [2m([22m[2m3 tests[22m[2m | [22m[31m3 failed[39m[2m)[22m[32m 71[2mms[22m[39m
+[31m     [31m├ù[31m shows Fleet Assets during execution phase[39m[32m 55[2mms[22m[39m
+[31m     [31m├ù[31m shows the current enemy tactic in the top slide-out UI[39m[32m 8[2mms[22m[39m
+[31m     [31m├ù[31m shows and clears an unread indicator when a new tactic arrives[39m[32m 7[2mms[22m[39m
+
+[31mΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[39m[1m[41m Failed Tests 3 [49m[22m[31mΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[39m
+
+[41m[1m FAIL [22m[49m src/components/console/GameScreen.test.tsx[2m > [22mGameScreen[2m > [22mshows Fleet 
+Assets during execution phase
+[41m[1m FAIL [22m[49m src/components/console/GameScreen.test.tsx[2m > [22mGameScreen[2m > [22mshows the 
+current enemy tactic in the top slide-out UI
+[41m[1m FAIL [22m[49m src/components/console/GameScreen.test.tsx[2m > [22mGameScreen[2m > [22mshows and clears 
+an unread indicator when a new tactic arrives
+[31m[1mTypeError[22m: Cannot read properties of undefined (reading 'catch')[39m
+[36m [2mΓ¥»[22m src/components/console/GameScreen.tsx:[2m59:15[22m[39m
+    [90m 57|[39m     bgm[33m.[39mloop [33m=[39m [35mtrue[39m[33m;[39m
+    [90m 58|[39m     bgm[33m.[39mvolume [33m=[39m [34m0.15[39m[33m;[39m
+    [90m 59|[39m     bgm[33m.[39m[34mplay[39m()[33m.[39m[35mcatch[39m(() [33m=>[39m { [90m/* ignore 
+autoplay restrictions */[39m })[33m;[39m
+    [90m   |[39m               [31m^[39m
+    [90m 60|[39m
+    [90m 61|[39m     [35mreturn[39m () [33m=>[39m {
+[90m [2mΓ¥»[22m Object.react_stack_bottom_frame 
+node_modules/react-dom/cjs/react-dom-client.development.js:[2m25989:20[22m[39m
+[90m [2mΓ¥»[22m runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:[2m874:13[22m[39m
+[90m [2mΓ¥»[22m commitHookEffectListMount 
+node_modules/react-dom/cjs/react-dom-client.development.js:[2m13249:29[22m[39m
+[90m [2mΓ¥»[22m commitHookPassiveMountEffects 
+node_modules/react-dom/cjs/react-dom-client.development.js:[2m13336:11[22m[39m
+[90m [2mΓ¥»[22m commitPassiveMountOnFiber 
+node_modules/react-dom/cjs/react-dom-client.development.js:[2m15484:13[22m[39m
+[90m [2mΓ¥»[22m recursivelyTraversePassiveMountEffects 
+node_modules/react-dom/cjs/react-dom-client.development.js:[2m15439:11[22m[39m
+[90m [2mΓ¥»[22m commitPassiveMountOnFiber 
+node_modules/react-dom/cjs/react-dom-client.development.js:[2m15519:11[22m[39m
+[90m [2mΓ¥»[22m flushPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:[2m18432:9[22m[39m
+[90m [2mΓ¥»[22m node_modules/react-dom/cjs/react-dom-client.development.js:[2m17923:15[22m[39m
+
+[31m[2mΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[1/3]ΓÄ»[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m3 failed[39m[22m[90m (3)[39m
+[2m   Start at [22m 16:09:02
+[2m   Duration [22m 1.81s[2m (transform 533ms, setup 71ms, import 845ms, tests 71ms, environment 612ms)[22m
+

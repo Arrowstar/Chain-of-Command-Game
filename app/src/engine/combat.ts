@@ -130,8 +130,8 @@ export interface DamageResult {
   netOverflowHits: number;
   /** Armor roll value */
   armorRoll: number;
-  /** Armor die type used */
-  armorDie: DieType;
+  /** Armor die type used (undefined = no armor) */
+  armorDie: DieType | undefined;
   /** Final hull damage dealt */
   hullDamage: number;
   /** Whether critical damage was triggered */
@@ -175,7 +175,7 @@ export function resolveAttack(
   defenderFacing: HexFacing,
   defenderEvasion: number,
   defenderShields: ShieldState,
-  defenderArmorDie: DieType,
+  defenderArmorDie: DieType | undefined,
   defenderCurrentHull: number,
   defenderMaxHull: number,
   defenderHasDroppedBelow50: boolean,
@@ -348,8 +348,8 @@ export function resolveAttack(
   let netOverflowHits = 0;
 
   if (overflowHits > 0 && !isIonWeapon) {
-    // Roll armor die to mitigate
-    if (!armorDisabled && !weapon.tags.includes('armorPiercing') && !armorPiercingAttack) {
+    // Roll armor die to mitigate (skip entirely if defender has no armor die)
+    if (defenderArmorDie && !armorDisabled && !weapon.tags.includes('armorPiercing') && !armorPiercingAttack) {
       armorRoll = rollDie(defenderArmorDie);
     }
     

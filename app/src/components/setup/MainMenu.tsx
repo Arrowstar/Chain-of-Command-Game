@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { CampaignSaveManager } from '../../utils/CampaignSaveManager';
+import SettingsButton from '../SettingsButton';
 
 interface MainMenuProps {
   onStart?: () => void;
@@ -246,6 +247,11 @@ export default function MainMenu({ onStart, onStartCampaign, onContinueCampaign,
             {s.label}
           </div>
         ))}
+      </div>
+      
+      {/* Settings Button */}
+      <div style={{ position: 'absolute', bottom: 'var(--space-md)', right: 'var(--space-md)', zIndex: 100 }}>
+        <SettingsButton />
       </div>
     </div>
   );

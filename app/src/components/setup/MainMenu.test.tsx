@@ -4,9 +4,10 @@ import userEvent from '@testing-library/user-event';
 import MainMenu from './MainMenu';
 
 describe('MainMenu', () => {
-  it('renders title and buttons', () => {
+  it('renders title and buttons', async () => {
     render(<MainMenu />);
-    expect(screen.getByText('CHAIN OF COMMAND')).toBeInTheDocument();
+    // Title is animated, so we wait for it
+    expect(await screen.findByText('CHAIN OF COMMAND', {}, { timeout: 2000 })).toBeInTheDocument();
     expect(screen.getByText('STELLAR WAR')).toBeInTheDocument();
     expect(screen.getByTestId('start-scenario-btn')).toBeInTheDocument();
     expect(screen.getByText('START CAMPAIGN')).toBeInTheDocument();

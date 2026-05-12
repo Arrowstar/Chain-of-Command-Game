@@ -1613,3 +1613,79 @@ h4 { font-size: 1rem;   font-weight: 500; }
   letter-spacing: 0.18em;
   box-shadow: var(--glow-cyan-strong), inset 0 0 24px hsla(185, 90%, 55%, 0.06);
 }
+
+/* --- Settings Modal ----------------------------------------------- */
+
+.settings-modal-backdrop {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 1500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.settings-modal {
+  width: 90%;
+  max-width: 480px;
+  background: hsla(220, 25%, 10%, 0.95);
+  padding: var(--space-xl);
+  border-radius: var(--radius-md);
+  position: relative;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.8), var(--glow-cyan);
+}
+
+.settings-close-btn {
+  position: absolute;
+  top: var(--space-md);
+  right: var(--space-md);
+  padding: 4px 12px;
+  font-size: 1.2rem;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.settings-close-btn:hover {
+  border-color: var(--color-holo-cyan);
+  color: var(--color-holo-cyan);
+  box-shadow: var(--glow-cyan);
+}
+
+.settings-slider-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.settings-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-holo-cyan);
+  cursor: pointer;
+  box-shadow: 0 0 10px var(--color-holo-cyan);
+}
+
+.settings-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-holo-cyan);
+  cursor: pointer;
+  box-shadow: 0 0 10px var(--color-holo-cyan);
+  border: none;
+}

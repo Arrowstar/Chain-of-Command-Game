@@ -2,15 +2,17 @@ import './index.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
+import SettingsModal from './components/SettingsModal';
+import { useSettingsStore } from './store/useSettingsStore';
 
 // ── Global button sounds ──────────────────────────────────────────────────────
 const _clickSound = new Audio('/assets/sounds/button-click.wav');
-_clickSound.volume = 0.35;
 const _hoverSound = new Audio('/assets/sounds/button-hover.wav');
-_hoverSound.volume = 0.15; // Hover sound should be quieter than the click
 
 document.addEventListener('click', (e: MouseEvent) => {
   if ((e.target as HTMLElement).closest('button')) {
+    const sfxVolume = useSettingsStore.getState().sfxVolume;
+    _clickSound.volume = sfxVolume * 0.7; // Click is louder relative to hover
     _clickSound.currentTime = 0;
     _clickSound.play().catch(() => { /* swallow autoplay policy errors */ });
   }
@@ -23,6 +25,8 @@ document.addEventListener('mouseover', (e: MouseEvent) => {
   
   if (button) {
     if (button !== lastHoveredButton) {
+      const sfxVolume = useSettingsStore.getState().sfxVolume;
+      _hoverSound.volume = sfxVolume * 0.3; // Hover is quieter
       _hoverSound.currentTime = 0;
       _hoverSound.play().catch(() => { /* swallow autoplay policy errors */ });
       lastHoveredButton = button;
@@ -35,6 +39,9 @@ document.addEventListener('mouseover', (e: MouseEvent) => {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <>
+      <App />
+      <SettingsModal />
+    </>
   </StrictMode>,
 );
