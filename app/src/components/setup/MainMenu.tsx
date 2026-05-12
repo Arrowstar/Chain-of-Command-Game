@@ -163,7 +163,7 @@ export default function MainMenu({ onStart, onStartCampaign, onContinueCampaign,
           </div>
 
           <p style={{ color: 'var(--color-text-secondary)', marginBottom: 'var(--space-lg)' }}>
-            Assume command. Manage the stress of your bridge officers. Secure the sector.
+            The sector is in turmoil. Your crew is on the edge. Steel your nerves, issue the orders, and hold the line at all costs.
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
