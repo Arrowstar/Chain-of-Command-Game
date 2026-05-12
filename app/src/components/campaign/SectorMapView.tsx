@@ -543,6 +543,8 @@ function FleetStatusCard({
   const scarCount = ship?.scars.length ?? 0;
   const traumaCount = player.officers.reduce((sum, officer) => sum + officer.traumas.length, 0);
   const crewDangerCount = player.officers.filter(officer => isOfficerDanger(officer, getResolvedOfficerData(officer))).length;
+  const { isCoarsePointer } = useViewport();
+  const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
 
   const shipStatusColor = !ship || ship.isDestroyed
     ? 'var(--color-hostile-red)'
@@ -556,6 +558,7 @@ function FleetStatusCard({
     <div
       className="fleet-status-card"
       data-testid={`fleet-status-card-${player.id}`}
+      onClick={() => isCoarsePointer && setActiveTooltip(null)}
     >
       <div className="fleet-status-card-topline">
         <div>
@@ -582,13 +585,71 @@ function FleetStatusCard({
       </div>
 
       <div className="fleet-status-badges">
-        {ship?.isDestroyed && <StatusBadge color="var(--color-hostile-red)" label="Hull Lost" tooltip="This ship has been destroyed and is no longer combat-capable." />}
-        {scarCount > 0 && <StatusBadge color="var(--color-alert-amber)" label={`${scarCount} Scar${scarCount === 1 ? '' : 's'}`} tooltip={describeScarTooltip(ship?.scars ?? [])} />}
-        {unresolvedCriticals > 0 && <StatusBadge color="var(--color-hostile-red)" label={`${unresolvedCriticals} Crit${unresolvedCriticals === 1 ? '' : 's'}`} tooltip={describeCriticalTooltip(ship?.criticalDamage ?? [])} />}
-        {traumaCount > 0 && <StatusBadge color="var(--color-stress-orange)" label={`${traumaCount} Trauma${traumaCount === 1 ? '' : 's'}`} tooltip={describeTraumaTooltip(player.officers)} />}
-        {crewDangerCount > 0 && <StatusBadge color="var(--color-alert-amber)" label={`${crewDangerCount} Crew Risk`} tooltip={describeCrewRiskTooltip(player.officers, getResolvedOfficerData)} />}
+        {ship?.isDestroyed && (
+          <StatusBadge 
+            color="var(--color-hostile-red)" 
+            label="Hull Lost" 
+            tooltip="This ship has been destroyed and is no longer combat-capable." 
+            activeTooltip={activeTooltip}
+            setActiveTooltip={setActiveTooltip}
+            id="hull-lost"
+            isCoarse={isCoarsePointer}
+          />
+        )}
+        {scarCount > 0 && (
+          <StatusBadge 
+            color="var(--color-alert-amber)" 
+            label={`${scarCount} Scar${scarCount === 1 ? '' : 's'}`} 
+            tooltip={describeScarTooltip(ship?.scars ?? [])} 
+            activeTooltip={activeTooltip}
+            setActiveTooltip={setActiveTooltip}
+            id="scars"
+            isCoarse={isCoarsePointer}
+          />
+        )}
+        {unresolvedCriticals > 0 && (
+          <StatusBadge 
+            color="var(--color-hostile-red)" 
+            label={`${unresolvedCriticals} Crit${unresolvedCriticals === 1 ? '' : 's'}`} 
+            tooltip={describeCriticalTooltip(ship?.criticalDamage ?? [])} 
+            activeTooltip={activeTooltip}
+            setActiveTooltip={setActiveTooltip}
+            id="crits"
+            isCoarse={isCoarsePointer}
+          />
+        )}
+        {traumaCount > 0 && (
+          <StatusBadge 
+            color="var(--color-stress-orange)" 
+            label={`${traumaCount} Trauma${traumaCount === 1 ? '' : 's'}`} 
+            tooltip={describeTraumaTooltip(player.officers)} 
+            activeTooltip={activeTooltip}
+            setActiveTooltip={setActiveTooltip}
+            id="trauma"
+            isCoarse={isCoarsePointer}
+          />
+        )}
+        {crewDangerCount > 0 && (
+          <StatusBadge 
+            color="var(--color-alert-amber)" 
+            label={`${crewDangerCount} Crew Risk`} 
+            tooltip={describeCrewRiskTooltip(player.officers, getResolvedOfficerData)} 
+            activeTooltip={activeTooltip}
+            setActiveTooltip={setActiveTooltip}
+            id="risk"
+            isCoarse={isCoarsePointer}
+          />
+        )}
         {!ship?.isDestroyed && scarCount === 0 && unresolvedCriticals === 0 && traumaCount === 0 && crewDangerCount === 0 && (
-          <StatusBadge color="var(--color-holo-green)" label="Combat Ready" tooltip="No current scars, unresolved critical damage, trauma alerts, or crew stress warnings." />
+          <StatusBadge 
+            color="var(--color-holo-green)" 
+            label="Combat Ready" 
+            tooltip="No current scars, unresolved critical damage, trauma alerts, or crew stress warnings." 
+            activeTooltip={activeTooltip}
+            setActiveTooltip={setActiveTooltip}
+            id="ready"
+            isCoarse={isCoarsePointer}
+          />
         )}
       </div>
 
@@ -600,6 +661,9 @@ function FleetStatusCard({
             key={officer.officerId}
             officer={officer}
             officerData={getResolvedOfficerData(officer)}
+            activeTooltip={activeTooltip}
+            setActiveTooltip={setActiveTooltip}
+            isCoarse={isCoarsePointer}
           />
         ))}
       </div>
@@ -610,19 +674,35 @@ function FleetStatusCard({
 function OfficerStatusChip({
   officer,
   officerData,
+  activeTooltip,
+  setActiveTooltip,
+  isCoarse,
 }: {
   officer: OfficerState;
   officerData?: OfficerData;
+  activeTooltip: string | null;
+  setActiveTooltip: (id: string | null) => void;
+  isCoarse: boolean;
 }) {
   const maxStress = officerData ? getMaxStress(officer, officerData) : null;
   const stationLabel = officer.station.slice(0, 3).toUpperCase();
   const warning = getOfficerWarning(officer, officerData, maxStress);
   const tierLabel = officer.currentTier.toUpperCase();
 
+  const tooltipText = `${officerData?.name ?? officer.station.toUpperCase()}${maxStress !== null ? ` • Stress ${officer.currentStress}/${maxStress}` : ' • Stress immune'}${officer.traumas.length ? ` • ${officer.traumas.length} trauma` : ''}${officer.isLocked ? ' • Locked' : ''}`;
+  const isSelected = activeTooltip === `officer-${officer.officerId}`;
+
   return (
     <div
       className="fleet-status-officer"
-      title={`${officerData?.name ?? officer.station.toUpperCase()}${maxStress !== null ? ` • Stress ${officer.currentStress}/${maxStress}` : ' • Stress immune'}${officer.traumas.length ? ` • ${officer.traumas.length} trauma` : ''}${officer.isLocked ? ' • Locked' : ''}`}
+      title={isCoarse ? undefined : tooltipText}
+      onClick={(e) => {
+        if (isCoarse) {
+          e.stopPropagation();
+          setActiveTooltip(isSelected ? null : `officer-${officer.officerId}`);
+        }
+      }}
+      style={{ position: 'relative' }}
     >
       <span className="fleet-status-officer-station">{stationLabel}</span>
       <span className="fleet-status-officer-state" style={{ color: warning.color }}>
@@ -630,22 +710,51 @@ function OfficerStatusChip({
       </span>
       <div className="fleet-status-officer-detail">
         <span className="fleet-status-officer-name">{officerData?.name ?? 'Officer'}</span>
-        <span className="fleet-status-officer-tier" title={`Experience tier: ${tierLabel}`}>
+        <span className="fleet-status-officer-tier" title={isCoarse ? undefined : `Experience tier: ${tierLabel}`}>
           {tierLabel}
         </span>
       </div>
+      {isCoarse && isSelected && (
+        <div className="touch-tooltip" style={{ bottom: 'calc(100% + 10px)', width: '200px' }}>{tooltipText}</div>
+      )}
     </div>
   );
 }
 
-function StatusBadge({ color, label, tooltip }: { color: string; label: string; tooltip: string }) {
+function StatusBadge({ 
+  color, 
+  label, 
+  tooltip,
+  activeTooltip,
+  setActiveTooltip,
+  id,
+  isCoarse
+}: { 
+  color: string; 
+  label: string; 
+  tooltip: string;
+  activeTooltip: string | null;
+  setActiveTooltip: (id: string | null) => void;
+  id: string;
+  isCoarse: boolean;
+}) {
+  const isSelected = activeTooltip === `badge-${id}`;
   return (
     <span
       className="fleet-status-badge"
-      style={{ borderColor: color, color }}
-      title={tooltip}
+      style={{ borderColor: color, color, position: 'relative', cursor: isCoarse ? 'pointer' : 'help' }}
+      title={isCoarse ? undefined : tooltip}
+      onClick={(e) => {
+        if (isCoarse) {
+          e.stopPropagation();
+          setActiveTooltip(isSelected ? null : `badge-${id}`);
+        }
+      }}
     >
       {label}
+      {isCoarse && isSelected && (
+        <div className="touch-tooltip" style={{ bottom: 'calc(100% + 10px)' }}>{tooltip}</div>
+      )}
     </span>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { CampaignSaveManager } from '../../utils/CampaignSaveManager';
 
 interface MainMenuProps {
@@ -8,8 +8,69 @@ interface MainMenuProps {
   onStartTutorial?: () => void;
 }
 
+const TITLE_TEXT = 'CHAIN OF COMMAND';
+
+// Scrolling data — doubled so the seam is invisible
+const DATA_LEFT = [
+  'UPLINK SECURE', 'SUBSPACE: NOMINAL', 'SYS CHECK: OK',
+  'AUTH: ADMIRAL-7', 'COMM: ENCRYPTED', 'PING: 14ms',
+  'NAV GRID: ONLINE', 'SHIELD STATUS: READY', 'REACTOR: 98.4%',
+  'CREW: 847/850', 'AI CORE: STANDBY', 'SECTORS: 12',
+  'THREAT LVL: AMBER', 'FLEET READY: 4/4', 'JUMP DRIVE: CHARGED',
+  '> AWAITING CMD_', 'GYRO: STABLE', 'ATMOS: NORMAL',
+  'UPLINK SECURE', 'SUBSPACE: NOMINAL', 'SYS CHECK: OK',
+  'AUTH: ADMIRAL-7', 'COMM: ENCRYPTED', 'PING: 14ms',
+  'NAV GRID: ONLINE', 'SHIELD STATUS: READY', 'REACTOR: 98.4%',
+  'CREW: 847/850', 'AI CORE: STANDBY', 'SECTORS: 12',
+  'THREAT LVL: AMBER', 'FLEET READY: 4/4', 'JUMP DRIVE: CHARGED',
+  '> AWAITING CMD_', 'GYRO: STABLE', 'ATMOS: NORMAL',
+];
+
+const DATA_RIGHT = [
+  'HULL: 100%', 'ORDNANCE: LOADED', 'TARGETING: IDLE',
+  'COM-1: ACTIVE', 'COM-2: STANDBY', 'ENCRYPTION: AES-512',
+  'QUANTUM LINK: OK', 'DATA RELAY: SYNC', 'FUEL: 100%',
+  'SECTOR 1: CLEAR', 'SECTOR 2: HOSTILE', 'SECTOR 3: UNKNOWN',
+  'BEACON: LOCKED', 'STARMAP: UPDATED', 'WAYPOINT: SET',
+  'ENGINE: READY', 'THRUSTER: NOMINAL', 'VENT: CLEAR',
+  'HULL: 100%', 'ORDNANCE: LOADED', 'TARGETING: IDLE',
+  'COM-1: ACTIVE', 'COM-2: STANDBY', 'ENCRYPTION: AES-512',
+  'QUANTUM LINK: OK', 'DATA RELAY: SYNC', 'FUEL: 100%',
+  'SECTOR 1: CLEAR', 'SECTOR 2: HOSTILE', 'SECTOR 3: UNKNOWN',
+  'BEACON: LOCKED', 'STARMAP: UPDATED', 'WAYPOINT: SET',
+  'ENGINE: READY', 'THRUSTER: NOMINAL', 'VENT: CLEAR',
+];
+
+const STATUS_INDICATORS = [
+  { label: 'UPLINK',  color: 'var(--color-holo-green)',  delay: '0s' },
+  { label: 'SYSTEMS', color: 'var(--color-holo-cyan)',   delay: '1.1s' },
+  { label: 'WEAPONS', color: 'var(--color-alert-amber)', delay: '2.3s' },
+  { label: 'SHIELDS', color: 'var(--color-holo-cyan)',   delay: '0.6s' },
+  { label: 'COMMS',   color: 'var(--color-holo-green)',  delay: '1.8s' },
+];
+
 export default function MainMenu({ onStart, onStartCampaign, onContinueCampaign, onStartTutorial }: MainMenuProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [displayedTitle, setDisplayedTitle] = useState('');
+  const [titleDone, setTitleDone] = useState(false);
+
+  // Typewriter effect
+  useEffect(() => {
+    // Brief initial delay before typing starts
+    const startDelay = setTimeout(() => {
+      let i = 0;
+      const interval = setInterval(() => {
+        i++;
+        setDisplayedTitle(TITLE_TEXT.slice(0, i));
+        if (i >= TITLE_TEXT.length) {
+          clearInterval(interval);
+          setTitleDone(true);
+        }
+      }, 55);
+      return () => clearInterval(interval);
+    }, 400);
+    return () => clearTimeout(startDelay);
+  }, []);
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -21,94 +82,170 @@ export default function MainMenu({ onStart, onStartCampaign, onContinueCampaign,
   };
 
   return (
-    <div 
-      className="panel"
-      style={{
-        width: '100vw',
-        height: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'var(--color-bg-deep)',
-        border: 'none',
-        borderRadius: 0
-      }}
-    >
-      <div className="panel panel--glow" style={{ padding: 'var(--space-lg)', textAlign: 'center', maxWidth: '600px' }}>
-        <h1 style={{ color: 'var(--color-holo-cyan)', fontSize: '3rem', marginBottom: 'var(--space-md)', textShadow: 'var(--glow-cyan)' }}>
-          CHAIN OF COMMAND
-        </h1>
-        <div className="label" style={{ color: 'var(--color-alert-amber)', fontSize: '1.2rem', marginBottom: 'var(--space-lg)', letterSpacing: '4px' }}>
-          STELLAR WAR
+    <div className="main-menu-bg">
+      {/* Drifting tactical grid */}
+      <div className="main-menu-grid" />
+
+      {/* Static CRT scanline texture */}
+      <div className="main-menu-scanlines" />
+
+      {/* Animated CRT sweep line */}
+      <div className="main-menu-scanline-sweep" />
+
+      {/* Corner info tags */}
+      <div className="main-menu-corner-tag main-menu-corner-tag--tl">
+        <div>CHAIN OF COMMAND: STELLAR WAR</div>
+        <div>SYS v3.1.4 // BUILD 2025-A</div>
+      </div>
+      <div className="main-menu-corner-tag main-menu-corner-tag--tr">
+        <div>CLASSIFIED: FLEET ADMIRAL ACCESS</div>
+        <div>ENCRYPTION: AES-512</div>
+      </div>
+      <div className="main-menu-corner-tag main-menu-corner-tag--bl">
+        TACTICAL CIC TERMINAL
+      </div>
+      <div className="main-menu-corner-tag main-menu-corner-tag--br">
+        NODE: HEGEMONY-PRIME-01
+      </div>
+
+      {/* Left scrolling data column */}
+      <div className="main-menu-data-column main-menu-data-column--left">
+        <div className="main-menu-data-scroll">
+          {DATA_LEFT.map((line, i) => <div key={i}>{line}</div>)}
         </div>
+      </div>
 
-        <p style={{ color: 'var(--color-text-secondary)', marginBottom: 'var(--space-lg)' }}>
-          Assume command. Manage the stress of your bridge officers. Secure the sector.
-        </p>
+      {/* Right scrolling data column */}
+      <div className="main-menu-data-column main-menu-data-column--right">
+        <div className="main-menu-data-scroll main-menu-data-scroll--slow">
+          {DATA_RIGHT.map((line, i) => <div key={i}>{line}</div>)}
+        </div>
+      </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
-          <button 
-            className="btn" 
-            style={{ fontSize: '1.2rem', padding: 'var(--space-md)' }}
-            onClick={onStart}
-            data-testid="start-scenario-btn"
-          >
-            START SKIRMISH
-          </button>
-
-          <button
-            className="btn"
+      {/* Centre menu panel */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+      }}>
+        <div className="panel panel--glow" style={{
+          padding: 'var(--space-lg)',
+          textAlign: 'center',
+          maxWidth: '600px',
+          width: '90%',
+          background: 'hsla(220, 30%, 8%, 0.85)',
+          backdropFilter: 'blur(6px)',
+        }}>
+          {/* Title with typewriter + glitch */}
+          <h1
+            className={titleDone ? 'main-menu-title-glitch' : ''}
             style={{
-              fontSize: '1.2rem',
-              padding: 'var(--space-md)',
-              borderColor: 'rgba(0, 220, 180, 0.55)',
-              background: 'rgba(0, 220, 180, 0.08)',
               color: 'var(--color-holo-cyan)',
+              fontSize: '3rem',
+              marginBottom: 'var(--space-md)',
+              textShadow: 'var(--glow-cyan-strong)',
+              fontFamily: 'var(--font-display)',
+              minHeight: '3.6rem',
             }}
-            onClick={onStartTutorial}
-            data-testid="start-tutorial-btn"
           >
-            COMBAT TUTORIAL
-          </button>
-          
-          <button 
-            className="btn" 
-            style={{ fontSize: '1.2rem', padding: 'var(--space-md)' }}
-            onClick={onStartCampaign}
-          >
-            START CAMPAIGN
-          </button>
+            {displayedTitle}
+            {!titleDone && <span className="main-menu-cursor">█</span>}
+          </h1>
 
-          {CampaignSaveManager.hasBrowserSave() && (
-            <button 
-              className="btn btn--secondary" 
+          <div className="label" style={{
+            color: 'var(--color-alert-amber)',
+            fontSize: '1.2rem',
+            marginBottom: 'var(--space-lg)',
+            letterSpacing: '4px',
+            textShadow: 'var(--glow-amber)',
+          }}>
+            STELLAR WAR
+          </div>
+
+          <p style={{ color: 'var(--color-text-secondary)', marginBottom: 'var(--space-lg)' }}>
+            Assume command. Manage the stress of your bridge officers. Secure the sector.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+            <button
+              className="btn main-menu-btn"
               style={{ fontSize: '1.2rem', padding: 'var(--space-md)' }}
-              onClick={() => {
-                if (CampaignSaveManager.loadFromBrowser() && onContinueCampaign) {
-                  onContinueCampaign();
-                }
-              }}
+              onClick={onStart}
+              data-testid="start-scenario-btn"
             >
-              CONTINUE CAMPAIGN
+              START SKIRMISH
             </button>
-          )}
 
-          <button 
-            className="btn btn--secondary" 
-            style={{ fontSize: '1.2rem', padding: 'var(--space-md)' }}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            IMPORT CAMPAIGN
-          </button>
-          <input 
-            type="file" 
-            accept=".json" 
-            ref={fileInputRef} 
-            style={{ display: 'none' }} 
-            onChange={handleImport} 
-          />
+            <button
+              className="btn main-menu-btn"
+              style={{
+                fontSize: '1.2rem',
+                padding: 'var(--space-md)',
+                borderColor: 'rgba(0, 220, 180, 0.55)',
+                background: 'rgba(0, 220, 180, 0.08)',
+                color: 'var(--color-holo-cyan)',
+              }}
+              onClick={onStartTutorial}
+              data-testid="start-tutorial-btn"
+            >
+              COMBAT TUTORIAL
+            </button>
+
+            <button
+              className="btn main-menu-btn"
+              style={{ fontSize: '1.2rem', padding: 'var(--space-md)' }}
+              onClick={onStartCampaign}
+            >
+              START CAMPAIGN
+            </button>
+
+            {CampaignSaveManager.hasBrowserSave() && (
+              <button
+                className="btn btn--secondary main-menu-btn"
+                style={{ fontSize: '1.2rem', padding: 'var(--space-md)' }}
+                onClick={() => {
+                  if (CampaignSaveManager.loadFromBrowser() && onContinueCampaign) {
+                    onContinueCampaign();
+                  }
+                }}
+              >
+                CONTINUE CAMPAIGN
+              </button>
+            )}
+
+            <button
+              className="btn btn--secondary main-menu-btn"
+              style={{ fontSize: '1.2rem', padding: 'var(--space-md)' }}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              IMPORT CAMPAIGN
+            </button>
+            <input
+              type="file"
+              accept=".json"
+              ref={fileInputRef}
+              style={{ display: 'none' }}
+              onChange={handleImport}
+            />
+          </div>
         </div>
+      </div>
+
+      {/* Bottom status indicators */}
+      <div className="main-menu-status-bar">
+        {STATUS_INDICATORS.map((s, i) => (
+          <div key={i} className="main-menu-status-indicator">
+            <div
+              className="main-menu-status-dot"
+              style={{
+                background: s.color,
+                boxShadow: `0 0 6px ${s.color}`,
+                animationDelay: s.delay,
+              }}
+            />
+            {s.label}
+          </div>
+        ))}
       </div>
     </div>
   );

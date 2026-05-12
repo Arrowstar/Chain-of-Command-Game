@@ -3,7 +3,7 @@ import {
   executePostCombatLoop, resolveEventOption, convertFleetFavorToRP,
   applyEventResolution, buildEventRequirementContext, getEventOptionAvailability,
   purchaseHullPatch, scrapItem, purchasePsychEval, purchaseDeepRepair,
-  purchaseOfficerTraining, generateMarketInventory,
+  purchaseOfficerTraining, purchaseMarketItemFn, generateMarketInventory,
   advanceToNextSector, checkTotalWipe, applyShipReplacement,
 } from './campaignEngine';
 import type { PlayerState, ShipState, OfficerData, OfficerState } from '../types/game';
@@ -553,6 +553,51 @@ describe('purchaseOfficerTraining', () => {
   it('fails with insufficient RP', () => {
     const result = purchaseOfficerTraining({ officerId: 'o1', shipId: 's1', currentTier: 'rookie', currentRP: 5 });
     expect(result.success).toBe(false);
+  });
+});
+
+describe('purchaseMarketItemFn', () => {
+  it('correctly applies store discounts to the purchase price', () => {
+    // illegal-rail-accelerator costs 70 RP
+    const result = purchaseMarketItemFn({
+      itemId: 'illegal-rail-accelerator',
+      itemType: 'weapon',
+      shipId: 'ship-1',
+      slotIndex: 0,
+      currentRP: 40, // Not enough for 70 RP, but enough for 50% discount (35 RP)
+      discountPercent: 50,
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.rpDelta).toBe(-35); // 70 RP * 0.5 = 35 RP
+  });
+
+  it('fails if even the discounted price is too high', () => {
+    const result = purchaseMarketItemFn({
+      itemId: 'illegal-rail-accelerator',
+      itemType: 'weapon',
+      shipId: 'ship-1',
+      slotIndex: 0,
+      currentRP: 30, // Less than 35 RP
+      discountPercent: 50,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.failureReason).toContain('Not enough RP');
+  });
+
+  it('works with 0% discount', () => {
+    const result = purchaseMarketItemFn({
+      itemId: 'illegal-rail-accelerator',
+      itemType: 'weapon',
+      shipId: 'ship-1',
+      slotIndex: 0,
+      currentRP: 70,
+      discountPercent: 0,
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.rpDelta).toBe(-70);
   });
 });
 

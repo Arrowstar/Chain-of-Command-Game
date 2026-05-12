@@ -38,8 +38,9 @@ export default function OfficerStationPanel({ officerState, playerId }: OfficerS
   const [pendingTapAdjustSpeed, setPendingTapAdjustSpeed] = useState(false);
   const clearTokenSelection = useTokenSelectionStore(s => s.clearSelection);
   const { isCoarsePointer } = useViewport();
+  const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
 
-  if (!officerData || !player) return null;
+  if (!officerState || !officerData || !player) return null;
 
   const objectiveType = useGameStore(s => s.objectiveType);
   const myShip = playerShips.find(s => s.id === player.shipId);
@@ -107,6 +108,7 @@ export default function OfficerStationPanel({ officerState, playerId }: OfficerS
       style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}
       id={`officer-station-${officerState.station}`}
       data-testid={`officer-station-${officerState.station}`}
+      onClick={() => isCoarsePointer && setActiveTooltip(null)}
     >
       {/* Header */}
       <div className="flex-between" style={{ alignItems: 'flex-start' }}>
@@ -126,10 +128,19 @@ export default function OfficerStationPanel({ officerState, playerId }: OfficerS
           />
           <div>
             <h3
-              title={officerAbilityTooltip}
-              style={{ color: 'var(--color-holo-cyan)', fontSize: '1rem', margin: '0 0 4px 0', cursor: 'help' }}
+              title={isCoarsePointer ? undefined : officerAbilityTooltip}
+              onClick={(e) => {
+                if (isCoarsePointer) {
+                  e.stopPropagation();
+                  setActiveTooltip(activeTooltip === 'ability' ? null : 'ability');
+                }
+              }}
+              style={{ color: 'var(--color-holo-cyan)', fontSize: '1rem', margin: '0 0 4px 0', cursor: 'help', position: 'relative' }}
             >
               {officerData.name}
+              {isCoarsePointer && activeTooltip === 'ability' && (
+                <div className="touch-tooltip">{officerAbilityTooltip}</div>
+              )}
             </h3>
             <div className="label" style={{ color: 'var(--color-text-secondary)' }}>
               Station: {officerState.station.toUpperCase()}
@@ -139,10 +150,19 @@ export default function OfficerStationPanel({ officerState, playerId }: OfficerS
         <div style={{ textAlign: 'right' }}>
           <div 
             className="label" 
-            style={{ color: 'var(--color-alert-amber)', cursor: 'help' }}
-            title={officerAbilityTooltip}
+            style={{ color: 'var(--color-alert-amber)', cursor: 'help', position: 'relative' }}
+            title={isCoarsePointer ? undefined : officerAbilityTooltip}
+            onClick={(e) => {
+              if (isCoarsePointer) {
+                e.stopPropagation();
+                setActiveTooltip(activeTooltip === 'ability' ? null : 'ability');
+              }
+            }}
           >
             {officerData.traitName}
+            {isCoarsePointer && activeTooltip === 'ability' && (
+              <div className="touch-tooltip" style={{ right: 0, left: 'auto', transform: 'none' }}>{officerAbilityTooltip}</div>
+            )}
           </div>
           <div className="mono" style={{ fontSize: '0.7rem' }}>Rank: {officerState.currentTier.toUpperCase()}</div>
         </div>
@@ -190,14 +210,23 @@ export default function OfficerStationPanel({ officerState, playerId }: OfficerS
           <div className="mono" style={{ fontSize: '0.68rem', color: 'var(--color-text-secondary)' }}>
             {isCoarsePointer ? 'Tap a scar tag for the full penalty, or the ? for shorthand help.' : 'Hover a scar tag for the full penalty, or the ? for shorthand help.'}
           </div>
-          {stationScars.map(scar => {
+          {stationScars.map((scar, idx) => {
             const meta = getScarStatusMeta(scar.fromCriticalId);
             return (
-              <div key={scar.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', alignItems: 'center' }}>
-                <span style={{ color: 'var(--color-text-bright)', fontSize: '0.82rem' }} title={getScarTooltip(scar)}>{scar.name}</span>
+              <div 
+                key={scar.id} 
+                style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', alignItems: 'center', position: 'relative' }}
+                onClick={(e) => {
+                  if (isCoarsePointer) {
+                    e.stopPropagation();
+                    setActiveTooltip(activeTooltip === `scar-${idx}` ? null : `scar-${idx}`);
+                  }
+                }}
+              >
+                <span style={{ color: 'var(--color-text-bright)', fontSize: '0.82rem', cursor: 'help' }} title={isCoarsePointer ? undefined : getScarTooltip(scar)}>{scar.name}</span>
                 <span
                   className="mono"
-                  title={getScarTooltip(scar)}
+                  title={isCoarsePointer ? undefined : getScarTooltip(scar)}
                   style={{
                     fontSize: '0.68rem',
                     color: 'var(--color-alert-amber)',

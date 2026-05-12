@@ -499,8 +499,8 @@ export default function DrydockView() {
                               }}
                               onClick={() => {
                                 if (isTargetable && canAfford) {
-                                  const baseItemId = selectedItem.source === 'stash' ? selectedItem.id.substring(0, selectedItem.id.lastIndexOf('-')) : selectedItem.id;
-                                  if (selectedItem.source === 'market') {
+                                  const baseItemId = selectedItem!.source === 'stash' ? selectedItem!.id.substring(0, selectedItem!.id.lastIndexOf('-')) : selectedItem!.id;
+                                  if (selectedItem!.source === 'market') {
                                     purchaseMarketItem(baseItemId, ship.id, true, i);
                                   } else {
                                     swapStashItem(ship.id, i, baseItemId, true, 'equip');
@@ -551,8 +551,8 @@ export default function DrydockView() {
                               }}
                               onClick={() => {
                                 if (isTargetable && canAfford) {
-                                  const baseItemId = selectedItem.source === 'stash' ? selectedItem.id.substring(0, selectedItem.id.lastIndexOf('-')) : selectedItem.id;
-                                  if (selectedItem.source === 'market') {
+                                  const baseItemId = selectedItem!.source === 'stash' ? selectedItem!.id.substring(0, selectedItem!.id.lastIndexOf('-')) : selectedItem!.id;
+                                  if (selectedItem!.source === 'market') {
                                     purchaseMarketItem(baseItemId, ship.id, false, i);
                                   } else {
                                     swapStashItem(ship.id, i, baseItemId, false, 'equip');

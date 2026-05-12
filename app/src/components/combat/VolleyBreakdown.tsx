@@ -4,6 +4,7 @@ import DiceVisual from './DiceVisual';
 import type { VolleyResult } from '../../types/game';
 import type { DamageResult } from '../../engine/combat';
 import { useGameStore } from '../../store/useGameStore';
+import { useViewport } from '../../utils/useViewport';
 
 export interface VolleyResultItem {
   damageResult: DamageResult;
@@ -30,6 +31,8 @@ export default function VolleyBreakdown({ results, damageResult, outOfArc, weapo
   const [showDamage, setShowDamage] = useState(false);
   const [activeTabIndex, setActiveTabIndex] = useState(0);
   const { playerShips, enemyShips, stations, fighterTokens, getShipName } = useGameStore();
+  const { isCoarsePointer } = useViewport();
+  const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
 
   const getAllegianceColor = (id: string) => {
     if (playerShips.some(s => s.id === id)) return 'var(--color-holo-cyan)';
@@ -74,6 +77,7 @@ export default function VolleyBreakdown({ results, damageResult, outOfArc, weapo
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9 }}
         className="panel panel--glow"
+        onClick={() => isCoarsePointer && setActiveTooltip(null)}
         style={{
           width: '500px',
           background: 'var(--color-bg-panel)',
@@ -340,27 +344,92 @@ export default function VolleyBreakdown({ results, damageResult, outOfArc, weapo
                         return (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', textAlign: 'left', marginTop: '6px' }}>
                             {ionNebulaActive ? (
-                                <div className="flex-between" style={{ fontSize: '0.75rem', marginBottom: '4px' }} title="Ion Nebula completely disables shields.">
+                                <div 
+                                  className="flex-between" 
+                                  style={{ fontSize: '0.75rem', marginBottom: '4px', position: 'relative' }} 
+                                  title={isCoarsePointer ? undefined : "Ion Nebula completely disables shields."}
+                                  onClick={(e) => {
+                                    if (isCoarsePointer) {
+                                      e.stopPropagation();
+                                      setActiveTooltip(activeTooltip === 'ion-nebula' ? null : 'ion-nebula');
+                                    }
+                                  }}
+                                >
                                   <span className="label" style={{ color: 'var(--color-text-secondary)', cursor: 'help' }}>Shields Bypassed</span>
                                   <span className="mono" style={{ color: 'var(--color-alert-amber)' }}>(Ion Nebula)</span>
+                                  {isCoarsePointer && activeTooltip === 'ion-nebula' && (
+                                    <div className="touch-tooltip" style={{ bottom: 'calc(100% + 8px)' }}>Ion Nebula completely disables shields.</div>
+                                  )}
                                 </div>
                             ) : (
                               <>
-                                <div className="flex-between" style={{ fontSize: '0.75rem' }} title="The shield arc that intercepted the attack.">
+                                <div 
+                                  className="flex-between" 
+                                  style={{ fontSize: '0.75rem', position: 'relative' }} 
+                                  title={isCoarsePointer ? undefined : "The shield arc that intercepted the attack."}
+                                  onClick={(e) => {
+                                    if (isCoarsePointer) {
+                                      e.stopPropagation();
+                                      setActiveTooltip(activeTooltip === 'struck-arc' ? null : 'struck-arc');
+                                    }
+                                  }}
+                                >
                                   <span className="label" style={{ color: 'var(--color-text-secondary)', cursor: 'help' }}>Struck Arc</span>
                                   <span className="mono" style={{ color: 'var(--color-holo-cyan)' }}>{sectorLabel}</span>
+                                  {isCoarsePointer && activeTooltip === 'struck-arc' && (
+                                    <div className="touch-tooltip" style={{ bottom: 'calc(100% + 8px)' }}>The shield arc that intercepted the attack.</div>
+                                  )}
                                 </div>
-                                <div className="flex-between" style={{ fontSize: '0.75rem' }} title="The initial shield strength before the attack.">
+                                <div 
+                                  className="flex-between" 
+                                  style={{ fontSize: '0.75rem', position: 'relative' }} 
+                                  title={isCoarsePointer ? undefined : "The initial shield strength before the attack."}
+                                  onClick={(e) => {
+                                    if (isCoarsePointer) {
+                                      e.stopPropagation();
+                                      setActiveTooltip(activeTooltip === 'init-shields' ? null : 'init-shields');
+                                    }
+                                  }}
+                                >
                                   <span className="label" style={{ color: 'var(--color-text-secondary)', cursor: 'help' }}>Initial Shields</span>
                                   <span className="mono">{initialShield}</span>
+                                  {isCoarsePointer && activeTooltip === 'init-shields' && (
+                                    <div className="touch-tooltip" style={{ bottom: 'calc(100% + 8px)' }}>The initial shield strength before the attack.</div>
+                                  )}
                                 </div>
-                                <div className="flex-between" style={{ fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '4px' }} title="The amount of shield energy depleted by the attack.">
+                                <div 
+                                  className="flex-between" 
+                                  style={{ fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '4px', position: 'relative' }} 
+                                  title={isCoarsePointer ? undefined : "The amount of shield energy depleted by the attack."}
+                                  onClick={(e) => {
+                                    if (isCoarsePointer) {
+                                      e.stopPropagation();
+                                      setActiveTooltip(activeTooltip === 'shield-dmg' ? null : 'shield-dmg');
+                                    }
+                                  }}
+                                >
                                   <span className="label" style={{ color: 'var(--color-text-secondary)', cursor: 'help' }}>Shield Damage</span>
                                   <span className="mono" style={{ color: 'var(--color-alert-amber)' }}>-{shieldHits}</span>
+                                  {isCoarsePointer && activeTooltip === 'shield-dmg' && (
+                                    <div className="touch-tooltip" style={{ bottom: 'calc(100% + 8px)' }}>The amount of shield energy depleted by the attack.</div>
+                                  )}
                                 </div>
-                                <div className="flex-between" style={{ fontSize: '0.9rem', borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '6px', marginTop: '2px' }} title="The remaining shield energy in this arc.">
+                                <div 
+                                  className="flex-between" 
+                                  style={{ fontSize: '0.9rem', borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '6px', marginTop: '2px', position: 'relative' }} 
+                                  title={isCoarsePointer ? undefined : "The remaining shield energy in this arc."}
+                                  onClick={(e) => {
+                                    if (isCoarsePointer) {
+                                      e.stopPropagation();
+                                      setActiveTooltip(activeTooltip === 'rem-shields' ? null : 'rem-shields');
+                                    }
+                                  }}
+                                >
                                   <span className="label" style={{ color: 'var(--color-text-primary)', cursor: 'help' }}>Remaining</span>
                                   <span className="mono" style={{ color: 'var(--color-holo-cyan)', fontWeight: 'bold' }}>{shieldRemaining}</span>
+                                  {isCoarsePointer && activeTooltip === 'rem-shields' && (
+                                    <div className="touch-tooltip" style={{ bottom: 'calc(100% + 8px)' }}>The remaining shield energy in this arc.</div>
+                                  )}
                                 </div>
                               </>
                             )}
@@ -395,31 +464,96 @@ export default function VolleyBreakdown({ results, damageResult, outOfArc, weapo
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', textAlign: 'left', marginTop: '6px' }}>
                             {overflowHits > 0 && (
                               <>
-                                <div className="flex-between" style={{ fontSize: '0.75rem' }} title="Standard hits that bypassed shields and struck the hull directly.">
+                                <div 
+                                  className="flex-between" 
+                                  style={{ fontSize: '0.75rem', position: 'relative' }} 
+                                  title={isCoarsePointer ? undefined : "Standard hits that bypassed shields and struck the hull directly."}
+                                  onClick={(e) => {
+                                    if (isCoarsePointer) {
+                                      e.stopPropagation();
+                                      setActiveTooltip(activeTooltip === 'overflow' ? null : 'overflow');
+                                    }
+                                  }}
+                                >
                                   <span className="label" style={{ color: 'var(--color-text-secondary)', cursor: 'help' }}>Overflow Hits</span>
                                   <span className="mono">+{overflowHits}</span>
+                                  {isCoarsePointer && activeTooltip === 'overflow' && (
+                                    <div className="touch-tooltip" style={{ bottom: 'calc(100% + 8px)' }}>Standard hits that bypassed shields and struck the hull directly.</div>
+                                  )}
                                 </div>
-                                <div className="flex-between" style={{ fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '4px' }} title="The defender's armor die roll, mitigating Overflow Hits.">
+                                <div 
+                                  className="flex-between" 
+                                  style={{ fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '4px', position: 'relative' }} 
+                                  title={isCoarsePointer ? undefined : "The defender's armor die roll, mitigating Overflow Hits."}
+                                  onClick={(e) => {
+                                    if (isCoarsePointer) {
+                                      e.stopPropagation();
+                                      setActiveTooltip(activeTooltip === 'armor-roll' ? null : 'armor-roll');
+                                    }
+                                  }}
+                                >
                                   <span className="label" style={{ color: 'var(--color-text-secondary)', cursor: 'help' }}>Armor Roll ({currentItem.damageResult.armorDie})</span>
                                   <span className="mono" style={{ color: 'var(--color-text-dim)' }}>-{armorRoll}</span>
+                                  {isCoarsePointer && activeTooltip === 'armor-roll' && (
+                                    <div className="touch-tooltip" style={{ bottom: 'calc(100% + 8px)' }}>The defender's armor die roll, mitigating Overflow Hits.</div>
+                                  )}
                                 </div>
-                                <div className="flex-between" style={{ fontSize: '0.75rem' }} title={min1RuleApplied ? "Armor cannot reduce Overflow Hits below 1 unless there are piercing hits." : "The remaining Overflow Hits after armor mitigation."}>
+                                <div 
+                                  className="flex-between" 
+                                  style={{ fontSize: '0.75rem', position: 'relative' }} 
+                                  title={isCoarsePointer ? undefined : (min1RuleApplied ? "Armor cannot reduce Overflow Hits below 1 unless there are piercing hits." : "The remaining Overflow Hits after armor mitigation.")}
+                                  onClick={(e) => {
+                                    if (isCoarsePointer) {
+                                      e.stopPropagation();
+                                      setActiveTooltip(activeTooltip === 'net-overflow' ? null : 'net-overflow');
+                                    }
+                                  }}
+                                >
                                   <span className="label" style={{ color: 'var(--color-text-secondary)', cursor: 'help' }}>Net Overflow Hits{min1RuleApplied ? ' (Min 1)' : ''}</span>
                                   <span className="mono">{netOverflowHits}</span>
+                                  {isCoarsePointer && activeTooltip === 'net-overflow' && (
+                                    <div className="touch-tooltip" style={{ bottom: 'calc(100% + 8px)' }}>{min1RuleApplied ? "Armor cannot reduce Overflow Hits below 1 unless there are piercing hits." : "The remaining Overflow Hits after armor mitigation."}</div>
+                                  )}
                                 </div>
                               </>
                             )}
                             
                             {piercingHits > 0 && (
-                              <div className="flex-between" style={{ fontSize: '0.75rem' }} title="Critical hits that completely bypass shields and armor.">
+                              <div 
+                                className="flex-between" 
+                                style={{ fontSize: '0.75rem', position: 'relative' }} 
+                                title={isCoarsePointer ? undefined : "Critical hits that completely bypass shields and armor."}
+                                onClick={(e) => {
+                                  if (isCoarsePointer) {
+                                    e.stopPropagation();
+                                    setActiveTooltip(activeTooltip === 'piercing' ? null : 'piercing');
+                                  }
+                                }}
+                              >
                                 <span className="label" style={{ color: 'var(--color-text-secondary)', cursor: 'help' }}>Piercing Hits</span>
                                 <span className="mono" style={{ color: 'var(--color-alert-amber)' }}>+{piercingHits}</span>
+                                {isCoarsePointer && activeTooltip === 'piercing' && (
+                                  <div className="touch-tooltip" style={{ bottom: 'calc(100% + 8px)' }}>Critical hits that completely bypass shields and armor.</div>
+                                )}
                               </div>
                             )}
 
-                            <div className="flex-between" style={{ fontSize: '0.9rem', borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '6px', marginTop: '2px' }} title="The final amount of Hull Damage dealt to the defender.">
+                            <div 
+                              className="flex-between" 
+                              style={{ fontSize: '0.9rem', borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '6px', marginTop: '2px', position: 'relative' }} 
+                              title={isCoarsePointer ? undefined : "The final amount of Hull Damage dealt to the defender."}
+                              onClick={(e) => {
+                                if (isCoarsePointer) {
+                                  e.stopPropagation();
+                                  setActiveTooltip(activeTooltip === 'total-dmg' ? null : 'total-dmg');
+                                }
+                              }}
+                            >
                               <span className="label" style={{ color: 'var(--color-text-primary)', cursor: 'help' }}>Total Damage</span>
                               <span className="mono" style={{ color: 'var(--color-hostile-red)', fontWeight: 'bold' }}>{hullDamage}</span>
+                              {isCoarsePointer && activeTooltip === 'total-dmg' && (
+                                <div className="touch-tooltip" style={{ bottom: 'calc(100% + 8px)' }}>The final amount of Hull Damage dealt to the defender.</div>
+                              )}
                             </div>
                           </div>
                         );

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import type { ActionDefinition } from '../../types/game';
 import { useTokenSelectionStore } from '../../store/useTokenSelectionStore';
@@ -38,6 +38,7 @@ export default function ActionSlot({
   const selectedTokenId = useTokenSelectionStore(s => s.selectedTokenId);
   const clearSelection = useTokenSelectionStore(s => s.clearSelection);
   const { isCoarsePointer } = useViewport();
+  const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
 
   const isActive = isOver && !disabled;
   // Highlight the slot while a token is tapped-selected and the slot is ready
@@ -62,7 +63,10 @@ export default function ActionSlot({
     <div
       className={`panel ${isActive ? 'panel--glow' : ''}`}
       ref={setNodeRef}
-      onClick={isTapReady ? handleDropZoneClick : undefined}
+      onClick={(e) => {
+        if (isTapReady) handleDropZoneClick();
+        if (isCoarsePointer) setActiveTooltip(null);
+      }}
       style={{
         opacity: disabled ? 0.5 : 1,
         padding: 'var(--space-sm)',
@@ -94,10 +98,19 @@ export default function ActionSlot({
           <div>{action.stressCost} STRESS</div>
           {costNote ? (
             <div
-              title={costNote}
-              style={{ color: 'var(--color-holo-cyan)', fontSize: '0.62rem', marginTop: '2px' }}
+              title={isCoarsePointer ? undefined : costNote}
+              onClick={(e) => {
+                if (isCoarsePointer) {
+                  e.stopPropagation();
+                  setActiveTooltip(activeTooltip === 'cost' ? null : 'cost');
+                }
+              }}
+              style={{ color: 'var(--color-holo-cyan)', fontSize: '0.62rem', marginTop: '2px', cursor: 'help', position: 'relative' }}
             >
               {costNote}
+              {isCoarsePointer && activeTooltip === 'cost' && (
+                <div className="touch-tooltip" style={{ bottom: 'calc(100% + 6px)' }}>{costNote}</div>
+              )}
             </div>
           ) : null}
         </div>
@@ -169,7 +182,20 @@ export default function ActionSlot({
                 {/* Unassign button for this specific assignment */}
                 <button
                   className="action-slot-unassign-btn"
-                  onClick={(e) => { e.stopPropagation(); onUnassign(tokenId); }}
+                  onClick={(e) => {
+                    if (isCoarsePointer) {
+                      e.stopPropagation();
+                      if (activeTooltip === `unassign-${assignmentIdx}`) {
+                        onUnassign(tokenId);
+                        setActiveTooltip(null);
+                      } else {
+                        setActiveTooltip(`unassign-${assignmentIdx}`);
+                      }
+                    } else {
+                      e.stopPropagation(); 
+                      onUnassign(tokenId);
+                    }
+                  }}
                   style={{
                     position: 'absolute',
                     top: isCoarsePointer ? '-12px' : '-6px',
@@ -187,10 +213,15 @@ export default function ActionSlot({
                     justifyContent: 'center',
                     zIndex: 10,
                   }}
-                  title="Remove this assignment"
+                  title={isCoarsePointer ? undefined : "Remove this assignment"}
                   data-testid={`unassign-btn-${action.id}-${assignmentIdx}`}
                 >
                   ×
+                  {isCoarsePointer && activeTooltip === `unassign-${assignmentIdx}` && (
+                    <div className="touch-tooltip" style={{ bottom: 'calc(100% + 12px)', fontSize: '0.65rem' }}>
+                      Tap again to confirm removal
+                    </div>
+                  )}
                 </button>
               </div>
             ))}

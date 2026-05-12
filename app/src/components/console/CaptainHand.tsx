@@ -3,6 +3,8 @@ import { useGameStore } from '../../store/useGameStore';
 import CommandToken from './CommandToken';
 import { getScarImpactLegendText, getScarStatusMeta, getScarTooltip } from './scarStatus';
 import { getCurrentCtDisplayState } from '../../engine/commandTokens';
+import { useViewport } from '../../utils/useViewport';
+import { useState } from 'react';
 
 export default function CaptainHand({ playerId }: { playerId?: string }) {
   const players = useGameStore(s => s.players);
@@ -11,6 +13,8 @@ export default function CaptainHand({ playerId }: { playerId?: string }) {
   const activeRoE = useGameStore(s => s.activeRoE);
   const combatModifiers = useGameStore(s => s.combatModifiers);
   const player = playerId ? players.find(p => p.id === playerId) : players[0];
+  const { isCoarsePointer } = useViewport();
+  const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
 
   if (!player) return null;
   const ship = playerShips.find(entry => entry.id === player.shipId);
@@ -33,7 +37,11 @@ export default function CaptainHand({ playerId }: { playerId?: string }) {
   ].join('\n');
 
   return (
-    <div className="panel panel--glow" style={{ padding: 'var(--space-md)' }}>
+    <div 
+      className="panel panel--glow" 
+      style={{ padding: 'var(--space-md)' }}
+      onClick={() => isCoarsePointer && setActiveTooltip(null)}
+    >
       <div className="label" style={{ marginBottom: 'var(--space-sm)', color: 'var(--color-holo-cyan)', display: 'flex', justifyContent: 'space-between' }}>
         <span>Command Token Pool</span>
         <span className="mono" style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
@@ -42,7 +50,13 @@ export default function CaptainHand({ playerId }: { playerId?: string }) {
       </div>
       <div
         className="mono"
-        title={ctSummaryTooltip}
+        title={isCoarsePointer ? undefined : ctSummaryTooltip}
+        onClick={(e) => {
+          if (isCoarsePointer) {
+            e.stopPropagation();
+            setActiveTooltip(activeTooltip === 'ct-summary' ? null : 'ct-summary');
+          }
+        }}
         style={{
           marginBottom: 'var(--space-sm)',
           fontSize: '0.68rem',
@@ -51,11 +65,18 @@ export default function CaptainHand({ playerId }: { playerId?: string }) {
           justifyContent: 'space-between',
           gap: '8px',
           flexWrap: 'wrap',
+          cursor: isCoarsePointer ? 'pointer' : 'help',
+          position: 'relative',
         }}
       >
         <span>Base {ctDisplay.baseCt} CT</span>
         <span>Round Start {ctDisplay.roundStartCt}</span>
         <span>Live Pool {ctDisplay.totalTokensThisRound}</span>
+        {isCoarsePointer && activeTooltip === 'ct-summary' && (
+          <div className="touch-tooltip" style={{ bottom: 'calc(100% + 10px)' }}>
+            {ctSummaryTooltip.split('\n').map((line, i) => <div key={i}>{line}</div>)}
+          </div>
+        )}
       </div>
       {ctDisplay.modifiers.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: 'var(--space-sm)' }}>
@@ -63,7 +84,13 @@ export default function CaptainHand({ playerId }: { playerId?: string }) {
             <span
               key={modifier.id}
               className="mono"
-              title={modifier.description}
+              title={isCoarsePointer ? undefined : modifier.description}
+              onClick={(e) => {
+                if (isCoarsePointer) {
+                  e.stopPropagation();
+                  setActiveTooltip(activeTooltip === `mod-${modifier.id}` ? null : `mod-${modifier.id}`);
+                }
+              }}
               style={{
                 fontSize: '0.66rem',
                 color: modifier.amount >= 0 ? 'var(--color-holo-cyan)' : 'var(--color-alert-amber)',
@@ -72,9 +99,13 @@ export default function CaptainHand({ playerId }: { playerId?: string }) {
                 borderRadius: '999px',
                 padding: '3px 8px',
                 cursor: 'help',
+                position: 'relative',
               }}
             >
               {modifier.label}
+              {isCoarsePointer && activeTooltip === `mod-${modifier.id}` && (
+                <div className="touch-tooltip" style={{ bottom: 'calc(100% + 10px)' }}>{modifier.description}</div>
+              )}
             </span>
           ))}
         </div>
@@ -127,10 +158,17 @@ export default function CaptainHand({ playerId }: { playerId?: string }) {
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
             {ship.scars.map(scar => {
               const meta = getScarStatusMeta(scar.fromCriticalId);
+              const isSelected = activeTooltip === `scar-${scar.id}`;
               return (
                 <span
                   key={scar.id}
-                  title={getScarTooltip(scar)}
+                  title={isCoarsePointer ? undefined : getScarTooltip(scar)}
+                  onClick={(e) => {
+                    if (isCoarsePointer) {
+                      e.stopPropagation();
+                      setActiveTooltip(isSelected ? null : `scar-${scar.id}`);
+                    }
+                  }}
                   className="mono"
                   style={{
                     fontSize: '0.68rem',
@@ -140,9 +178,13 @@ export default function CaptainHand({ playerId }: { playerId?: string }) {
                     borderRadius: '999px',
                     padding: '3px 8px',
                     cursor: 'help',
+                    position: 'relative',
                   }}
                 >
                   {meta.shortImpact}
+                  {isCoarsePointer && isSelected && (
+                    <div className="touch-tooltip" style={{ bottom: 'calc(100% + 10px)' }}>{getScarTooltip(scar)}</div>
+                  )}
                 </span>
               );
             })}

@@ -1095,12 +1095,11 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
       shipId,
       slotIndex,
       currentRP: campaign.requisitionPoints,
+      discountPercent,
     });
 
     if (!result.success) { console.warn('[Drydock]', result.failureReason); return; }
-    const discountedDelta = discountPercent > 0
-      ? -Math.max(0, Math.floor((-result.rpDelta) * (100 - discountPercent) / 100))
-      : result.rpDelta;
+    const discountedDelta = result.rpDelta;
 
     set(state => {
       if (!state.campaign) return state;

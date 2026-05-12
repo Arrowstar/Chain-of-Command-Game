@@ -871,28 +871,33 @@ export function purchaseMarketItemFn(params: {
   shipId: string;
   slotIndex: number;
   currentRP: number;
+  discountPercent?: number;
 }): DrydockResult {
-  const { itemId, itemType, shipId, slotIndex, currentRP } = params;
+  const { itemId, itemType, shipId, slotIndex, currentRP, discountPercent = 0 } = params;
 
-  let cost = 0;
+  let baseCost = 0;
   if (itemType === 'weapon') {
     const weapon = getWeaponById(itemId);
     if (!weapon) return { success: false, failureReason: `Unknown weapon: ${itemId}`, rpDelta: 0, mutations: [] };
-    cost = weapon.rpCost;
+    baseCost = weapon.rpCost;
   } else {
     const sub = getSubsystemById(itemId);
     if (!sub) return { success: false, failureReason: `Unknown subsystem: ${itemId}`, rpDelta: 0, mutations: [] };
-    cost = sub.rpCost;
+    baseCost = sub.rpCost;
   }
 
-  if (currentRP < cost) {
-    return { success: false, failureReason: `Not enough RP (need ${cost}, have ${currentRP})`, rpDelta: 0, mutations: [] };
+  const finalCost = discountPercent > 0
+    ? Math.max(0, Math.floor(baseCost * (100 - discountPercent) / 100))
+    : baseCost;
+
+  if (currentRP < finalCost) {
+    return { success: false, failureReason: `Not enough RP (need ${finalCost}, have ${currentRP})`, rpDelta: 0, mutations: [] };
   }
 
   const mutationType = itemType === 'weapon' ? 'weaponEquipped' : 'subsystemEquipped';
   return {
     success: true,
-    rpDelta: -cost,
+    rpDelta: -finalCost,
     mutations: [{ type: mutationType, shipId, slotIndex, itemId, itemType }],
   };
 }
