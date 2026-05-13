@@ -4,6 +4,9 @@ import userEvent from '@testing-library/user-event';
 import GameScreen from './GameScreen';
 import { useGameStore } from '../../store/useGameStore';
 import { useUIStore } from '../../store/useUIStore';
+import * as useViewportModule from '../../utils/useViewport';
+
+const useViewportSpy = vi.spyOn(useViewportModule, 'useViewport');
 
 vi.mock('../board/HexMap', () => ({
   default: () => <div data-testid="hex-map" />,
@@ -19,6 +22,7 @@ vi.mock('./ExecutionPanel', () => ({
 
 describe('GameScreen', () => {
   beforeEach(() => {
+    useViewportSpy.mockReturnValue({ isTablet: false, isCoarsePointer: false } as any);
     useUIStore.getState().resetUI();
     useGameStore.setState({
       phase: 'execution',
@@ -81,7 +85,7 @@ describe('GameScreen', () => {
     render(<GameScreen />);
 
     expect(screen.getByTestId('execution-panel')).toBeInTheDocument();
-    expect(screen.getByText('Open Fleet Assets')).toBeInTheDocument();
+    expect(screen.getByText('⛟ FLEET ASSETS')).toBeInTheDocument();
     expect(screen.getByText('3 FF')).toBeInTheDocument();
   });
 
@@ -156,5 +160,50 @@ describe('GameScreen', () => {
       expect(screen.queryByTestId('enemy-tactic-unread-indicator')).not.toBeInTheDocument();
     });
     expect(screen.getByText('Overwhelming Firepower')).toBeInTheDocument();
+  });
+
+  it('renders tabbed UI for officers when on tablet viewport', async () => {
+    useViewportSpy.mockReturnValue({ isTablet: true, isCoarsePointer: true } as any);
+
+    useGameStore.setState({
+      phase: 'command', // So we don't render ExecutionPanel
+      players: [{
+        id: 'p1',
+        name: 'Player 1',
+        shipId: 's1',
+        officers: [
+          { officerId: 'vance', station: 'helm', currentStress: 1, currentTier: 'recruit', traumas: [], isLocked: false },
+          { officerId: 'scorch-malikov', station: 'weapons', currentStress: 0, currentTier: 'recruit', traumas: [{ id: 't1', name: 'Trauma' }], isLocked: true },
+        ],
+        commandTokens: 3,
+        maxCommandTokens: 5,
+        assignedActions: [],
+      } as any],
+    });
+
+    const user = userEvent.setup();
+    render(<GameScreen />);
+
+    // We should see tabs for HELM and WEAPONS
+    const helmTab = screen.getByRole('button', { name: /HELM/i });
+    const weaponsTab = screen.getByRole('button', { name: /WEAPONS/i });
+
+    expect(helmTab).toBeInTheDocument();
+    expect(weaponsTab).toBeInTheDocument();
+
+    // Helm is active by default (first sorted alphabetically)
+    expect(screen.getByTestId('officer-station-helm')).toBeInTheDocument();
+    expect(screen.queryByTestId('officer-station-weapons')).not.toBeInTheDocument();
+
+    // Weapons has a lock and a trauma
+    expect(screen.getByText('LOCKED')).toBeInTheDocument();
+    expect(screen.getByText('⚠ 1 TRAUMA')).toBeInTheDocument();
+
+    // Click weapons tab
+    await user.click(weaponsTab);
+
+    // Now Weapons panel is active
+    expect(screen.queryByTestId('officer-station-helm')).not.toBeInTheDocument();
+    expect(screen.getByTestId('officer-station-weapons')).toBeInTheDocument();
   });
 });

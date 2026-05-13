@@ -24,7 +24,7 @@ function SelectField(
   );
 }
 
-export default function FleetAssetsPanel() {
+export default function FleetAssetsPanel({ asFab = false }: { asFab?: boolean } = {}) {
   const fleetFavor = useGameStore(s => s.fleetFavor);
   const players = useGameStore(s => s.players);
   const playerShips = useGameStore(s => s.playerShips);
@@ -87,15 +87,71 @@ export default function FleetAssetsPanel() {
 
   return (
     <>
-      <div className="panel panel--raised" style={{ padding: 'var(--space-md)' }}>
-        <div className="label" style={{ marginBottom: 'var(--space-sm)', color: 'var(--color-alert-amber)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span>Fleet Assets</span>
-          <span className="mono" style={{ color: 'var(--color-text-secondary)' }}>{fleetFavor} FF</span>
-        </div>
-        <button className="btn" style={{ width: '100%' }} onClick={() => setOpen(true)}>
-          Open Fleet Assets
+      {/* FAB trigger: floating button on the hex map pane */}
+      {asFab ? (
+        <button
+          onClick={() => setOpen(true)}
+          style={{
+            position: 'absolute',
+            bottom: 'var(--space-lg)',
+            left: 'var(--space-lg)',
+            zIndex: 120,
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            border: '2px solid var(--color-alert-amber)',
+            background: 'rgba(10, 18, 28, 0.92)',
+            boxShadow: '0 0 16px rgba(255, 181, 71, 0.35), 0 2px 8px rgba(0,0,0,0.5)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            gap: '2px',
+            backdropFilter: 'blur(4px)',
+            transition: 'box-shadow 0.2s ease, transform 0.15s ease',
+          }}
+          title={`Fleet Assets — ${fleetFavor} FF`}
+          aria-label="Open Fleet Assets"
+        >
+          {/* Ship-wheel / assets icon */}
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--color-alert-amber)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="3" />
+            <line x1="12" y1="2" x2="12" y2="6" />
+            <line x1="12" y1="18" x2="12" y2="22" />
+            <line x1="2" y1="12" x2="6" y2="12" />
+            <line x1="18" y1="12" x2="22" y2="12" />
+            <line x1="4.93" y1="4.93" x2="7.76" y2="7.76" />
+            <line x1="16.24" y1="16.24" x2="19.07" y2="19.07" />
+            <line x1="19.07" y1="4.93" x2="16.24" y2="7.76" />
+            <line x1="7.76" y1="16.24" x2="4.93" y2="19.07" />
+          </svg>
+          {/* FF badge */}
+          <span style={{
+            fontSize: '0.58rem',
+            fontFamily: 'var(--font-mono)',
+            color: 'var(--color-alert-amber)',
+            letterSpacing: '0.05em',
+            lineHeight: 1,
+          }}>
+            {fleetFavor} FF
+          </span>
         </button>
-      </div>
+      ) : (
+        /* Inline compact trigger (Settings toolbar row) */
+        <button
+          className="btn"
+          style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px' }}
+          onClick={() => setOpen(true)}
+        >
+          <span style={{ color: 'var(--color-alert-amber)', fontSize: '0.75rem', fontWeight: 'bold', letterSpacing: '0.06em' }}>
+            ⛟ FLEET ASSETS
+          </span>
+          <span className="mono" style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>
+            {fleetFavor} FF
+          </span>
+        </button>
+      )}
 
       {open && (
         <div style={{

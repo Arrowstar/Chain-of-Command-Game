@@ -4,7 +4,8 @@ import CommandToken from './CommandToken';
 import { getScarImpactLegendText, getScarStatusMeta, getScarTooltip } from './scarStatus';
 import { getCurrentCtDisplayState } from '../../engine/commandTokens';
 import { useViewport } from '../../utils/useViewport';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import TouchTooltipPortal from '../TouchTooltipPortal';
 
 export default function CaptainHand({ playerId }: { playerId?: string }) {
   const players = useGameStore(s => s.players);
@@ -15,6 +16,10 @@ export default function CaptainHand({ playerId }: { playerId?: string }) {
   const player = playerId ? players.find(p => p.id === playerId) : players[0];
   const { isCoarsePointer } = useViewport();
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+
+  const summaryRef = useRef<HTMLDivElement>(null);
+  const modRefs = useRef<Record<string, HTMLSpanElement | null>>({});
+  const scarRefs = useRef<Record<string, HTMLSpanElement | null>>({});
 
   if (!player) return null;
   const ship = playerShips.find(entry => entry.id === player.shipId);
@@ -49,6 +54,7 @@ export default function CaptainHand({ playerId }: { playerId?: string }) {
         </span>
       </div>
       <div
+        ref={summaryRef}
         className="mono"
         title={isCoarsePointer ? undefined : ctSummaryTooltip}
         onClick={(e) => {
@@ -72,10 +78,10 @@ export default function CaptainHand({ playerId }: { playerId?: string }) {
         <span>Base {ctDisplay.baseCt} CT</span>
         <span>Round Start {ctDisplay.roundStartCt}</span>
         <span>Live Pool {ctDisplay.totalTokensThisRound}</span>
-        {isCoarsePointer && activeTooltip === 'ct-summary' && (
-          <div className="touch-tooltip" style={{ bottom: 'calc(100% + 10px)' }}>
+        {isCoarsePointer && (
+          <TouchTooltipPortal show={activeTooltip === 'ct-summary'} anchorRef={summaryRef}>
             {ctSummaryTooltip.split('\n').map((line, i) => <div key={i}>{line}</div>)}
-          </div>
+          </TouchTooltipPortal>
         )}
       </div>
       {ctDisplay.modifiers.length > 0 && (
@@ -83,6 +89,7 @@ export default function CaptainHand({ playerId }: { playerId?: string }) {
           {ctDisplay.modifiers.map(modifier => (
             <span
               key={modifier.id}
+              ref={el => { modRefs.current[modifier.id] = el; }}
               className="mono"
               title={isCoarsePointer ? undefined : modifier.description}
               onClick={(e) => {
@@ -103,8 +110,10 @@ export default function CaptainHand({ playerId }: { playerId?: string }) {
               }}
             >
               {modifier.label}
-              {isCoarsePointer && activeTooltip === `mod-${modifier.id}` && (
-                <div className="touch-tooltip" style={{ bottom: 'calc(100% + 10px)' }}>{modifier.description}</div>
+              {isCoarsePointer && (
+                <TouchTooltipPortal show={activeTooltip === `mod-${modifier.id}`} anchorRef={{ current: modRefs.current[modifier.id] }}>
+                  {modifier.description}
+                </TouchTooltipPortal>
               )}
             </span>
           ))}
@@ -162,6 +171,7 @@ export default function CaptainHand({ playerId }: { playerId?: string }) {
               return (
                 <span
                   key={scar.id}
+                  ref={el => { scarRefs.current[scar.id] = el; }}
                   title={isCoarsePointer ? undefined : getScarTooltip(scar)}
                   onClick={(e) => {
                     if (isCoarsePointer) {
@@ -182,8 +192,10 @@ export default function CaptainHand({ playerId }: { playerId?: string }) {
                   }}
                 >
                   {meta.shortImpact}
-                  {isCoarsePointer && isSelected && (
-                    <div className="touch-tooltip" style={{ bottom: 'calc(100% + 10px)' }}>{getScarTooltip(scar)}</div>
+                  {isCoarsePointer && (
+                    <TouchTooltipPortal show={isSelected} anchorRef={{ current: scarRefs.current[scar.id] }}>
+                      {getScarTooltip(scar)}
+                    </TouchTooltipPortal>
                   )}
                 </span>
               );

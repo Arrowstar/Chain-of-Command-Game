@@ -8,6 +8,7 @@ import type { OfficerData, OfficerState, PlayerState, ShipArc, ShipState } from 
 import { useViewport } from '../../utils/useViewport';
 import { getMaxStress } from '../../engine/stress';
 import { getOfficerById } from '../../data/officers';
+import TouchTooltipPortal from '../TouchTooltipPortal';
 import { getWeaponById } from '../../data/weapons';
 import { getSubsystemById } from '../../data/subsystems';
 import { getChassisById } from '../../data/shipChassis';
@@ -743,8 +744,10 @@ function StatusBadge({
   isCoarse: boolean;
 }) {
   const isSelected = activeTooltip === `badge-${id}`;
+  const badgeRef = useRef<HTMLSpanElement>(null);
   return (
     <span
+      ref={badgeRef}
       className="fleet-status-badge"
       style={{ borderColor: color, color, position: 'relative', cursor: isCoarse ? 'pointer' : 'help' }}
       title={isCoarse ? undefined : tooltip}
@@ -756,8 +759,10 @@ function StatusBadge({
       }}
     >
       {label}
-      {isCoarse && isSelected && (
-        <div className="touch-tooltip" style={{ bottom: 'calc(100% + 10px)' }}>{tooltip}</div>
+      {isCoarse && (
+        <TouchTooltipPortal show={isSelected} anchorRef={badgeRef}>
+          {tooltip}
+        </TouchTooltipPortal>
       )}
     </span>
   );

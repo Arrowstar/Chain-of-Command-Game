@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useGameStore } from '../../store/useGameStore';
+import TouchTooltipPortal from '../TouchTooltipPortal';
 import { getActionsByStation } from '../../data/actions';
 import ActionSlot from './ActionSlot';
 import StressBar from './StressBar';
@@ -39,6 +40,9 @@ export default function OfficerStationPanel({ officerState, playerId }: OfficerS
   const clearTokenSelection = useTokenSelectionStore(s => s.clearSelection);
   const { isCoarsePointer } = useViewport();
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+
+  const nameRef = useRef<HTMLHeadingElement>(null);
+  const traitRef = useRef<HTMLDivElement>(null);
 
   if (!officerState || !officerData || !player) return null;
 
@@ -128,6 +132,7 @@ export default function OfficerStationPanel({ officerState, playerId }: OfficerS
           />
           <div>
             <h3
+              ref={nameRef}
               title={isCoarsePointer ? undefined : officerAbilityTooltip}
               onClick={(e) => {
                 if (isCoarsePointer) {
@@ -138,8 +143,10 @@ export default function OfficerStationPanel({ officerState, playerId }: OfficerS
               style={{ color: 'var(--color-holo-cyan)', fontSize: '1rem', margin: '0 0 4px 0', cursor: 'help', position: 'relative' }}
             >
               {officerData.name}
-              {isCoarsePointer && activeTooltip === 'ability' && (
-                <div className="touch-tooltip">{officerAbilityTooltip}</div>
+              {isCoarsePointer && (
+                <TouchTooltipPortal show={activeTooltip === 'ability'} anchorRef={nameRef}>
+                  {officerAbilityTooltip}
+                </TouchTooltipPortal>
               )}
             </h3>
             <div className="label" style={{ color: 'var(--color-text-secondary)' }}>
@@ -149,6 +156,7 @@ export default function OfficerStationPanel({ officerState, playerId }: OfficerS
         </div>
         <div style={{ textAlign: 'right' }}>
           <div 
+            ref={traitRef}
             className="label" 
             style={{ color: 'var(--color-alert-amber)', cursor: 'help', position: 'relative' }}
             title={isCoarsePointer ? undefined : officerAbilityTooltip}
@@ -160,8 +168,10 @@ export default function OfficerStationPanel({ officerState, playerId }: OfficerS
             }}
           >
             {officerData.traitName}
-            {isCoarsePointer && activeTooltip === 'ability' && (
-              <div className="touch-tooltip" style={{ right: 0, left: 'auto', transform: 'none' }}>{officerAbilityTooltip}</div>
+            {isCoarsePointer && (
+              <TouchTooltipPortal show={activeTooltip === 'ability'} anchorRef={traitRef}>
+                {officerAbilityTooltip}
+              </TouchTooltipPortal>
             )}
           </div>
           <div className="mono" style={{ fontSize: '0.7rem' }}>Rank: {officerState.currentTier.toUpperCase()}</div>
