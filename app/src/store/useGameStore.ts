@@ -2388,6 +2388,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           logEntryId?: string;
         }
         const allDamageResults: CombatResolutionRecord[] = [];
+        const deferredCrits: { type: 'player' | 'enemy', targetName: string, card: CriticalDamageCard, isMagazineExplosion?: boolean, isEnemyShieldCollapse?: boolean }[] = [];
         // const anyHullDamageThisAction = false; // for Overclocked Reactors crit trigger
         
         let usedSurgicalStrike = false;
@@ -2811,17 +2812,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
                           // Immediate one-shot: strip all shields to 0, then discard
                           const zeroShields = { fore: 0, foreStarboard: 0, aftStarboard: 0, aft: 0, aftPort: 0, forePort: 0 };
                           get().updateEnemyShip(targetId, { shields: zeroShields });
-                          get().addLog('critical', `══& CRITICAL HIT! ${target.name} suffered: ${critCard.name}! (All shields immediately reduced to 0)`);
-                          fireCombatToast({ type: 'critical', message: `★ CRITICAL HIT — ${target.name}: ${critCard.name}!` });
-                          useUIStore.getState().queueModal('critical', { card: critCard });
+                          deferredCrits.push({ type: 'enemy', targetName: target.name, card: critCard, isEnemyShieldCollapse: true });
                         } else {
                           get().updateEnemyShip(targetId, {
                               criticalDamage: [...currentEnemy.criticalDamage, critCard],
                               hasDroppedBelow50: ('currentHull' in target ? (target as any).currentHull : 0) > targetMaxHull / 2 && (targetUpdates.currentHull ?? 0) <= targetMaxHull / 2
                           });
-                          get().addLog('critical', `══& CRITICAL HIT! ${target.name} suffered: ${critCard.name}!`);
-                          fireCombatToast({ type: 'critical', message: `★ CRITICAL HIT — ${target.name}: ${critCard.name}!` });
-                          useUIStore.getState().queueModal('critical', { card: critCard });
+                          deferredCrits.push({ type: 'enemy', targetName: target.name, card: critCard });
                         }
                     }
                 } else {
@@ -2838,9 +2835,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                             targetUpdates.currentHull = newHull;
                             if (newHull === 0) targetUpdates.isDestroyed = true;
                             
-                            get().addLog('critical', `══& CRITICAL HIT! ${target.name} suffered: ${critCard.name}! (Immediate 2 Hull Damage)`);
-                            fireCombatToast({ type: 'critical', message: `★ CRITICAL HIT — ${target.name}: ${critCard.name}!` });
-                            useUIStore.getState().queueModal('critical', { card: critCard });
+                            deferredCrits.push({ type: 'player', targetName: target.name, card: critCard, isMagazineExplosion: true });
                         } else {
                             targetUpdates.criticalDamage = [...(currentPlayerShip.criticalDamage || []), critCard];
                             targetUpdates.hasDroppedBelow50 = ('currentHull' in target ? (target as any).currentHull : 0) > targetMaxHull / 2 && (targetUpdates.currentHull ?? 0) <= targetMaxHull / 2;
@@ -2849,9 +2844,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                                 targetUpdates.currentSpeed = 0;
                             }
                             
-                            get().addLog('critical', `══& CRITICAL HIT! ${target.name} suffered: ${critCard.name}!`);
-                            fireCombatToast({ type: 'critical', message: `★ CRITICAL HIT — ${target.name}: ${critCard.name}!` });
-                            useUIStore.getState().queueModal('critical', { card: critCard });
+                            deferredCrits.push({ type: 'player', targetName: target.name, card: critCard });
                         }
                     }
 
@@ -3057,6 +3050,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 weaponName: weapon.name,
             });
         }
+        
+        deferredCrits.forEach(crit => {
+            let msg = `══& CRITICAL HIT! ${crit.targetName} suffered: ${crit.card.name}!`;
+            if (crit.isMagazineExplosion) msg += ` (Immediate 2 Hull Damage)`;
+            if (crit.isEnemyShieldCollapse) msg += ` (All shields immediately reduced to 0)`;
+            get().addLog('critical', msg);
+            fireCombatToast({ type: 'critical', message: `★ CRITICAL HIT — ${crit.targetName}: ${crit.card.name}!` });
+            useUIStore.getState().queueModal('critical', { card: crit.card });
+        });
         break;
       }
 
@@ -3820,6 +3822,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       });
 
       // Apply damage to targets (could be player ships or allied enemy ships)
+      const deferredCrits: { targetName: string, card: CriticalDamageCard, isMagazineExplosion?: boolean }[] = [];
       playerDamage.forEach((dmg: { targetId: string; hullDamage: number; shieldDamage: number; sector: import('../types/game').ShipArc; officerStress?: number; attackerId: string; criticalTriggered?: boolean }) => {
         const liveState = get();
         const playerShip = liveState.playerShips.find(s => s.id === dmg.targetId);
@@ -3844,9 +3847,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
               updates.currentHull = newHull;
               if (newHull === 0) updates.isDestroyed = true;
               
-              get().addLog('critical', `══& CRITICAL HIT! ${playerShip.name} suffered: ${critCard.name}! (Immediate 2 Hull Damage)`);
-              fireCombatToast({ type: 'critical', message: `★ CRITICAL HIT — ${playerShip.name}: ${critCard.name}!` });
-              useUIStore.getState().queueModal('critical', { card: critCard });
+              deferredCrits.push({ targetName: playerShip.name, card: critCard, isMagazineExplosion: true });
             } else {
               updates.criticalDamage = [...playerShip.criticalDamage, critCard];
               
@@ -3854,9 +3855,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 updates.currentSpeed = 0;
               }
               
-              get().addLog('critical', `══& CRITICAL HIT! ${playerShip.name} suffered: ${critCard.name}!`);
-              fireCombatToast({ type: 'critical', message: `★ CRITICAL HIT — ${playerShip.name}: ${critCard.name}!` });
-              useUIStore.getState().queueModal('critical', { card: critCard });
+              deferredCrits.push({ targetName: playerShip.name, card: critCard });
             }
           }
 
@@ -4035,6 +4034,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return state;
           });
         });
+      });
+
+      deferredCrits.forEach(crit => {
+        let msg = `══& CRITICAL HIT! ${crit.targetName} suffered: ${crit.card.name}!`;
+        if (crit.isMagazineExplosion) msg += ` (Immediate 2 Hull Damage)`;
+        get().addLog('critical', msg);
+        fireCombatToast({ type: 'critical', message: `★ CRITICAL HIT — ${crit.targetName}: ${crit.card.name}!` });
+        useUIStore.getState().queueModal('critical', { card: crit.card });
       });
 
       // Log player damage summary

@@ -366,11 +366,7 @@ export function resolveAttack(
   }
 
   // Check critical damage trigger
-  const newHull = defenderCurrentHull - hullDamage;
-  const below50 = newHull <= defenderMaxHull / 2;
-  const criticalTriggered =
-    hullDamage >= 3 ||
-    (below50 && !defenderHasDroppedBelow50);
+  const criticalTriggered = hullDamage >= 3;
 
   return {
     // In Ion Nebula: shieldHits = 0 (no shields were actually struck)

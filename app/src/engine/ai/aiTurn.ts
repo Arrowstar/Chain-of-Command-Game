@@ -395,7 +395,7 @@ export function executeAITier(
           sector,
           officerStress: piercingHits > 0 ? effectiveTacticCard?.mechanicalEffect.criticalStressBonus : undefined,
           attackerId: aiShip.id,
-          criticalTriggered: piercingHits > 0,
+          criticalTriggered: hullDmg >= 3,
         });
         actions.push({
           shipId: aiShip.id, type: 'attack', details: {
@@ -408,7 +408,7 @@ export function executeAITier(
               hullDamage: hullDmg,
               overflowHits: overflow,
               armorRoll: armorRoll,
-              criticalTriggered: piercingHits > 0,
+              criticalTriggered: hullDmg >= 3,
               shieldRemaining: targetInIonNebula ? shieldVal : shieldVal - shieldDmg,
               armorDie: target.armorDie || 'd4',
               ionNebulaActive: targetInIonNebula || undefined,
