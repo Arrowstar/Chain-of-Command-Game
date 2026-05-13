@@ -1206,8 +1206,15 @@ export default function HexMap() {
   // ─── Mouse handlers ─────────────────────────────────
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
-    zoomCamera(e.deltaY > 0 ? -0.1 : 0.1);
-  }, [zoomCamera]);
+    if (e.ctrlKey) {
+      // Trackpad pinch-to-zoom (ctrlKey is true)
+      // deltaY is the pinch amount
+      zoomCamera(e.deltaY > 0 ? -0.1 : 0.1);
+    } else {
+      // Normal wheel or 2-finger swipe on trackpad -> Pan the map
+      panCamera(-e.deltaX, -e.deltaY);
+    }
+  }, [zoomCamera, panCamera]);
 
   const handlePointerDown = (e: React.PointerEvent) => {
     // Track every pointer (finger / pen / mouse) for pinch detection
