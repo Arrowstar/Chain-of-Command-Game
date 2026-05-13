@@ -351,6 +351,7 @@ export default function SectorMapView() {
         onMouseMove={handleNodeMove}
         onMouseLeave={handleNodeLeave}
         data-testid={`node-${node.id}`}
+        role={(isSelectable || isCurrent) ? "button" : undefined}
       >
         {/* Outer hexagon shell */}
         <polygon
