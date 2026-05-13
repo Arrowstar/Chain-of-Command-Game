@@ -5,7 +5,17 @@ import App from './App';
 import SettingsModal from './components/SettingsModal';
 import { useSettingsStore } from './store/useSettingsStore';
 
-// ── Global button sounds ──────────────────────────────────────────────────────
+// ── Orientation lock ──────────────────────────────────────────────────────────
+// Attempt to lock the screen to landscape. Works in Chrome/Android and when the
+// app is installed as a PWA. Falls back silently on iOS Safari in-browser.
+if (screen?.orientation?.lock) {
+  screen.orientation.lock('landscape').catch(() => { /* Not supported in-browser on iOS */ });
+}
+// Prevent native context menu (long-press magnifier on iOS) from interrupting
+// our DnD drag gestures globally.
+document.addEventListener('contextmenu', (e) => e.preventDefault());
+// ─────────────────────────────────────────────────────────────────────────────
+
 const _clickSound = new Audio('/assets/sounds/button-click.wav');
 const _hoverSound = new Audio('/assets/sounds/button-hover.wav');
 

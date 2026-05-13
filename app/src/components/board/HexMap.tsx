@@ -15,6 +15,7 @@ import { getTerrainColor, drawHexPolygon, drawShipTriangle, drawShipShields, att
 import { getFighterClassById } from '../../data/fighters';
 import { getValidTargetsForWeapon } from '../../engine/combat';
 import { createWeaponFireAnimation, type ActiveFireAnimation } from '../../engine/weaponFireAnimations';
+import { playCombatSfx } from '../../utils/useCombatSfx';
 
 import { getSubsystemById } from '../../data/subsystems';
 import { projectDriftPreview } from '../../engine/movement';
@@ -201,6 +202,8 @@ export default function HexMap() {
       const anim   = createWeaponFireAnimation(event, fromPx, toPx);
       layersRef.current.animations!.addChild(anim.gfx);
       activeAnimationsRef.current.set(event.id, anim);
+      // Play combat SFX synchronized to animation spawn
+      playCombatSfx(event);
       // Remove from queue so we don't re-spawn on the next render cycle
       useUIStore.getState().consumeFireAnimation(event.id);
     });

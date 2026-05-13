@@ -2661,6 +2661,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 targetPos: target.position,
                 weaponTags: weapon.tags ?? [],
                 isEnemy: false,
+                outcome: damageResult.hullDamage > 0 ? 'hull-hit'
+                       : damageResult.shieldHits > 0 ? 'shield-hit'
+                       : 'miss',
               });
             }
 
@@ -3954,12 +3957,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
           const defenderState = [...get().playerShips, ...get().enemyShips].find(s => s.id === det.target);
           let fireAnimation: import('../types/game').WeaponFireEvent | undefined = undefined;
           if (attackingShip && defenderState) {
+            const faDet = det as { hullDmg?: number; shieldDmg?: number; damageResult?: import('../engine/combat').DamageResult };
+            const faHull  = (faDet.hullDmg  ?? 0) as number;
+            const faShield = (faDet.shieldDmg ?? 0) as number;
+            const adv = getAdversaryById(attackingShip.adversaryId);
             fireAnimation = {
               id: `fire-enemy-${a.shipId}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
               attackerPos: attackingShip.position,
               targetPos: defenderState.position,
-              weaponTags: [], // AI ships have no weapon tag metadata; default to beam
+              weaponTags: adv?.weaponTags ?? [], // use adversary weapon tags if available
               isEnemy: attackingShip.faction === 'hegemony',
+              outcome: faHull  > 0 ? 'hull-hit'
+                     : faShield > 0 ? 'shield-hit'
+                     : 'miss',
             };
           }
 
@@ -4145,12 +4155,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
             // ─── Station weapon fire animation event ───────────────────────────
             const stationDefender = [...get().playerShips, ...get().enemyShips].find(s => s.id === det.target);
             if (station && stationDefender) {
+              const staDet = det as { hullDmg?: number; shieldDmg?: number };
+              const staHull   = (staDet.hullDmg   ?? 0) as number;
+              const staShield = (staDet.shieldDmg  ?? 0) as number;
+              const stationData2 = getStationById(station.stationId);
               useUIStore.getState().queueFireAnimation({
                 id: `fire-station-${a.stationId}-${Date.now()}`,
                 attackerPos: station.position,
                 targetPos: stationDefender.position,
-                weaponTags: [], // Stations use generic beam; isHeavy could refine this later
+                weaponTags: stationData2?.weaponTags ?? [],
                 isEnemy: true,
+                outcome: staHull   > 0 ? 'hull-hit'
+                       : staShield > 0 ? 'shield-hit'
+                       : 'miss',
               });
             }
 

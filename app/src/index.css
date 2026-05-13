@@ -109,9 +109,11 @@ html, body, #root {
 }
 
 /* Prevent text selection during gameplay drag interactions */
+/* Also suppresses iOS Safari's long-press callout (magnifier/share) */
 .no-select {
   user-select: none;
   -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 /* ─── Typography ─────────────────────────────────────────────────── */
@@ -1360,6 +1362,13 @@ h4 { font-size: 1rem;   font-weight: 500; }
   /* Suppress hover lift animations — no hover on touch */
   .btn:hover {
     transform: none;
+  }
+
+  /* Immediate tactile depression feedback on tap */
+  .btn:active {
+    transform: scale(0.95);
+    opacity: 0.85;
+    transition: transform 0.05s ease, opacity 0.05s ease;
   }
 
   /* Wider, easier-to-hit scrollbar thumb */

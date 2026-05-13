@@ -1032,4 +1032,13 @@ export interface WeaponFireEvent {
   weaponTags: WeaponTag[];
   /** true = attacker is enemy/station; false = player-allied */
   isEnemy: boolean;
+  /**
+   * Combat outcome — used exclusively by the audio layer to select the
+   * correct impact sound. Carries no game state.
+   * - 'hull-hit'    : attack dealt hull damage
+   * - 'shield-hit'  : attack hit shields only (no hull damage)
+   * - 'miss'        : volley scored zero hits
+   * Omitted for pure visual events (explosions, torpedo travel).
+   */
+  outcome?: 'hull-hit' | 'shield-hit' | 'miss';
 }
