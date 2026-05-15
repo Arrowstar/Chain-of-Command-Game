@@ -1807,16 +1807,7 @@ body.is-phone .fleet-builder-officer-col {
   flex: 1 1 200px;
 }
 
-body.is-phone .fleet-status-rail-overlay {
-  flex-direction: column;
-  padding: 56px 8px 8px 8px;
-  justify-content: flex-start;
-  align-items: flex-start;
-}
 
-body.is-phone .fleet-status-side-rail {
-  width: 100%;
-}
 
 body.is-phone .fleet-status-card {
   width: 100%;

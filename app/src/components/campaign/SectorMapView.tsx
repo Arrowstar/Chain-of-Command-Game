@@ -138,7 +138,8 @@ export default function SectorMapView() {
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const { isCoarsePointer } = useViewport();
+  const { isPhone, isCoarsePointer } = useViewport();
+  const [isMobileFleetStatusOpen, setIsMobileFleetStatusOpen] = useState(false);
 
   useBgm('/assets/music/Iron_Steps_on_Frozen_Ground.mp4', 0.15);
 
@@ -489,35 +490,73 @@ export default function SectorMapView() {
         </div>
       </div>
 
-      {/* ── Fleet Status Side Rails ── */}
-      <div className="fleet-status-rail-overlay" data-testid="fleet-status-rail">
-        <div className="fleet-status-side-rail fleet-status-side-rail--left">
-          {persistedPlayers.slice(0, 2).map(player => {
-            const ship = persistedShips.find(candidate => candidate.id === player.shipId);
-            return (
-              <FleetStatusCard
-                key={player.id}
-                player={player}
-                ship={ship}
-                officerDataMap={officerDataMap}
-              />
-            );
-          })}
+      {/* ── Fleet Status Side Rails (Desktop/Tablet) ── */}
+      {!isPhone && (
+        <div className="fleet-status-rail-overlay" data-testid="fleet-status-rail">
+          <div className="fleet-status-side-rail fleet-status-side-rail--left">
+            {persistedPlayers.slice(0, 2).map(player => {
+              const ship = persistedShips.find(candidate => candidate.id === player.shipId);
+              return (
+                <FleetStatusCard
+                  key={player.id}
+                  player={player}
+                  ship={ship}
+                  officerDataMap={officerDataMap}
+                />
+              );
+            })}
+          </div>
+          <div className="fleet-status-side-rail fleet-status-side-rail--right">
+            {persistedPlayers.slice(2, 4).map(player => {
+              const ship = persistedShips.find(candidate => candidate.id === player.shipId);
+              return (
+                <FleetStatusCard
+                  key={player.id}
+                  player={player}
+                  ship={ship}
+                  officerDataMap={officerDataMap}
+                />
+              );
+            })}
+          </div>
         </div>
-        <div className="fleet-status-side-rail fleet-status-side-rail--right">
-          {persistedPlayers.slice(2, 4).map(player => {
-            const ship = persistedShips.find(candidate => candidate.id === player.shipId);
-            return (
-              <FleetStatusCard
-                key={player.id}
-                player={player}
-                ship={ship}
-                officerDataMap={officerDataMap}
-              />
-            );
-          })}
-        </div>
-      </div>
+      )}
+
+      {/* ── Mobile Fleet Status (Phone) ── */}
+      {isPhone && (
+        <>
+          <div style={{ position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)', zIndex: 50 }}>
+            <button className="btn btn--execute" style={{ padding: '12px 32px', borderRadius: '32px', boxShadow: '0 4px 16px rgba(0, 255, 120, 0.25)', fontSize: '1rem', letterSpacing: '0.05em' }} onClick={() => setIsMobileFleetStatusOpen(true)}>
+              FLEET STATUS
+            </button>
+          </div>
+          {isMobileFleetStatusOpen && (
+            <div style={{
+              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+              backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 999,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 'var(--space-md)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: 'var(--space-md)' }}>
+                <h3 style={{ color: 'var(--color-holo-cyan)', margin: 0, fontSize: '1.2rem', letterSpacing: '0.05em' }}>FLEET STATUS</h3>
+                <button className="btn" style={{ padding: '6px 12px', fontSize: '0.9rem' }} onClick={() => setIsMobileFleetStatusOpen(false)}>CLOSE</button>
+              </div>
+              <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 'var(--space-md)', overflowY: 'auto', paddingBottom: '80px' }}>
+                {persistedPlayers.map(player => {
+                  const ship = persistedShips.find(candidate => candidate.id === player.shipId);
+                  return (
+                    <FleetStatusCard
+                      key={player.id}
+                      player={player}
+                      ship={ship}
+                      officerDataMap={officerDataMap}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </>
+      )}
 
       {/* ── Tooltip ── */}
       {tooltip.visible && tooltip.node && (
