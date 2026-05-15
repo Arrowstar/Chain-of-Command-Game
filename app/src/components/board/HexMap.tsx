@@ -178,8 +178,39 @@ export default function HexMap() {
       });
     });
 
-    // Center the camera on hex (0,0) which is the player's starting position
-    useUIStore.getState().setCameraPosition(w / 2, h / 2, 1);
+    // Initial Camera Positioning
+    const state = useGameStore.getState();
+    if (state.deploymentMode) {
+      const playerPositions = state.playerShips.map(s => hexToPixel(s.position));
+      let cx = 0;
+      let cy = 0;
+      if (playerPositions.length > 0) {
+        cx = playerPositions.reduce((sum, p) => sum + p.x, 0) / playerPositions.length;
+        cy = playerPositions.reduce((sum, p) => sum + p.y, 0) / playerPositions.length;
+      }
+      
+      const allPositions = [...state.playerShips, ...state.enemyShips].map(s => hexToPixel(s.position));
+      let maxDx = 0;
+      let maxDy = 0;
+      for (const p of allPositions) {
+        maxDx = Math.max(maxDx, Math.abs(p.x - cx));
+        maxDy = Math.max(maxDy, Math.abs(p.y - cy));
+      }
+      
+      // Ensure a minimum distance to prevent infinite zoom if all ships are on the same hex
+      maxDx = Math.max(maxDx, 200);
+      maxDy = Math.max(maxDy, 200);
+      
+      // Calculate zoom to fit all ships within 80% of the screen
+      const zoomX = (w * 0.4) / maxDx;
+      const zoomY = (h * 0.4) / maxDy;
+      const targetZoom = Math.max(0.2, Math.min(1.2, zoomX, zoomY));
+      
+      useUIStore.getState().setCameraPosition(w / 2 - cx * targetZoom, h / 2 - cy * targetZoom, targetZoom);
+    } else {
+      // Center the camera on hex (0,0) which is the player's starting position
+      useUIStore.getState().setCameraPosition(w / 2, h / 2, 1);
+    }
 
     return () => {
       app.destroy(true, { children: true });
