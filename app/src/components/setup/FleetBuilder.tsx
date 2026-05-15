@@ -12,6 +12,7 @@ import { HexFacing } from '../../types/game';
 import { isInFiringArc, hexDistance } from '../../engine/hexGrid';
 import type { CustomScenarioConfig } from './ScenarioEditor';
 import SettingsButton from '../SettingsButton';
+import { useViewport } from '../../utils/useViewport';
 
 const WEAPON_COLORS = ['#4FD1C5', '#F6E05E', '#F6AD55', '#FC8181', '#B794F4', '#63B3ED'];
 const ARC_INDEX: Record<string, number> = { 'fore': 0, 'foreStarboard': 1, 'aftStarboard': 2, 'aft': 3, 'aftPort': 4, 'forePort': 5 };
@@ -114,7 +115,7 @@ function getHexGridPath(cx: number, cy: number, hexSize: number, q: number, r: n
   return `M ${pts[0]} L ${pts[1]} L ${pts[2]} L ${pts[3]} L ${pts[4]} L ${pts[5]} Z`;
 }
 
-function ShipLoadoutPreview({ chassis, selectedWeaponIds, hoveredWeaponId }: { chassis: any, selectedWeaponIds: string[], hoveredWeaponId?: string | null }) {
+function ShipLoadoutPreview({ chassis, selectedWeaponIds, hoveredWeaponId, isPhone }: { chassis: any, selectedWeaponIds: string[], hoveredWeaponId?: string | null, isPhone?: boolean }) {
   const cx = 150;
   const cy = 150;
   const hexSize = 16; 
@@ -142,10 +143,10 @@ function ShipLoadoutPreview({ chassis, selectedWeaponIds, hoveredWeaponId }: { c
   const bgGridD = allHexCoords.map(h => getHexGridPath(cx, cy, hexSize, h.q, h.r)).join(' ');
 
   return (
-    <div className="panel panel--raised" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '320px' }}>
+    <div className="panel panel--raised" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: isPhone ? '100%' : '320px' }}>
       <div className="label" style={{ color: 'var(--color-holo-cyan)', marginBottom: 'var(--space-md)', alignSelf: 'flex-start' }}>LOADOUT PREVIEW</div>
       
-      <svg width="240" height="240" viewBox="0 0 300 300" style={{ background: 'var(--color-bg-deep)', borderRadius: '50%', border: '1px solid var(--color-border)', marginBottom: 'var(--space-md)' }}>
+      <svg width={isPhone ? "200" : "240"} height={isPhone ? "200" : "240"} viewBox="0 0 300 300" style={{ background: 'var(--color-bg-deep)', borderRadius: '50%', border: '1px solid var(--color-border)', marginBottom: 'var(--space-md)' }}>
         {/* Hex Grid Background */}
         <path d={bgGridD} fill="none" stroke="var(--color-border)" strokeWidth="0.8" opacity="0.4" />
 
@@ -248,6 +249,7 @@ interface FleetBuilderProps {
 }
 
 export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup, onCampaignStart, onSkirmishStart }: FleetBuilderProps) {
+  const { isPhone } = useViewport();
   const purchasableWeapons = getPurchasableWeapons();
   const purchasableSubsystems = getPurchasableSubsystems();
 
@@ -296,6 +298,7 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
   const [selectedSubsystems, setSelectedSubsystems] = useState<string[]>([]);
   const [weaponFilter, setWeaponFilter] = useState<'all' | 'energy' | 'kinetic' | 'missile'>('all');
   const [hoveredWeaponId, setHoveredWeaponId] = useState<string | null>(null);
+  const [activeModuleTab, setActiveModuleTab] = useState<'weapons' | 'subsystems' | 'preview'>('weapons');
 
   // Saves current UI state into the drafts array for the active player
   const saveCurrentDraftRef = React.useRef<() => void>(() => {});
@@ -931,7 +934,7 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
                     }}
                   />
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 'var(--space-md)' }}>
+                <div className="fleet-builder-chassis-grid">
                   {chassisList.map(chassis => (
                     <div 
                       key={chassis.id}
@@ -987,7 +990,7 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
             )}
             <div style={{ display: 'flex', gap: 'var(--space-md)', flexWrap: 'wrap' }}>
               {stations.map(station => (
-                <div key={station} className="panel panel--raised" style={{ flex: '1 1 300px' }}>
+                <div key={station} className="panel panel--raised fleet-builder-officer-col">
                   <div className="flex-between" style={{ marginBottom: 'var(--space-sm)', borderBottom: `1px solid ${STATION_COLORS[station]}44`, paddingBottom: '4px' }}>
                     <div className="label" style={{ color: STATION_COLORS[station], textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span style={{ fontSize: '1.1rem' }}>{STATION_ICONS[station]}</span>
@@ -1095,9 +1098,27 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
         {step === 3 && activeChassis && (
           <>
             <h3 style={{ color: 'var(--color-text-bright)' }}>Equip Weapons & Subsystems</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 1fr) minmax(300px, 1fr) minmax(300px, 1fr)', gap: 'var(--space-lg)' }}>
+            
+            {/* Phone Tabs */}
+            {isPhone && (
+              <div style={{ display: 'flex', gap: '4px', marginBottom: 'var(--space-md)' }}>
+                {['weapons', 'subsystems', 'preview'].map(tab => (
+                  <button
+                    key={tab}
+                    className={`btn ${activeModuleTab === tab ? 'btn--execute' : 'btn--secondary'}`}
+                    style={{ flex: 1, padding: '8px 4px', fontSize: '0.8rem' }}
+                    onClick={() => setActiveModuleTab(tab as any)}
+                  >
+                    {tab.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className={isPhone ? "" : "fleet-builder-modules-grid"}>
               
               {/* Weapons */}
+              {(!isPhone || activeModuleTab === 'weapons') && (
               <div className="panel panel--raised">
                 <div className="flex-between" style={{ marginBottom: 'var(--space-md)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1151,8 +1172,8 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
                           src={weapon.imagePath}
                           alt={weapon.name}
                           style={{
-                            width: '56px',
-                            height: '56px',
+                            width: isPhone ? '40px' : '56px',
+                            height: isPhone ? '40px' : '56px',
                             flexShrink: 0,
                             objectFit: 'cover',
                             borderRadius: '4px',
@@ -1242,8 +1263,10 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
                   </div>
                   )})}
               </div>
+              )}
 
               {/* Subsystems */}
+              {(!isPhone || activeModuleTab === 'subsystems') && (
               <div className="panel panel--raised">
                 <div className="flex-between" style={{ marginBottom: 'var(--space-md)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1282,8 +1305,8 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
                                 src={sub.imagePath}
                                 alt={sub.name}
                                 style={{
-                                  width: '56px',
-                                  height: '56px',
+                                  width: isPhone ? '40px' : '56px',
+                                  height: isPhone ? '40px' : '56px',
                                   flexShrink: 0,
                                   objectFit: 'cover',
                                   borderRadius: '4px',
@@ -1322,9 +1345,12 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
                   );
                 })}
               </div>
+              )}
 
               {/* Preview Segment */}
-              <ShipLoadoutPreview chassis={activeChassis} selectedWeaponIds={selectedWeapons} hoveredWeaponId={hoveredWeaponId} />
+              {(!isPhone || activeModuleTab === 'preview') && (
+                <ShipLoadoutPreview chassis={activeChassis} selectedWeaponIds={selectedWeapons} hoveredWeaponId={hoveredWeaponId} isPhone={isPhone} />
+              )}
 
             </div>
             

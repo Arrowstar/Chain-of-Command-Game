@@ -30,11 +30,11 @@ function App() {
   const [scenarioConfig, setScenarioConfig] = useState<CustomScenarioConfig | null>(null);
 
   useEffect(() => {
-    // Lock to portrait only for the main menu.
-    // Lock to landscape for all other modes (gameplay, builders, etc.)
+    // Lock to portrait for the main menu and fleet builders.
+    // Lock to landscape for all gameplay modes (skirmish, campaign, combat, etc.)
     const applyOrientation = async () => {
       try {
-        if (appMode === 'menu') {
+        if (appMode === 'menu' || appMode === 'skirmish-builder' || appMode === 'campaign-builder') {
           await ScreenOrientation.lock({ orientation: 'portrait' });
         } else {
           await ScreenOrientation.lock({ orientation: 'landscape' });

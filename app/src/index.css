@@ -1656,6 +1656,22 @@ h4 { font-size: 1rem;   font-weight: 500; }
 
 /* --- Settings Modal ----------------------------------------------- */
 
+.fleet-builder-modules-grid {
+  display: grid;
+  grid-template-columns: minmax(300px, 1fr) minmax(300px, 1fr) minmax(300px, 1fr);
+  gap: var(--space-lg);
+}
+
+.fleet-builder-chassis-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-md);
+}
+
+.fleet-builder-officer-col {
+  flex: 1 1 300px;
+}
+
 .settings-modal-backdrop {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -1778,7 +1794,19 @@ body.is-phone .panel {
   padding: var(--space-sm);
 }
 
-/* ─── Sector map fleet status cards ─────────────────────────────── */
+body.is-phone .fleet-builder-modules-grid {
+  grid-template-columns: 1fr;
+  gap: var(--space-md);
+}
+
+body.is-phone .fleet-builder-chassis-grid {
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+}
+
+body.is-phone .fleet-builder-officer-col {
+  flex: 1 1 200px;
+}
+
 body.is-phone .fleet-status-rail-overlay {
   flex-direction: column;
   padding: 56px 8px 8px 8px;
