@@ -491,7 +491,7 @@ export default function SectorMapView() {
       </div>
 
       {/* ── Fleet Status Side Rails (Desktop/Tablet) ── */}
-      {!isPhone && (
+      {!isPhone && campaign.campaignPhase === 'sectorMap' && (
         <div className="fleet-status-rail-overlay" data-testid="fleet-status-rail">
           <div className="fleet-status-side-rail fleet-status-side-rail--left">
             {persistedPlayers.slice(0, 2).map(player => {
@@ -523,7 +523,7 @@ export default function SectorMapView() {
       )}
 
       {/* ── Mobile Fleet Status (Phone) ── */}
-      {isPhone && (
+      {isPhone && campaign.campaignPhase === 'sectorMap' && (
         <>
           <div style={{ position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)', zIndex: 50 }}>
             <button className="btn btn--execute" style={{ padding: '12px 32px', borderRadius: '32px', boxShadow: '0 4px 16px rgba(0, 255, 120, 0.25)', fontSize: '1rem', letterSpacing: '0.05em' }} onClick={() => setIsMobileFleetStatusOpen(true)}>
