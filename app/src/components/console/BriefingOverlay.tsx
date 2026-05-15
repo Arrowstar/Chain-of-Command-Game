@@ -21,14 +21,14 @@ export default function BriefingOverlay() {
       backgroundColor: 'rgba(0, 10, 20, 0.95)',
       display: 'flex',
       flexDirection: 'column',
-      justifyContent: tutorialActive ? 'flex-start' : 'center',
+      justifyContent: 'flex-start',
       alignItems: 'center',
       zIndex: 100,
       padding: 'var(--space-xl)',
       paddingTop: tutorialActive ? '40px' : 'var(--space-xl)',
       overflowY: 'auto',
     }}>
-      <div id="briefing-overlay" className="panel panel--glow" style={{ width: '800px', maxWidth: '90vw', padding: 'var(--space-xl)' }}>
+      <div id="briefing-overlay" className="panel panel--glow" style={{ width: '800px', maxWidth: '90vw', padding: 'var(--space-xl)', margin: 'auto' }}>
         <h1 style={{ color: 'var(--color-holo-cyan)', textAlign: 'center', marginBottom: 'var(--space-md)' }}>
           ROUND {round} - INTELLIGENCE BRIEFING
         </h1>
