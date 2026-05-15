@@ -128,6 +128,9 @@ export default function VolleyBreakdown({ results, damageResult, outOfArc, weapo
         onClick={() => isCoarsePointer && setActiveTooltip(null)}
         style={{
           width: '500px',
+          maxWidth: 'calc(100vw - 24px)',
+          maxHeight: 'calc(100vh - 24px)',
+          overflowY: 'auto',
           background: 'var(--color-bg-panel)',
           zIndex: 1000,
           padding: 'var(--space-md)',

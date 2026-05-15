@@ -124,19 +124,8 @@ export default function MainMenu({ onStart, onStartCampaign, onContinueCampaign,
       </div>
 
       {/* Centre menu panel */}
-      <div style={{
-        position: 'absolute', inset: 0,
-        display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center',
-      }}>
-        <div className="panel panel--glow" style={{
-          padding: 'var(--space-lg)',
-          textAlign: 'center',
-          maxWidth: '600px',
-          width: '90%',
-          background: 'hsla(220, 30%, 8%, 0.85)',
-          backdropFilter: 'blur(6px)',
-        }}>
+      <div className="main-menu-center-wrapper">
+        <div className="panel panel--glow main-menu-panel">
           {/* Title with typewriter + glitch */}
           <h1
             className={titleDone ? 'main-menu-title-glitch' : ''}
@@ -163,14 +152,13 @@ export default function MainMenu({ onStart, onStartCampaign, onContinueCampaign,
             STELLAR WAR
           </div>
 
-          <p style={{ color: 'var(--color-text-secondary)', marginBottom: 'var(--space-lg)' }}>
+          <p style={{ color: 'var(--color-text-secondary)', marginBottom: 'var(--space-md)' }}>
             The sector is in turmoil. Your crew is on the edge. Steel your nerves, issue the orders, and hold the line at all costs.
           </p>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+          <div className="main-menu-btn-container">
             <button
               className="btn main-menu-btn"
-              style={{ fontSize: '1.2rem', padding: 'var(--space-md)' }}
               onClick={onStart}
               data-testid="start-scenario-btn"
             >
@@ -180,8 +168,6 @@ export default function MainMenu({ onStart, onStartCampaign, onContinueCampaign,
             <button
               className="btn main-menu-btn"
               style={{
-                fontSize: '1.2rem',
-                padding: 'var(--space-md)',
                 borderColor: 'rgba(0, 220, 180, 0.55)',
                 background: 'rgba(0, 220, 180, 0.08)',
                 color: 'var(--color-holo-cyan)',
@@ -194,7 +180,6 @@ export default function MainMenu({ onStart, onStartCampaign, onContinueCampaign,
 
             <button
               className="btn main-menu-btn"
-              style={{ fontSize: '1.2rem', padding: 'var(--space-md)' }}
               onClick={onStartCampaign}
             >
               START CAMPAIGN
@@ -203,7 +188,6 @@ export default function MainMenu({ onStart, onStartCampaign, onContinueCampaign,
             {CampaignSaveManager.hasBrowserSave() && (
               <button
                 className="btn btn--secondary main-menu-btn"
-                style={{ fontSize: '1.2rem', padding: 'var(--space-md)' }}
                 onClick={() => {
                   if (CampaignSaveManager.loadFromBrowser() && onContinueCampaign) {
                     onContinueCampaign();
@@ -216,7 +200,6 @@ export default function MainMenu({ onStart, onStartCampaign, onContinueCampaign,
 
             <button
               className="btn btn--secondary main-menu-btn"
-              style={{ fontSize: '1.2rem', padding: 'var(--space-md)' }}
               onClick={() => fileInputRef.current?.click()}
             >
               IMPORT CAMPAIGN

@@ -52,9 +52,10 @@ export default function GameScreen() {
 
   const [activePlayerId, setActivePlayerId] = useState(players[0]?.id);
   const [activeTabletStation, setActiveTabletStation] = useState<OfficerStation | null>(null);
+  const [activePhoneTab, setActivePhoneTab] = useState<'map' | 'console'>('map');
   const player = players.find(p => p.id === activePlayerId) || players[0];
 
-  const { isTablet, isCoarsePointer } = useViewport();
+  const { isTablet, isCoarsePointer, isPhone } = useViewport();
 
   useBgm('/assets/music/Iron_Perimeter.mp3', 0.15);
 
@@ -135,6 +136,245 @@ export default function GameScreen() {
     assignToken(player.id, action);
     setPendingActionDrop(null);
   };
+
+  // ── Phone landscape layout (≤640px) ─────────────────────────────
+  if (isPhone) {
+    const sortedOfficers = (Array.isArray(player?.officers) ? player.officers : [])
+      .slice()
+      .sort((a, b) => (a.station || '').localeCompare(b.station || ''));
+    const currentStation = activeTabletStation || sortedOfficers[0]?.station;
+    const activeOfficer = sortedOfficers.find(o => o.station === currentStation);
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', width: '100vw', height: '100vh', overflow: 'hidden' }}>
+        {/* Game-wide overlays */}
+        {phase === 'briefing' && <BriefingOverlay />}
+        <GameLog />
+        <CombatToastContainer />
+        {tutorialActive && <TutorialOverlay />}
+        <AstroCafNotification />
+        <DebugMenu onAutoWin={debugAutoWin} />
+
+        {/* Experimental tech badges — fixed below tab bar */}
+        {phase !== 'briefing' && experimentalTech.length > 0 && (
+          <div style={{ position: 'fixed', top: 48, left: 8, zIndex: 180, pointerEvents: 'none' }}>
+            <div style={{ display: 'flex', gap: '6px', pointerEvents: 'auto' }}>
+              {experimentalTech.map(tech => <TechBadge key={tech.id} tech={tech} />)}
+            </div>
+          </div>
+        )}
+
+        {/* Tab bar */}
+        <div className="phone-tab-bar">
+          <button
+            className={`phone-tab-btn${activePhoneTab === 'map' ? ' active' : ''}`}
+            onClick={() => setActivePhoneTab('map')}
+          >
+            MAP
+          </button>
+          <button
+            className={`phone-tab-btn${activePhoneTab === 'console' ? ' active' : ''}`}
+            onClick={() => setActivePhoneTab('console')}
+          >
+            CONSOLE
+          </button>
+        </div>
+
+        {/* Content area */}
+        <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+
+          {/* ── MAP TAB ────────────────────────────────────────────── */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            display: activePhoneTab === 'map' ? 'block' : 'none',
+          }}>
+            {phase !== 'briefing' && (
+              <div
+                id="top-center-buttons"
+                style={{
+                  position: 'absolute',
+                  top: 8,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  zIndex: 180,
+                  width: 'min(760px, calc(100% - 16px))',
+                  pointerEvents: 'none',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginBottom: (showScenarioTracker || showEnemyTactic || showRoE) ? '8px' : 0 }}>
+                  <button
+                    className="btn"
+                    style={{ pointerEvents: 'auto', padding: '8px 10px', minHeight: '40px', fontSize: '0.75rem', borderColor: 'rgba(0, 204, 255, 0.35)', background: 'rgba(12, 18, 28, 0.92)', color: 'var(--color-holo-cyan)' }}
+                    onClick={() => setShowRoE(open => !open)}
+                  >
+                    {showRoE ? 'HIDE ROE' : 'ROE'}
+                  </button>
+                  <button
+                    className="btn"
+                    style={{ pointerEvents: 'auto', padding: '8px 10px', minHeight: '40px', fontSize: '0.75rem', borderColor: 'rgba(230, 160, 0, 0.35)', background: 'rgba(12, 18, 28, 0.92)', color: 'var(--color-alert-amber)' }}
+                    onClick={() => setShowScenarioTracker(open => !open)}
+                  >
+                    {showScenarioTracker ? 'HIDE OBJ' : 'OBJ'}
+                  </button>
+                  <button
+                    className="btn"
+                    style={{ pointerEvents: 'auto', padding: '8px 10px', minHeight: '40px', fontSize: '0.75rem', borderColor: 'rgba(210, 72, 72, 0.35)', background: 'rgba(12, 18, 28, 0.92)', color: 'var(--color-hostile-red)' }}
+                    onClick={() => { setShowEnemyTactic(open => { const next = !open; if (next) setHasUnreadEnemyTactic(false); return next; }); }}
+                  >
+                    {hasUnreadEnemyTactic && (
+                      <span
+                        data-testid="enemy-tactic-unread-indicator"
+                        aria-label="New enemy tactic"
+                        title="New enemy tactic"
+                        style={{ display: 'inline-flex', width: '8px', height: '8px', borderRadius: '999px', background: 'var(--color-hostile-red)', boxShadow: '0 0 10px rgba(210, 72, 72, 0.75)', marginRight: '6px', flexShrink: 0 }}
+                      />
+                    )}
+                    {showEnemyTactic ? 'HIDE TACTIC' : 'TACTIC'}
+                  </button>
+                </div>
+                <div style={{ display: 'grid', gap: '8px' }}>
+                  <div style={{ pointerEvents: showRoE ? 'auto' : 'none', opacity: showRoE ? 1 : 0, maxHeight: showRoE ? '320px' : '0px', overflow: 'hidden', transform: showRoE ? 'translateY(0)' : 'translateY(-18px)', transition: 'opacity 180ms ease, transform 180ms ease, max-height 180ms ease' }}>
+                    {showRoE && <div style={{ width: 'min(540px, 100%)', margin: '0 auto' }}><RoEPanel showOverrideAction={isCampaign} /></div>}
+                  </div>
+                  <div style={{ pointerEvents: showScenarioTracker ? 'auto' : 'none', opacity: showScenarioTracker ? 1 : 0, maxHeight: showScenarioTracker ? '320px' : '0px', overflow: 'hidden', transform: showScenarioTracker ? 'translateY(0)' : 'translateY(-18px)', transition: 'opacity 180ms ease, transform 180ms ease, max-height 180ms ease' }}>
+                    {showScenarioTracker && <CombatScenarioProgressTracker variant="overlay" />}
+                  </div>
+                  <div style={{ pointerEvents: showEnemyTactic ? 'auto' : 'none', opacity: showEnemyTactic ? 1 : 0, maxHeight: showEnemyTactic ? '280px' : '0px', overflow: 'hidden', transform: showEnemyTactic ? 'translateY(0)' : 'translateY(-18px)', transition: 'opacity 180ms ease, transform 180ms ease, max-height 180ms ease' }}>
+                    {showEnemyTactic && <div style={{ width: 'min(540px, 100%)', margin: '0 auto' }}><EnemyTacticPanel /></div>}
+                  </div>
+                </div>
+              </div>
+            )}
+            <HexMap />
+          </div>
+
+          {/* ── CONSOLE TAB ────────────────────────────────────────── */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            overflowY: 'auto',
+            display: activePhoneTab === 'console' ? 'flex' : 'none',
+            flexDirection: 'column',
+            padding: 'var(--space-sm)',
+            gap: 'var(--space-sm)',
+            background: 'var(--color-bg-panel)',
+            paddingBottom: '60px', // space for pinned execute bar
+          }}>
+            {/* Settings + Fleet Assets */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+              <SettingsButton />
+              <div style={{ flex: 1 }}><FleetAssetsPanel /></div>
+            </div>
+
+            {phase === 'execution' ? (
+              <div id="execution-panel"><ExecutionPanel /></div>
+            ) : phase === 'setup' && deploymentMode ? (
+              <DeploymentPanel
+                ships={playerShips}
+                selectedShipId={deploymentSelectedShipId}
+                deploymentBounds={deploymentBounds}
+                onSelectShip={selectDeploymentShip}
+                onRotateShip={rotateDeploymentShip}
+                onConfirm={confirmDeployment}
+                hideConfirmBtn={true}
+              />
+            ) : (
+              <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+                {/* Multiplayer player tabs */}
+                {players.length > 1 && (
+                  <div style={{ display: 'flex', gap: '4px', marginBottom: '4px' }}>
+                    {players.map(p => (
+                      <button
+                        key={p.id}
+                        className="btn"
+                        style={{ padding: '8px 12px', fontSize: '0.8rem', borderColor: p.id === activePlayerId ? 'var(--color-holo-cyan)' : 'transparent', background: p.id === activePlayerId ? 'rgba(0, 204, 255, 0.1)' : 'transparent', color: p.id === activePlayerId ? 'var(--color-text-bright)' : 'var(--color-text-secondary)' }}
+                        onClick={() => setActivePlayerId(p.id)}
+                      >
+                        {p.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Captain's CT pool */}
+                <div id="captain-hand" style={{ width: '100%' }}>
+                  <CaptainHand playerId={player.id} />
+                </div>
+
+                {/* Officer station tabs */}
+                {player && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)', flex: 1 }}>
+                    <div style={{ display: 'flex', gap: '4px', paddingBottom: '4px', borderBottom: '1px solid var(--color-border)', overflowX: 'auto' }}>
+                      {sortedOfficers.map(o => {
+                        const isActive = o.station === currentStation;
+                        const assignments = player.assignedActions.filter(a => a.station === o.station).length;
+                        return (
+                          <button
+                            key={o.station}
+                            onClick={() => setActiveTabletStation(o.station)}
+                            className={`btn${isActive ? ' btn--primary' : ''}`}
+                            style={{
+                              flex: 1, minWidth: 60, padding: '6px 4px', fontSize: '0.68rem',
+                              borderColor: isActive ? 'var(--color-holo-cyan)' : 'var(--color-border)',
+                              background: isActive ? 'rgba(0, 204, 255, 0.1)' : o.isLocked ? 'rgba(255,0,0,0.1)' : 'var(--color-bg-panel)',
+                              position: 'relative',
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '2px' }}>
+                              <span style={{ fontSize: '0.65rem', fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{o.station.toUpperCase()}</span>
+                              {assignments > 0 && (
+                                <span style={{ color: 'var(--color-bg-deep)', background: 'var(--color-holo-cyan)', borderRadius: '999px', padding: '0 4px', fontSize: '0.58rem', fontWeight: 'bold', flexShrink: 0 }}>{assignments}</span>
+                              )}
+                            </div>
+                            {o.isLocked && <div style={{ fontSize: '0.55rem', color: 'var(--color-hostile-red)', fontWeight: 'bold' }}>LOCKED</div>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      {activeOfficer ? <OfficerStationPanel key={activeOfficer.officerId} officerState={activeOfficer} playerId={player.id} /> : null}
+                    </div>
+                  </div>
+                )}
+              </DndContext>
+            )}
+          </div>
+        </div>
+
+        {/* Pinned Action Bar — Contextual */}
+        {(phase === 'command' || (phase === 'setup' && deploymentMode)) && (
+          <div className="phone-execute-bar">
+            {phase === 'setup' && deploymentMode ? (
+              <button 
+                className="btn btn--execute" 
+                style={{ width: '100%', padding: '14px 16px', marginTop: 0 }} 
+                onClick={confirmDeployment}
+              >
+                CONFIRM DEPLOYMENT
+              </button>
+            ) : (
+              <ExecuteButton />
+            )}
+          </div>
+        )}
+
+        {/* Adjust Speed context modal */}
+        {pendingActionDrop && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+            <div className="panel" style={{ padding: 'var(--space-lg)', display: 'flex', flexDirection: 'column', gap: 'var(--space-md)', maxWidth: 'calc(100vw - 24px)' }}>
+              <h3 style={{ color: 'var(--color-holo-cyan)' }}>Adjust Speed</h3>
+              <p style={{ color: 'var(--color-text-secondary)' }}>Select vector shift direction:</p>
+              <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+                <button className="btn btn--execute" onClick={() => confirmAdjustSpeed(1)}>Accelerate (+)</button>
+                <button className="btn" onClick={() => confirmAdjustSpeed(-1)}>Decelerate (-)</button>
+              </div>
+              <button className="btn" style={{ marginTop: 'var(--space-md)' }} onClick={() => setPendingActionDrop(null)}>Cancel</button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+  // ── End phone layout ──────────────────────────────────────────────
 
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh', overflow: 'hidden' }}>
@@ -532,6 +772,7 @@ function DeploymentPanel({
   onSelectShip,
   onRotateShip,
   onConfirm,
+  hideConfirmBtn,
 }: {
   ships: Array<{ id: string; name: string; facing: number }>;
   selectedShipId: string | null;
@@ -539,6 +780,7 @@ function DeploymentPanel({
   onSelectShip: (shipId: string) => void;
   onRotateShip: (shipId: string, delta?: 1 | -1) => void;
   onConfirm: () => void;
+  hideConfirmBtn?: boolean;
 }) {
   const selectedShip = selectedShipId ? ships.find(ship => ship.id === selectedShipId) ?? null : null;
 
@@ -635,15 +877,31 @@ function DeploymentPanel({
         )}
       </div>
 
-      <button className="btn btn--execute" style={{ padding: '14px 16px' }} onClick={onConfirm}>
-        Confirm Deployment
-      </button>
+      {!hideConfirmBtn && (
+        <button className="btn btn--execute" style={{ padding: '14px 16px' }} onClick={onConfirm}>
+          Confirm Deployment
+        </button>
+      )}
     </div>
   );
 }
 
 function DebugMenu({ onAutoWin }: { onAutoWin: () => void }) {
+  const [visible, setVisible] = useState(false);
   const [open, setOpen] = useState(false);
+
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.altKey && e.key.toLowerCase() === 'd') {
+        setVisible(v => !v);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  if (!visible) return null;
+
   return (
     <div style={{
       position: 'fixed',

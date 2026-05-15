@@ -60,4 +60,49 @@ describe('useViewport', () => {
     const { result } = renderHook(() => useViewport());
     expect(result.current.isTablet).toBe(false);
   });
+
+  it('detects a phone when the shortest edge is < 600px (e.g. S20 landscape: 800x360)', () => {
+    Object.defineProperty(window, 'innerWidth',  { writable: true, value: 800 });
+    Object.defineProperty(window, 'innerHeight', { writable: true, value: 360 });
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: vi.fn().mockImplementation(query => ({
+        matches: query === '(pointer: coarse)',
+        media: query, onchange: null,
+        addEventListener: vi.fn(), removeEventListener: vi.fn(), dispatchEvent: vi.fn(),
+      })),
+    });
+    const { result } = renderHook(() => useViewport());
+    expect(result.current.isPhone).toBe(true);
+  });
+
+  it('detects a phone when the shortest edge is < 600px (e.g. S20 portrait: 360x800)', () => {
+    Object.defineProperty(window, 'innerWidth',  { writable: true, value: 360 });
+    Object.defineProperty(window, 'innerHeight', { writable: true, value: 800 });
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: vi.fn().mockImplementation(query => ({
+        matches: query === '(pointer: coarse)',
+        media: query, onchange: null,
+        addEventListener: vi.fn(), removeEventListener: vi.fn(), dispatchEvent: vi.fn(),
+      })),
+    });
+    const { result } = renderHook(() => useViewport());
+    expect(result.current.isPhone).toBe(true);
+  });
+
+  it('does not flag a tablet as a phone when the shortest edge is >= 600px (e.g. iPad: 1024x768)', () => {
+    Object.defineProperty(window, 'innerWidth',  { writable: true, value: 1024 });
+    Object.defineProperty(window, 'innerHeight', { writable: true, value: 768 });
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: vi.fn().mockImplementation(query => ({
+        matches: query === '(pointer: coarse)',
+        media: query, onchange: null,
+        addEventListener: vi.fn(), removeEventListener: vi.fn(), dispatchEvent: vi.fn(),
+      })),
+    });
+    const { result } = renderHook(() => useViewport());
+    expect(result.current.isPhone).toBe(false);
+  });
 });

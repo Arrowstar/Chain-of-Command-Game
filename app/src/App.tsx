@@ -14,8 +14,12 @@ import CampaignScreen from './components/campaign/CampaignScreen';
 import { useCampaignStore } from './store/useCampaignStore';
 import ToastContainer from './components/campaign/ToastContainer';
 import { buildTutorialGameConfig } from './data/tutorialScenario';
+import { useViewport } from './utils/useViewport';
+
+import { ScreenOrientation } from '@capacitor/screen-orientation';
 
 function App() {
+  useViewport(); // Run globally to synchronize the 'is-phone' body class
   const phase = useGameStore(s => s.phase);
   const gameOver = useGameStore(s => s.gameOver);
   const fleetFavor = useGameStore(s => s.fleetFavor);
@@ -24,6 +28,24 @@ function App() {
   // App-level routing state
   const [appMode, setAppMode] = useState<'menu' | 'editor' | 'skirmish-builder' | 'campaign-builder' | 'skirmish' | 'campaign' | 'campaign-combat' | 'tutorial'>('menu');
   const [scenarioConfig, setScenarioConfig] = useState<CustomScenarioConfig | null>(null);
+
+  useEffect(() => {
+    // Lock to portrait only for the main menu.
+    // Lock to landscape for all other modes (gameplay, builders, etc.)
+    const applyOrientation = async () => {
+      try {
+        if (appMode === 'menu') {
+          await ScreenOrientation.lock({ orientation: 'portrait' });
+        } else {
+          await ScreenOrientation.lock({ orientation: 'landscape' });
+        }
+      } catch (err) {
+        // Will safely fail in non-Capacitor web environments
+        console.warn('ScreenOrientation lock failed:', err);
+      }
+    };
+    applyOrientation();
+  }, [appMode]);
 
   const menuModes = ['menu', 'editor', 'skirmish-builder', 'campaign-builder'];
   const isMenuMode = menuModes.includes(appMode);
