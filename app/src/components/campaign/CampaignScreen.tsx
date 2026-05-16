@@ -137,7 +137,7 @@ export default function CampaignScreen({ onStartCombat }: Props) {
         {campaign.campaignPhase === 'story' && <CampaignStoryScreen />}
         <CampaignLog />
         {campaign.campaignPhase === 'sectorMap' && showConversionPanel && (
-          <div style={{ position: 'absolute', top: 'var(--space-md)', right: 'var(--space-md)', width: '360px', maxWidth: 'calc(100vw - 32px)', zIndex: 12 }}>
+          <div style={{ position: 'absolute', top: 'var(--space-md)', right: 'var(--space-md)', width: '360px', maxWidth: 'calc(100vw - 32px)', zIndex: 50 }}>
             <FleetFavorConversionPanel compact title="SECTOR MAP CONVERSION" />
           </div>
         )}
