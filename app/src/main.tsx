@@ -3,6 +3,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import SettingsModal from './components/SettingsModal';
+import SettingsButton from './components/SettingsButton';
 import { useSettingsStore } from './store/useSettingsStore';
 
 // ── Orientation lock ──────────────────────────────────────────────────────────
@@ -51,6 +52,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <>
       <App />
+      <SettingsButton />
       <SettingsModal />
     </>
   </StrictMode>,

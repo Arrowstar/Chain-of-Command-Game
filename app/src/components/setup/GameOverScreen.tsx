@@ -2,7 +2,6 @@ import React from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useCampaignStore } from '../../store/useCampaignStore';
 import { motion } from 'framer-motion';
-import SettingsButton from '../SettingsButton';
 
 interface GameOverScreenProps {
   onReturn?: () => void;
@@ -104,9 +103,6 @@ export default function GameOverScreen({ onReturn }: GameOverScreenProps) {
           {useCampaignStore.getState().campaign ? 'RETURN TO COMMAND (CAMPAIGN)' : 'RETURN TO COMMAND'}
         </button>
       </motion.div>
-      <div style={{ position: 'absolute', top: 'var(--space-md)', right: 'var(--space-md)' }}>
-        <SettingsButton />
-      </div>
     </div>
   );
 }

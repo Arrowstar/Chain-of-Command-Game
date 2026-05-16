@@ -11,8 +11,8 @@ import type { OfficerStation, OfficerState, ShipState, EnemyShipState, ShipArc }
 import { HexFacing } from '../../types/game';
 import { isInFiringArc, hexDistance } from '../../engine/hexGrid';
 import type { CustomScenarioConfig } from './ScenarioEditor';
-import SettingsButton from '../SettingsButton';
 import { useViewport } from '../../utils/useViewport';
+
 
 const WEAPON_COLORS = ['#4FD1C5', '#F6E05E', '#F6AD55', '#FC8181', '#B794F4', '#63B3ED'];
 const ARC_INDEX: Record<string, number> = { 'fore': 0, 'foreStarboard': 1, 'aftStarboard': 2, 'aft': 3, 'aftPort': 4, 'forePort': 5 };
@@ -632,7 +632,7 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
   return (
     <div className="panel" style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', borderRadius: 0, border: 'none' }}>
       {/* ── Top Bar ── */}
-      <div style={{ padding: 'var(--space-md)', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ padding: 'var(--space-md)', paddingLeft: '60px', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
           {onCancel && <button className="btn" onClick={onCancel} style={{ padding: '4px 8px', fontSize: '0.8rem' }}>&larr; BACK</button>}
           <h2 style={{ color: 'var(--color-holo-cyan)', margin: 0 }}>Deployment Setup</h2>
@@ -640,7 +640,6 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
         {/* Clickable step breadcrumbs */}
         {/* Premium Step Breadcrumbs */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <SettingsButton />
           {(isCampaignSetup ? [1, 2] : [1, 2, 3]).map((s, idx, arr) => {
             const stepLabels: Record<number, string> = {
               1: isCampaignSetup ? 'INIT' : 'CHASSIS',

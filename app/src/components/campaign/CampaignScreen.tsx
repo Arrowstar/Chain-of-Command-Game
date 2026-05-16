@@ -9,7 +9,6 @@ import FleetFavorConversionPanel from './FleetFavorConversionPanel';
 import TechBadge from './TechBadge';
 import CampaignStoryScreen from './CampaignStoryScreen';
 import { CampaignSaveManager } from '../../utils/CampaignSaveManager';
-import SettingsButton from '../SettingsButton';
 import { useViewport } from '../../utils/useViewport';
 
 interface Props {
@@ -28,7 +27,7 @@ export default function CampaignScreen({ onStartCombat }: Props) {
       {/* Persistent Campaign HUD */}
       {isPhone ? (
         // ── Phone: two-row compact header ─────────────────────────
-        <header className="panel panel--glow" style={{ padding: 'var(--space-xs) var(--space-sm)', borderBottom: '1px solid var(--color-border)', borderRadius: 0, zIndex: 10 }}>
+        <header className="panel panel--glow" style={{ padding: 'var(--space-xs) var(--space-sm)', paddingLeft: '60px', borderBottom: '1px solid var(--color-border)', borderRadius: 0, zIndex: 10 }}>
           {/* Row 1: stats */}
           <div style={{ display: 'flex', gap: 'var(--space-md)', alignItems: 'center', flexWrap: 'wrap' }}>
             <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem' }}>
@@ -62,12 +61,11 @@ export default function CampaignScreen({ onStartCombat }: Props) {
                 SAVE
               </button>
             )}
-            <SettingsButton />
           </div>
         </header>
       ) : (
         // ── Desktop/tablet: existing header (unchanged) ─────────────
-        <header className="panel panel--glow" style={{ padding: 'var(--space-sm) var(--space-md)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--color-border)', borderRadius: 0, zIndex: 10 }}>
+        <header className="panel panel--glow" style={{ padding: 'var(--space-sm) var(--space-md)', paddingLeft: '60px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--color-border)', borderRadius: 0, zIndex: 10 }}>
           <div style={{ display: 'flex', gap: 'var(--space-lg)', alignItems: 'center' }}>
             <div>
               <span className="label" style={{ color: 'var(--color-holo-cyan)' }}>SECTOR</span>
@@ -127,7 +125,6 @@ export default function CampaignScreen({ onStartCombat }: Props) {
                 </button>
               </>
             )}
-            <SettingsButton />
           </div>
         </header>
       )}

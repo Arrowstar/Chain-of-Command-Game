@@ -1,18 +1,40 @@
 import React, { useEffect, useState } from 'react';
 import { useSettingsStore } from '../store/useSettingsStore';
+import { useCampaignStore } from '../store/useCampaignStore';
+import { CampaignSaveManager } from '../utils/CampaignSaveManager';
+
+// ─── Types ────────────────────────────────────────────────────────
+
+/**
+ * The exit-confirmation state shown inside the modal when the player
+ * clicks "Return to Main Menu".
+ *
+ *  idle          – no confirmation shown yet
+ *  campaign-save – on campaign map; offering Save & Exit / Exit Without Saving
+ *  combat-warn   – in combat/tutorial; warning that progress will be lost
+ */
+type ConfirmState = 'idle' | 'campaign-save' | 'combat-warn';
+
+// ─── Component ───────────────────────────────────────────────────
 
 export default function SettingsModal() {
   const isSettingsOpen = useSettingsStore(s => s.isSettingsOpen);
   const closeSettings = useSettingsStore(s => s.closeSettings);
+  const triggerReturnToMenu = useSettingsStore(s => s.triggerReturnToMenu);
+  const returnToMenuCallback = useSettingsStore(s => s.returnToMenuCallback);
   const musicVolume = useSettingsStore(s => s.musicVolume);
   const setMusicVolume = useSettingsStore(s => s.setMusicVolume);
   const sfxVolume = useSettingsStore(s => s.sfxVolume);
   const setSfxVolume = useSettingsStore(s => s.setSfxVolume);
 
+  // Campaign context — used to determine which confirmation to show
+  const campaign = useCampaignStore(s => s.campaign);
+
   // Use local state while dragging the slider for responsiveness,
   // then sync to store on change.
   const [localMusic, setLocalMusic] = useState(musicVolume);
   const [localSfx, setLocalSfx] = useState(sfxVolume);
+  const [confirmState, setConfirmState] = useState<ConfirmState>('idle');
 
   // Sync back if the store changes externally
   useEffect(() => {
@@ -22,17 +44,57 @@ export default function SettingsModal() {
     }
   }, [musicVolume, sfxVolume, isSettingsOpen]);
 
+  // Reset the confirm panel each time the modal opens/closes
+  useEffect(() => {
+    if (!isSettingsOpen) {
+      setConfirmState('idle');
+    }
+  }, [isSettingsOpen]);
+
   // Handle escape to close
   useEffect(() => {
     if (!isSettingsOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeSettings();
+      if (e.key === 'Escape') {
+        if (confirmState !== 'idle') {
+          setConfirmState('idle');
+        } else {
+          closeSettings();
+        }
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isSettingsOpen, closeSettings]);
+  }, [isSettingsOpen, closeSettings, confirmState]);
 
   if (!isSettingsOpen) return null;
+
+  /**
+   * Determine what kind of confirmation to show when the player clicks
+   * "Return to Main Menu".
+   *
+   * - If we're on the campaign map (sectorMap / drydock), offer to save first.
+   * - Otherwise (combat, tutorial, skirmish) warn that progress will be lost.
+   */
+  const handleReturnToMenuClick = () => {
+    // No callback means we're already on the main menu; button shouldn't show.
+    if (!returnToMenuCallback) return;
+
+    const savablePhases = ['sectorMap', 'drydock', 'nodeResolution'];
+    const isCampaignSavable =
+      campaign !== null && savablePhases.includes(campaign.campaignPhase);
+
+    if (isCampaignSavable) {
+      setConfirmState('campaign-save');
+    } else {
+      setConfirmState('combat-warn');
+    }
+  };
+
+  const handleSaveAndExit = () => {
+    CampaignSaveManager.saveToBrowser();
+    triggerReturnToMenu();
+  };
 
   const handleTestSound = () => {
     const testAudio = new Audio('/assets/sounds/button-click.wav');
@@ -113,6 +175,137 @@ export default function SettingsModal() {
           </div>
 
         </div>
+
+        {/* ── Navigation Section (hidden when on main menu) ─────────── */}
+        {returnToMenuCallback && (
+          <div
+            data-testid="navigation-section"
+            style={{
+              marginTop: 'var(--space-xl)',
+              paddingTop: 'var(--space-lg)',
+              borderTop: '1px solid var(--color-border)',
+            }}
+          >
+            <div
+              className="label"
+              style={{ color: 'var(--color-text-secondary)', marginBottom: 'var(--space-md)', letterSpacing: '2px' }}
+            >
+              NAVIGATION
+            </div>
+
+            {/* ── Idle state: show the button ───────────────────────── */}
+            {confirmState === 'idle' && (
+              <button
+                className="btn"
+                data-testid="return-to-menu-btn"
+                style={{
+                  width: '100%',
+                  borderColor: 'rgba(210, 72, 72, 0.45)',
+                  background: 'rgba(210, 72, 72, 0.07)',
+                  color: 'var(--color-hostile-red)',
+                  padding: '8px 16px',
+                }}
+                onClick={handleReturnToMenuClick}
+              >
+                RETURN TO MAIN MENU
+              </button>
+            )}
+
+            {/* ── Campaign-save confirmation ─────────────────────────── */}
+            {confirmState === 'campaign-save' && (
+              <div
+                data-testid="campaign-save-confirm"
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 'var(--space-sm)',
+                  padding: 'var(--space-md)',
+                  border: '1px solid rgba(230, 160, 0, 0.35)',
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'rgba(230, 160, 0, 0.05)',
+                }}
+              >
+                <p style={{ color: 'var(--color-alert-amber)', margin: 0, fontSize: '0.88rem' }}>
+                  Return to the main menu? You can save your campaign progress first.
+                </p>
+                <div style={{ display: 'flex', gap: 'var(--space-sm)', flexWrap: 'wrap' }}>
+                  <button
+                    className="btn btn--primary"
+                    data-testid="save-and-exit-btn"
+                    style={{ flex: 1 }}
+                    onClick={handleSaveAndExit}
+                  >
+                    SAVE &amp; EXIT
+                  </button>
+                  <button
+                    className="btn"
+                    data-testid="exit-without-saving-btn"
+                    style={{
+                      flex: 1,
+                      borderColor: 'rgba(210, 72, 72, 0.45)',
+                      background: 'rgba(210, 72, 72, 0.07)',
+                      color: 'var(--color-hostile-red)',
+                    }}
+                    onClick={triggerReturnToMenu}
+                  >
+                    EXIT WITHOUT SAVING
+                  </button>
+                  <button
+                    className="btn btn--secondary"
+                    data-testid="cancel-return-btn"
+                    style={{ flex: 1 }}
+                    onClick={() => setConfirmState('idle')}
+                  >
+                    CANCEL
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ── Combat / tutorial warning ──────────────────────────── */}
+            {confirmState === 'combat-warn' && (
+              <div
+                data-testid="combat-warn-confirm"
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 'var(--space-sm)',
+                  padding: 'var(--space-md)',
+                  border: '1px solid rgba(210, 72, 72, 0.35)',
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'rgba(210, 72, 72, 0.05)',
+                }}
+              >
+                <p style={{ color: 'var(--color-hostile-red)', margin: 0, fontSize: '0.88rem' }}>
+                  Combat progress cannot be saved. Abandoning now will lose all progress from this battle.
+                </p>
+                <div style={{ display: 'flex', gap: 'var(--space-sm)', flexWrap: 'wrap' }}>
+                  <button
+                    className="btn"
+                    data-testid="abandon-combat-btn"
+                    style={{
+                      flex: 1,
+                      borderColor: 'rgba(210, 72, 72, 0.45)',
+                      background: 'rgba(210, 72, 72, 0.07)',
+                      color: 'var(--color-hostile-red)',
+                    }}
+                    onClick={triggerReturnToMenu}
+                  >
+                    ABANDON &amp; EXIT
+                  </button>
+                  <button
+                    className="btn btn--secondary"
+                    data-testid="cancel-return-btn"
+                    style={{ flex: 1 }}
+                    onClick={() => setConfirmState('idle')}
+                  >
+                    CANCEL
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -7,13 +7,22 @@ export default function SettingsButton() {
   return (
     <button
       className="btn btn--secondary"
-      style={{ padding: '6px 12px', fontSize: '1rem', minWidth: '40px' }}
+      style={{
+        position: 'fixed',
+        top: '8px',
+        left: '8px',
+        zIndex: 200,
+        padding: '6px 12px',
+        fontSize: '1.1rem',
+        minWidth: '40px',
+        lineHeight: 1,
+      }}
       onClick={openSettings}
-      title="System Settings"
-      aria-label="Open System Settings"
+      title="Menu"
+      aria-label="Open Menu"
       data-testid="settings-btn"
     >
-      ⚙
+      ☰
     </button>
   );
 }

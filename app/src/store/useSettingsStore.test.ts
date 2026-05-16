@@ -9,6 +9,7 @@ describe('useSettingsStore', () => {
       musicVolume: 0.15,
       sfxVolume: 0.5,
       isSettingsOpen: false,
+      returnToMenuCallback: null,
     });
   });
 
@@ -58,6 +59,44 @@ describe('useSettingsStore', () => {
     expect(useSettingsStore.getState().isSettingsOpen).toBe(true);
     
     closeSettings();
+    expect(useSettingsStore.getState().isSettingsOpen).toBe(false);
+  });
+
+  it('initializes with null returnToMenuCallback', () => {
+    expect(useSettingsStore.getState().returnToMenuCallback).toBeNull();
+  });
+
+  it('setReturnToMenuCallback stores the callback', () => {
+    const { setReturnToMenuCallback } = useSettingsStore.getState();
+    const cb = vi.fn();
+
+    setReturnToMenuCallback(cb);
+
+    expect(useSettingsStore.getState().returnToMenuCallback).toBe(cb);
+  });
+
+  it('triggerReturnToMenu calls the registered callback', () => {
+    const cb = vi.fn();
+    useSettingsStore.setState({ returnToMenuCallback: cb, isSettingsOpen: true });
+
+    useSettingsStore.getState().triggerReturnToMenu();
+
+    expect(cb).toHaveBeenCalledOnce();
+  });
+
+  it('triggerReturnToMenu closes the settings modal', () => {
+    useSettingsStore.setState({ isSettingsOpen: true, returnToMenuCallback: vi.fn() });
+
+    useSettingsStore.getState().triggerReturnToMenu();
+
+    expect(useSettingsStore.getState().isSettingsOpen).toBe(false);
+  });
+
+  it('triggerReturnToMenu is safe to call with no callback registered', () => {
+    useSettingsStore.setState({ returnToMenuCallback: null, isSettingsOpen: true });
+
+    // Should not throw
+    expect(() => useSettingsStore.getState().triggerReturnToMenu()).not.toThrow();
     expect(useSettingsStore.getState().isSettingsOpen).toBe(false);
   });
 });

@@ -3,6 +3,7 @@ import { useBgm } from './utils/useBgm';
 import { useGameStore } from './store/useGameStore';
 import { useUIStore } from './store/useUIStore';
 import { useTutorialStore } from './store/useTutorialStore';
+import { useSettingsStore } from './store/useSettingsStore';
 import GameScreen from './components/console/GameScreen';
 import MainMenu from './components/setup/MainMenu';
 import ScenarioEditor from './components/setup/ScenarioEditor';
@@ -17,6 +18,7 @@ import { buildTutorialGameConfig } from './data/tutorialScenario';
 import { useViewport } from './utils/useViewport';
 
 import { ScreenOrientation } from '@capacitor/screen-orientation';
+import { App as CapacitorApp } from '@capacitor/app';
 
 function App() {
   useViewport(); // Run globally to synchronize the 'is-phone' body class
@@ -24,17 +26,36 @@ function App() {
   const gameOver = useGameStore(s => s.gameOver);
   const fleetFavor = useGameStore(s => s.fleetFavor);
   const isRedAlert = useUIStore(s => s.isRedAlert);
+  const setReturnToMenuCallback = useSettingsStore(s => s.setReturnToMenuCallback);
+  const isSettingsOpen = useSettingsStore(s => s.isSettingsOpen);
   
   // App-level routing state
   const [appMode, setAppMode] = useState<'menu' | 'editor' | 'skirmish-builder' | 'campaign-builder' | 'skirmish' | 'campaign' | 'campaign-combat' | 'tutorial'>('menu');
   const [scenarioConfig, setScenarioConfig] = useState<CustomScenarioConfig | null>(null);
 
+  // Register the "return to main menu" navigation callback in the global
+  // settings store so SettingsModal can trigger it without prop drilling.
+  useEffect(() => {
+    setReturnToMenuCallback(() => setAppMode('menu'));
+  }, [setReturnToMenuCallback]);
+
+  // Handler for the native app exit button on the main menu.
+  const handleExit = async () => {
+    try {
+      await CapacitorApp.exitApp();
+    } catch {
+      // On web, exitApp() throws — this is expected and handled gracefully
+      // by showing a hint in MainMenu instead.
+    }
+  };
+
   useEffect(() => {
     // Lock to portrait for the main menu, fleet builders, and campaign map.
+    // Also force portrait while the settings modal is open.
     // Lock to landscape for all gameplay modes (skirmish, combat, etc.)
     const applyOrientation = async () => {
       try {
-        if (appMode === 'menu' || appMode === 'skirmish-builder' || appMode === 'campaign-builder' || appMode === 'campaign') {
+        if (isSettingsOpen || appMode === 'menu' || appMode === 'skirmish-builder' || appMode === 'campaign-builder' || appMode === 'campaign') {
           await ScreenOrientation.lock({ orientation: 'portrait' });
         } else {
           await ScreenOrientation.lock({ orientation: 'landscape' });
@@ -45,7 +66,7 @@ function App() {
       }
     };
     applyOrientation();
-  }, [appMode]);
+  }, [appMode, isSettingsOpen]);
 
   const menuModes = ['menu', 'editor', 'skirmish-builder', 'campaign-builder'];
   const isMenuMode = menuModes.includes(appMode);
@@ -77,6 +98,7 @@ function App() {
           startTutorial();
           setAppMode('tutorial');
         }}
+        onExit={handleExit}
       />
     );
   }

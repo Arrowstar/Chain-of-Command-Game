@@ -1822,6 +1822,7 @@ body.is-phone .fleet-status-card {
   background: var(--color-bg-panel);
   border-bottom: 1px solid var(--color-border);
   z-index: 50;
+  padding-left: 60px;
 }
 
 .phone-tab-btn {

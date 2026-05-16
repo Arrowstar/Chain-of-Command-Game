@@ -201,7 +201,7 @@ export default function GameScreen() {
                   pointerEvents: 'none',
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginBottom: (showScenarioTracker || showEnemyTactic || showRoE) ? '8px' : 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '6px', padding: '0 52px', marginBottom: (showScenarioTracker || showEnemyTactic || showRoE) ? '8px' : 0 }}>
                   <button
                     className="btn"
                     style={{ pointerEvents: 'auto', padding: '8px 10px', minHeight: '40px', fontSize: '0.75rem', borderColor: 'rgba(0, 204, 255, 0.35)', background: 'rgba(12, 18, 28, 0.92)', color: 'var(--color-holo-cyan)' }}
@@ -259,11 +259,8 @@ export default function GameScreen() {
             background: 'var(--color-bg-panel)',
             paddingBottom: '60px', // space for pinned execute bar
           }}>
-            {/* Settings + Fleet Assets */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-              <SettingsButton />
-              <div style={{ flex: 1 }}><FleetAssetsPanel /></div>
-            </div>
+            {/* Fleet Assets */}
+            <FleetAssetsPanel />
 
             {phase === 'execution' ? (
               <div id="execution-panel"><ExecutionPanel /></div>
@@ -576,13 +573,8 @@ export default function GameScreen() {
           overflowY: 'auto',
         }}
       >
-        {/* Compact toolbar: Settings (left) + Fleet Assets trigger (right) — fully in flow, never overlaps */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-          <SettingsButton />
-          <div style={{ flex: 1 }}>
-            <FleetAssetsPanel />
-          </div>
-        </div>
+        {/* Compact toolbar: Fleet Assets trigger */}
+        <FleetAssetsPanel />
         {phase === 'execution' ? (
           <>
             <div id="execution-panel">
