@@ -29,9 +29,10 @@ function getState(): ViewportState {
   // Find the smallest dimension, regardless of orientation
   const shortestEdge = Math.min(width, height);
 
-  // Phones have a shortest edge under 600px. Tablets/Desktops are larger.
-  const isPhone = shortestEdge < 600 && isCoarsePointer;
   const isTablet = shortestEdge >= 600 && width <= 1280;
+  
+  // We now treat both phones and tablets as "isPhone" if they are touch devices.
+  const isPhone = (shortestEdge < 600 || isTablet) && isCoarsePointer;
 
   return { width, height, isTablet, isPhone, isCoarsePointer };
 }

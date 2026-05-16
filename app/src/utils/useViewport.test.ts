@@ -91,7 +91,7 @@ describe('useViewport', () => {
     expect(result.current.isPhone).toBe(true);
   });
 
-  it('does not flag a tablet as a phone when the shortest edge is >= 600px (e.g. iPad: 1024x768)', () => {
+  it('flags a tablet as a phone when the shortest edge is >= 600px but it has a coarse pointer (e.g. iPad: 1024x768)', () => {
     Object.defineProperty(window, 'innerWidth',  { writable: true, value: 1024 });
     Object.defineProperty(window, 'innerHeight', { writable: true, value: 768 });
     Object.defineProperty(window, 'matchMedia', {
@@ -103,6 +103,6 @@ describe('useViewport', () => {
       })),
     });
     const { result } = renderHook(() => useViewport());
-    expect(result.current.isPhone).toBe(false);
+    expect(result.current.isPhone).toBe(true);
   });
 });
