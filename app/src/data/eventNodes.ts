@@ -82,6 +82,12 @@ export const EVENT_NODES: EventNode[] = [
         ],
       },
       {
+        id: 'ignore-hail',
+        label: '"Ignore the hail and jump away."',
+        flavorText: 'We can\'t risk a Hegemony trap, but we don\'t have the stomach to space a helpless pilot.',
+        effects: [{ type: 'stress', value: 1, target: 'all' }],
+      },
+      {
         id: 'verify-codes',
         label: '"Have our sensor chief verify the defection codes first."',
         flavorText: 'A disciplined signal audit turns a gamble into a controlled intake.',
@@ -147,6 +153,15 @@ export const EVENT_NODES: EventNode[] = [
         effects: [
           { type: 'rp', value: -25, target: 'fleet' },
           { type: 'stressRecover', value: 999, target: 'all' }, // 999 = clear to 0
+        ],
+      },
+      {
+        id: 'arrest-ringleaders',
+        label: '"Arrest the ringleaders and force the rest back to work."',
+        flavorText: 'It keeps the engines running, but the lower decks will never forget this.',
+        effects: [
+          { type: 'trauma', target: 'engineering' },
+          { type: 'stress', value: 2, target: 'all' },
         ],
       },
     ],
@@ -319,6 +334,14 @@ export const EVENT_NODES: EventNode[] = [
           { type: 'stress', value: 2, target: 'all' },
         ],
       },
+      {
+        id: 'ignore',
+        label: '"Ignore their pleas and keep moving."',
+        flavorText: 'We cannot afford to escort them, but stealing their fuel crosses a line. We leave them in silence.',
+        effects: [
+          { type: 'stress', value: 2, target: 'all' },
+        ],
+      },
     ],
   },
 
@@ -367,6 +390,12 @@ export const EVENT_NODES: EventNode[] = [
           { type: 'officerUpgrade', target: 'engineering' },
           { type: 'ff', value: -2, target: 'fleet' },
         ],
+      },
+      {
+        id: 'ignore-hermit',
+        label: '"Ignore the rambling transmission."',
+        flavorText: 'We don\'t have the time or resources to chase the delusions of eccentric hermits.',
+        effects: [{ type: 'stress', value: 1, target: 'engineering' }],
       },
       {
         id: 'talk-shop',
@@ -701,6 +730,15 @@ export const EVENT_NODES: EventNode[] = [
         flavorText: '',
         effects: [
           { type: 'ff', value: -4, target: 'fleet' },
+          { type: 'stress', value: 2, target: 'all' },
+        ],
+      },
+      {
+        id: 'no-quarantine',
+        label: '"No quarantines. Everyone works through the sickness."',
+        flavorText: 'The virus ravages the lower decks and the bridge alike, but the fleet keeps moving.',
+        effects: [
+          { type: 'trauma', target: 'random' },
           { type: 'stress', value: 2, target: 'all' },
         ],
       },
