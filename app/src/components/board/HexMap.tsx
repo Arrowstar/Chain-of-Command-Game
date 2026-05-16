@@ -22,6 +22,7 @@ import { projectDriftPreview } from '../../engine/movement';
 import { previewAITierMovement, type AIMovementPreview } from '../../engine/ai/aiTurn';
 import { resolveFighterMovement } from '../../engine/ai/fighterAI';
 import ShipInfoPanel, { getMapHoverTargetId, type MapHoverTarget } from './ShipInfoPanel';
+import TargetingPromptOverlay from './TargetingPromptOverlay';
 
 // ─── Raw PixiJS via useRef (no @pixi/react reconciler) ──────────
 
@@ -1718,6 +1719,7 @@ export default function HexMap() {
         }}
       />
       <SelectionPicker />
+      <TargetingPromptOverlay />
     </div>
   );
 }

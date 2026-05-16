@@ -45,8 +45,8 @@ export default function ActionSlot({
   const unassignRefs = React.useRef<(HTMLButtonElement | null)[]>([]);
 
   const isActive = isOver && !disabled;
-  // Highlight the slot while a token is tapped-selected and the slot is ready
-  const isTapReady = !!selectedTokenId && !disabled;
+  // On touch, the slot is always tap-ready unless disabled. On desktop, requires a selected token.
+  const isTapReady = isCoarsePointer ? !disabled : (!!selectedTokenId && !disabled);
 
   // Cumulative stress paid: base + 0 + 1 + 2 + ... + (count-1) = base*count + count*(count-1)/2
   // We just display count and let the store tooltip (title) show the math.
@@ -56,8 +56,11 @@ export default function ActionSlot({
       : 0;
 
   const handleDropZoneClick = () => {
-    if (disabled) return;
-    if (selectedTokenId && onTapAssign) {
+    if (!isCoarsePointer && disabled) return;
+    if (isCoarsePointer && onTapAssign) {
+      onTapAssign();
+      if (selectedTokenId) clearSelection();
+    } else if (selectedTokenId && onTapAssign) {
       onTapAssign();
       clearSelection();
     }
@@ -241,7 +244,7 @@ export default function ActionSlot({
           </>
         ) : (
           <span className="label" style={{ opacity: isTapReady ? 0.7 : 0.3 }}>
-            {isTapReady ? 'TAP TO ASSIGN' : isCoarsePointer ? 'Tap CT, then tap here' : 'Drop CT Here'}
+            {isCoarsePointer ? 'TAP TO ASSIGN' : isTapReady ? 'TAP TO ASSIGN' : 'Drop CT Here'}
           </span>
         )}
       </div>

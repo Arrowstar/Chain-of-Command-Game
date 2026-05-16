@@ -206,4 +206,28 @@ describe('GameScreen', () => {
     expect(screen.queryByTestId('officer-station-helm')).not.toBeInTheDocument();
     expect(screen.getByTestId('officer-station-weapons')).toBeInTheDocument();
   });
+
+  it('automatically switches to the map tab on mobile when targeting is initiated', async () => {
+    useViewportSpy.mockReturnValue({ isPhone: true, isTablet: false, isCoarsePointer: false } as any);
+
+    const user = userEvent.setup();
+    render(<GameScreen />);
+
+    // Initially on MAP tab, switch to CONSOLE
+    const consoleTab = screen.getByRole('button', { name: /CONSOLE/i });
+    await user.click(consoleTab);
+
+    // Verify CONSOLE is active
+    expect(consoleTab.className).toContain('active');
+
+    // Initiate targeting
+    act(() => {
+      useUIStore.getState().startTargeting('hex', { shipId: 's1', actionId: 'test-action' });
+    });
+
+    // Verify it automatically switched back to MAP
+    const mapTab = screen.getByRole('button', { name: /MAP/i });
+    expect(mapTab.className).toContain('active');
+    expect(consoleTab.className).not.toContain('active');
+  });
 });

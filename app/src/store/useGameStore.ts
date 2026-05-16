@@ -2385,6 +2385,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
           defenderName: string;
           outOfArc?: boolean;
           outOfRange?: boolean;
+          lineOfSightBlocked?: boolean;
+          blockedBy?: HexCoord;
           logEntryId?: string;
         }
         const allDamageResults: CombatResolutionRecord[] = [];
@@ -2493,6 +2495,36 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 get().addLog('combat',
                     `║  ${get().getShipName(shipId)}: ${weapon.name} ═  LoS BLOCKED by asteroid at (${losCheck.blockedBy!.q},${losCheck.blockedBy!.r}). No effect for ${target.name}.`
                 );
+                
+                const latestLog = get().log[get().log.length - 1];
+                const logEntryId = latestLog?.id;
+
+                allDamageResults.push({
+                    damageResult: {
+                        shieldHits: 0,
+                        struckSector: 'fore',
+                        shieldRemaining: 0,
+                        overflowHits: 0,
+                        piercingHits: 0,
+                        netOverflowHits: 0,
+                        armorRoll: 0,
+                        armorDie: undefined,
+                        hullDamage: 0,
+                        criticalTriggered: false,
+                        volleyResult: { dice: [], targetNumber: 0, totalHits: 0, totalCrits: 0, totalStandardHits: 0, totalCriticalHits: 0 },
+                        tnBreakdown: { baseEvasion: 0, rangeModifier: 0, terrainModifier: 0, evasiveManeuvers: 0, targetLockModifier: 0, trackingBonus: 0, namedModifiers: [], total: 0 },
+                        lineOfSightBlocked: true,
+                        blockedBy: losCheck.blockedBy ?? undefined,
+                    },
+                    defenderId: currentTargetId,
+                    defenderName: target.name,
+                    outOfArc: false,
+                    outOfRange: false,
+                    lineOfSightBlocked: true,
+                    blockedBy: losCheck.blockedBy ?? undefined,
+                    logEntryId,
+                });
+
                 return;
             }
 
@@ -2885,6 +2917,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     `═a  ${tacOfficerName}: ${weapon.name} ═   ${target.name} [OUT OF RANGE ═  no effect]`,
                     { damageResult }
                 );
+            } else if (damageResult.lineOfSightBlocked) {
+                // Line of sight blocked is already logged above, so we don't need to add a duplicate log here.
             } else {
                 const tn = damageResult.tnBreakdown.total;
                 const hits = damageResult.volleyResult.totalHits;
@@ -2963,6 +2997,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 defenderName: targetName,
                 outOfArc: damageResult.outOfArc ?? false,
                 outOfRange: damageResult.outOfRange ?? false,
+                lineOfSightBlocked: damageResult.lineOfSightBlocked ?? false,
+                blockedBy: damageResult.blockedBy,
                 logEntryId,
             });
         });

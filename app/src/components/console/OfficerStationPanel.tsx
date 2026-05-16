@@ -14,6 +14,7 @@ import { applyRecycledCoolant, getStimInjectorBonus } from '../../engine/techEff
 import { getScarImpactLegendText, getScarStatusMeta, getScarTooltip, getStationScars } from './scarStatus';
 import { useTokenSelectionStore } from '../../store/useTokenSelectionStore';
 import { useViewport } from '../../utils/useViewport';
+import { fireCombatToast } from '../board/CombatToastContainer';
 
 interface OfficerStationPanelProps {
   officerState: OfficerState;
@@ -422,7 +423,26 @@ export default function OfficerStationPanel({ officerState, playerId }: OfficerS
           const isSlotDisabled = officerState.isLocked || tacticLockout || (action.id === 'reroute-power' && assignments.length > 0);
 
           const handleTapAssign = () => {
-            if (isSlotDisabled || !player || player.commandTokens < action.ctCost) return;
+            if (!player) return;
+
+            if (isSlotDisabled) {
+              if (isCoarsePointer) {
+                let msg = 'Station is locked.';
+                if (tacticLockout) msg = `Station jammed by ${currentTactic?.name || 'Tactic'}.`;
+                else if (action.id === 'reroute-power' && assignments.length > 0) msg = 'Reroute Power can only be assigned once.';
+                fireCombatToast({ type: 'warning', message: msg });
+              }
+              return;
+            }
+            if (player.commandTokens < action.ctCost) {
+              if (isCoarsePointer) {
+                fireCombatToast({
+                  type: 'warning',
+                  message: `Cannot assign: requires ${action.ctCost} CT (${player.commandTokens} available).`,
+                });
+              }
+              return;
+            }
 
             const isLeadFoot = officerData.traitName === 'Lead Foot' && action.id === 'adjust-speed';
             if (isLeadFoot) {

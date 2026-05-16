@@ -154,6 +154,10 @@ export interface DamageResult {
   isIonWeapon?: boolean;
   /** True if the entire volley was Armor Piercing (ignores Armor mitigation). */
   isArmorPiercing?: boolean;
+  /** True if the attack was blocked by line of sight */
+  lineOfSightBlocked?: boolean;
+  /** The hex coordinate of the asteroid or object that blocked line of sight */
+  blockedBy?: HexCoord;
 }
 
 /**

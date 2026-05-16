@@ -13,6 +13,8 @@ export interface VolleyResultItem {
   defenderName: string;
   outOfArc: boolean;
   outOfRange?: boolean;
+  lineOfSightBlocked?: boolean;
+  blockedBy?: { q: number, r: number };
   logEntryId?: string;
 }
 
@@ -98,6 +100,8 @@ export default function VolleyBreakdown({ results, damageResult, outOfArc, weapo
     defenderName: defenderId || 'Unknown',
     outOfArc: outOfArc || false,
     outOfRange: damageResult.outOfRange || false,
+    lineOfSightBlocked: damageResult.lineOfSightBlocked || false,
+    blockedBy: damageResult.blockedBy,
   }] : []);
 
   useEffect(() => {
@@ -210,7 +214,26 @@ export default function VolleyBreakdown({ results, damageResult, outOfArc, weapo
           </div>
         )}
         
-        {!currentItem.outOfArc && !currentItem.outOfRange && (
+        {currentItem.lineOfSightBlocked && (
+          <div style={{ 
+            padding: 'var(--space-sm)', 
+            background: 'rgba(229,62,62,0.15)', 
+            border: '1px solid var(--color-hostile-red)',
+            borderRadius: 'var(--radius-sm)',
+            marginBottom: 'var(--space-md)',
+            textAlign: 'center'
+          }}>
+            <div className="mono" style={{ color: 'var(--color-hostile-red)', fontSize: '0.9rem' }}>
+              ⚠ LINE OF SIGHT BLOCKED
+            </div>
+            <div className="label" style={{ marginTop: '4px' }}>
+              {attackerId} fired {weaponName} but line of sight to {currentItem.defenderName} was blocked by an asteroid.
+              <br />No damage applied.
+            </div>
+          </div>
+        )}
+        
+        {!currentItem.outOfArc && !currentItem.outOfRange && !currentItem.lineOfSightBlocked && (
           <>
             <div style={{ marginBottom: 'var(--space-md)', padding: 'var(--space-sm)', background: 'var(--color-bg-deep)' }}>
               <div className="flex-between" style={{ marginBottom: '6px' }}>
@@ -563,7 +586,7 @@ export default function VolleyBreakdown({ results, damageResult, outOfArc, weapo
           </>
         )}
         
-        {(!currentItem.outOfArc && !currentItem.outOfRange ? showDamage : true) && (
+        {(!currentItem.outOfArc && !currentItem.outOfRange && !currentItem.lineOfSightBlocked ? showDamage : true) && (
           <button className="btn" style={{ marginTop: 'var(--space-md)', width: '100%' }} onClick={onClose}>
             Acknowledge {items.length > 1 ? `(${activeTabIndex + 1}/${items.length})` : ''}
           </button>

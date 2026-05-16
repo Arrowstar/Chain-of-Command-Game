@@ -19,6 +19,7 @@ import AstroCafNotification from '../campaign/AstroCafNotification';
 import { useGameStore } from '../../store/useGameStore';
 import { useCampaignStore } from '../../store/useCampaignStore';
 import { useTutorialStore } from '../../store/useTutorialStore';
+import { useUIStore } from '../../store/useUIStore';
 import { getOfficerById } from '../../data/officers';
 import type { QueuedAction, OfficerStation } from '../../types/game';
 import { useViewport } from '../../utils/useViewport';
@@ -56,6 +57,13 @@ export default function GameScreen() {
   const player = players.find(p => p.id === activePlayerId) || players[0];
 
   const { isTablet, isCoarsePointer, isPhone } = useViewport();
+  const targetingMode = useUIStore(s => s.targetingMode);
+
+  useLayoutEffect(() => {
+    if (isPhone && targetingMode !== null) {
+      setActivePhoneTab('map');
+    }
+  }, [isPhone, targetingMode]);
 
   useBgm('/assets/music/Iron_Perimeter.mp3', 0.15);
 
