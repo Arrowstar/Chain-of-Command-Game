@@ -7,8 +7,6 @@ interface MainMenuProps {
   onStartCampaign?: () => void;
   onContinueCampaign?: () => void;
   onStartTutorial?: () => void;
-  /** Called when the player wants to exit the application. */
-  onExit?: () => void;
 }
 
 const TITLE_TEXT = 'CHAIN OF COMMAND';
@@ -52,10 +50,9 @@ const STATUS_INDICATORS = [
   { label: 'COMMS',   color: 'var(--color-holo-green)',  delay: '1.8s' },
 ];
 
-export default function MainMenu({ onStart, onStartCampaign, onContinueCampaign, onStartTutorial, onExit }: MainMenuProps) {
+export default function MainMenu({ onStart, onStartCampaign, onContinueCampaign, onStartTutorial }: MainMenuProps) {
   const [displayedTitle, setDisplayedTitle] = useState('');
   const [titleDone, setTitleDone] = useState(false);
-  const [showExitHint, setShowExitHint] = useState(false);
   const [showLoadModal, setShowLoadModal] = useState(false);
   const [hasSaves, setHasSaves] = useState(false);
 
@@ -200,47 +197,6 @@ export default function MainMenu({ onStart, onStartCampaign, onContinueCampaign,
               </button>
             )}
 
-            {/* Exit button — works on Capacitor native; shows a hint on web */}
-            {showExitHint ? (
-              <div
-                data-testid="exit-hint"
-                style={{
-                  padding: 'var(--space-sm) var(--space-md)',
-                  border: '1px solid rgba(210, 72, 72, 0.4)',
-                  borderRadius: 'var(--radius-sm)',
-                  color: 'var(--color-text-secondary)',
-                  fontSize: '0.82rem',
-                  textAlign: 'center',
-                  background: 'rgba(210, 72, 72, 0.06)',
-                }}
-              >
-                To exit, close this browser tab.
-              </div>
-            ) : (
-              <button
-                className="btn main-menu-btn"
-                data-testid="exit-btn"
-                style={{
-                  borderColor: 'rgba(210, 72, 72, 0.45)',
-                  background: 'rgba(210, 72, 72, 0.07)',
-                  color: 'var(--color-hostile-red)',
-                }}
-                onClick={async () => {
-                  if (onExit) {
-                    try {
-                      await onExit();
-                    } catch {
-                      // onExit threw (web) — show the close-tab hint
-                      setShowExitHint(true);
-                    }
-                  } else {
-                    setShowExitHint(true);
-                  }
-                }}
-              >
-                EXIT
-              </button>
-            )}
           </div>
         </div>
       </div>

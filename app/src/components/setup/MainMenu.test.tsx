@@ -20,34 +20,4 @@ describe('MainMenu', () => {
     await user.click(screen.getByTestId('start-scenario-btn'));
     expect(spy).toHaveBeenCalled();
   });
-
-  it('renders the EXIT button', () => {
-    render(<MainMenu />);
-    expect(screen.getByTestId('exit-btn')).toBeInTheDocument();
-  });
-
-  it('EXIT button calls onExit when provided', async () => {
-    const user = userEvent.setup();
-    const spy = vi.fn().mockResolvedValue(undefined);
-    render(<MainMenu onExit={spy} />);
-    await user.click(screen.getByTestId('exit-btn'));
-    expect(spy).toHaveBeenCalled();
-  });
-
-  it('EXIT button shows web hint when onExit is not provided', async () => {
-    const user = userEvent.setup();
-    render(<MainMenu />);
-    await user.click(screen.getByTestId('exit-btn'));
-    expect(screen.getByTestId('exit-hint')).toBeInTheDocument();
-    expect(screen.getByText(/close this browser tab/i)).toBeInTheDocument();
-  });
-
-  it('EXIT button shows web hint when onExit throws (web environment)', async () => {
-    const user = userEvent.setup();
-    // Simulate Capacitor App.exitApp() failing on web
-    const spy = vi.fn().mockRejectedValue(new Error('Not available on web'));
-    render(<MainMenu onExit={spy} />);
-    await user.click(screen.getByTestId('exit-btn'));
-    expect(await screen.findByTestId('exit-hint')).toBeInTheDocument();
-  });
 });

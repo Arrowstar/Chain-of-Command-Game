@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "com.harden.adam.chainofcommand"
+    namespace = "com.adamharden.chainofcommand"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.harden.adam.chainofcommand"
+        applicationId "com.adamharden.chainofcommand"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

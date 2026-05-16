@@ -19,6 +19,7 @@ import { useViewport } from './utils/useViewport';
 
 import { ScreenOrientation } from '@capacitor/screen-orientation';
 import { App as CapacitorApp } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
 
 function App() {
   useViewport(); // Run globally to synchronize the 'is-phone' body class
@@ -44,15 +45,25 @@ function App() {
     }
   }, [appMode, setReturnToMenuCallback]);
 
-  // Handler for the native app exit button on the main menu.
-  const handleExit = async () => {
-    try {
-      await CapacitorApp.exitApp();
-    } catch {
-      // On web, exitApp() throws — this is expected and handled gracefully
-      // by showing a hint in MainMenu instead.
-    }
-  };
+  // Register the Capacitor hardware back-button listener.
+  useEffect(() => {
+    let handle: any = null;
+    const initListener = async () => {
+      try {
+        handle = await CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+          if (!canGoBack) {
+            CapacitorApp.exitApp();
+          } else {
+            window.history.back();
+          }
+        });
+      } catch (e) {
+        // Fallback for environments where the plugin isn't available
+      }
+    };
+    initListener();
+    return () => { handle?.remove(); };
+  }, []);
 
   useEffect(() => {
     // Lock to portrait for the main menu, fleet builders, and campaign map.
@@ -103,7 +114,6 @@ function App() {
           startTutorial();
           setAppMode('tutorial');
         }}
-        onExit={handleExit}
       />
     );
   }

@@ -1,4 +1,4 @@
-package com.harden.adam.chainofcommand;
+package com.adamharden.chainofcommand;
 
 import com.getcapacitor.BridgeActivity;
 

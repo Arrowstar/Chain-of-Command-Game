@@ -1,5 +1,5 @@
 {
-  "appId": "com.harden.adam.chainofcommand",
+  "appId": "com.adamharden.chainofcommand",
   "appName": "Chain of Command",
   "webDir": "./app/dist"
 }
