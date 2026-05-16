@@ -42,6 +42,9 @@ export default function GameScreen() {
   const currentTactic = useGameStore(s => s.currentTactic);
   const experimentalTech = useGameStore(s => s.experimentalTech);
   const tutorialActive = useTutorialStore(s => s.isActive);
+  const tutorialCurrentStep = useTutorialStore(s => s.currentStep);
+  const tutorialSteps = useTutorialStore(s => s.steps);
+  const tutorialIsHidden = useTutorialStore(s => s.isHidden);
   const isCampaign = useCampaignStore(s => !!s.campaign);
 
   const [pendingActionDrop, setPendingActionDrop] = React.useState<{ actionDef: any; ctCost: number; stressCost: number } | null>(null);
@@ -64,6 +67,39 @@ export default function GameScreen() {
       setActivePhoneTab('map');
     }
   }, [isPhone, targetingMode]);
+
+  useLayoutEffect(() => {
+    if (!tutorialActive || tutorialIsHidden) return;
+    
+    const currentStepObj = tutorialSteps[tutorialCurrentStep];
+    if (!currentStepObj) return;
+
+    const highlightId = currentStepObj.highlightId;
+    if (!highlightId) return;
+
+    if (isPhone) {
+      if (
+        highlightId === 'hex-map-container' ||
+        highlightId === 'top-center-buttons' ||
+        highlightId === 'game-log-tab'
+      ) {
+        setActivePhoneTab('map');
+      } else if (
+        highlightId === 'captain-hand' ||
+        highlightId === 'fleet-assets-panel' ||
+        highlightId === 'execute-button' ||
+        highlightId === 'execution-panel' ||
+        highlightId.startsWith('officer-station')
+      ) {
+        setActivePhoneTab('console');
+      }
+    }
+
+    if ((isPhone || isTablet) && highlightId.startsWith('officer-station-')) {
+      const station = highlightId.replace('officer-station-', '') as OfficerStation;
+      setActiveTabletStation(station);
+    }
+  }, [isPhone, isTablet, tutorialActive, tutorialIsHidden, tutorialCurrentStep, tutorialSteps]);
 
   useBgm('/assets/music/Iron_Perimeter.mp3', 0.15);
 

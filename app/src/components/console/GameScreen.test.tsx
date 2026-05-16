@@ -230,4 +230,45 @@ describe('GameScreen', () => {
     expect(mapTab.className).toContain('active');
     expect(consoleTab.className).not.toContain('active');
   });
+
+  it('automatically switches tabs on mobile based on tutorial highlightId', async () => {
+    // We need to import useTutorialStore at the top or just mock its state here
+    const { useTutorialStore } = await import('../../store/useTutorialStore');
+    
+    useViewportSpy.mockReturnValue({ isPhone: true, isTablet: false, isCoarsePointer: false } as any);
+
+    render(<GameScreen />);
+
+    // Mock tutorial active and pointing to console element
+    act(() => {
+      useTutorialStore.setState({
+        isActive: true,
+        isHidden: false,
+        currentStep: 0,
+        steps: [
+          { highlightId: 'captain-hand', dialogue: '' }
+        ]
+      });
+    });
+
+    const consoleTab = screen.getByRole('button', { name: /CONSOLE/i });
+    const mapTab = screen.getByRole('button', { name: /MAP/i });
+
+    // Should switch to console
+    expect(consoleTab.className).toContain('active');
+
+    // Change step to point to map element
+    act(() => {
+      useTutorialStore.setState({
+        currentStep: 1,
+        steps: [
+          { highlightId: 'captain-hand', dialogue: '' },
+          { highlightId: 'hex-map-container', dialogue: '' }
+        ]
+      });
+    });
+
+    // Should switch to map
+    expect(mapTab.className).toContain('active');
+  });
 });
