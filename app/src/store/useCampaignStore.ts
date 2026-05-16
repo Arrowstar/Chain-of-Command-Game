@@ -56,6 +56,8 @@ interface CampaignStore {
   // Derived sector map (generated from campaign.sectorMapSeed)
   sectorMap: SectorMap | null;
 
+
+
   // ── Campaign Lifecycle ─────────────────────────────────────────
   startNewCampaign: (params: {
     fleetAdmiralPlayerId: string;
@@ -130,6 +132,10 @@ interface CampaignStore {
   // ── Selectors ─────────────────────────────────────────────────
   getOwnedTechIds: () => string[];
   hasTech: (id: string) => boolean;
+
+  // ── Active Save Slot Tracking ────────────────────────────────
+  activeSaveSlotId: string | null;
+  setActiveSaveSlotId: (id: string | null) => void;
 }
 
 // ─── Initial campaign state factory ──────────────────────────────
@@ -268,6 +274,9 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
   persistedShips: [],
   officerDataMap: {},
   sectorMap: null,
+  activeSaveSlotId: null,
+
+  setActiveSaveSlotId: (id) => set({ activeSaveSlotId: id }),
 
   pushCampaignLog: ({ type, message, outcome, details }) => {
     set(state => {

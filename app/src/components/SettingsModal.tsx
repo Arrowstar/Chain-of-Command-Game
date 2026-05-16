@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useCampaignStore } from '../store/useCampaignStore';
 import { CampaignSaveManager } from '../utils/CampaignSaveManager';
+import SaveSlotModal from './SaveSlotModal';
 
 // ─── Types ────────────────────────────────────────────────────────
 
@@ -36,6 +37,9 @@ export default function SettingsModal() {
   const [localSfx, setLocalSfx] = useState(sfxVolume);
   const [confirmState, setConfirmState] = useState<ConfirmState>('idle');
 
+  /** Whether the save slot modal is open and in which mode */
+  const [saveModalContext, setSaveModalContext] = useState<'save-only' | 'save-and-exit' | null>(null);
+
   // Sync back if the store changes externally
   useEffect(() => {
     if (isSettingsOpen) {
@@ -48,6 +52,7 @@ export default function SettingsModal() {
   useEffect(() => {
     if (!isSettingsOpen) {
       setConfirmState('idle');
+      setSaveModalContext(null);
     }
   }, [isSettingsOpen]);
 
@@ -56,6 +61,10 @@ export default function SettingsModal() {
     if (!isSettingsOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        if (saveModalContext !== null) {
+          // Let SaveSlotModal handle its own Escape
+          return;
+        }
         if (confirmState !== 'idle') {
           setConfirmState('idle');
         } else {
@@ -65,7 +74,7 @@ export default function SettingsModal() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isSettingsOpen, closeSettings, confirmState]);
+  }, [isSettingsOpen, closeSettings, confirmState, saveModalContext]);
 
   if (!isSettingsOpen) return null;
 
@@ -91,222 +100,260 @@ export default function SettingsModal() {
     }
   };
 
-  const handleSaveAndExit = () => {
-    CampaignSaveManager.saveToBrowser();
-    triggerReturnToMenu();
-  };
-
   const handleTestSound = () => {
     const testAudio = new Audio('/assets/sounds/button-click.wav');
     testAudio.volume = localSfx;
     testAudio.play().catch(() => {});
   };
 
+  // Savable phases (mirrors above)
+  const savablePhases = ['sectorMap', 'drydock', 'nodeResolution'];
+  const isCampaignSavable = campaign !== null && savablePhases.includes(campaign.campaignPhase);
+
   return (
-    <div className="settings-modal-backdrop" onClick={closeSettings}>
-      <div 
-        className="settings-modal panel panel--glow animate-fadeIn" 
-        onClick={e => e.stopPropagation()}
-        data-testid="settings-modal"
-      >
-        <button className="settings-close-btn btn" onClick={closeSettings} aria-label="Close settings">×</button>
-        
-        <h2 style={{ color: 'var(--color-holo-cyan)', textShadow: 'var(--glow-cyan-strong)', marginBottom: 'var(--space-md)' }}>
-          SYSTEM SETTINGS
-        </h2>
+    <>
+      <div className="settings-modal-backdrop" onClick={closeSettings}>
+        <div
+          className="settings-modal panel panel--glow animate-fadeIn"
+          onClick={e => e.stopPropagation()}
+          data-testid="settings-modal"
+        >
+          <button className="settings-close-btn btn" onClick={closeSettings} aria-label="Close settings">×</button>
 
-        <div className="settings-tab-bar" style={{ display: 'flex', gap: '8px', marginBottom: 'var(--space-lg)' }}>
-          <button className="btn btn--primary" style={{ flex: 1, pointerEvents: 'none' }}>AUDIO</button>
-        </div>
+          <h2 style={{ color: 'var(--color-holo-cyan)', textShadow: 'var(--glow-cyan-strong)', marginBottom: 'var(--space-md)' }}>
+            SYSTEM SETTINGS
+          </h2>
 
-        <div className="settings-content" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xl)' }}>
-          
-          {/* Music Volume Slider */}
-          <div className="settings-slider-group">
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <span className="label" style={{ color: 'var(--color-text-primary)' }}>MUSIC VOLUME</span>
-              <span className="mono" style={{ color: 'var(--color-holo-cyan)' }}>{Math.round(localMusic * 100)}%</span>
-            </div>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.05"
-              value={localMusic}
-              onChange={(e) => {
-                const val = parseFloat(e.target.value);
-                setLocalMusic(val);
-                setMusicVolume(val);
-              }}
-              className="settings-slider"
-              data-testid="music-volume-slider"
-            />
+          <div className="settings-tab-bar" style={{ display: 'flex', gap: '8px', marginBottom: 'var(--space-lg)' }}>
+            <button className="btn btn--primary" style={{ flex: 1, pointerEvents: 'none' }}>AUDIO</button>
           </div>
 
-          {/* SFX Volume Slider */}
-          <div className="settings-slider-group">
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <span className="label" style={{ color: 'var(--color-text-primary)' }}>SFX VOLUME</span>
-              <span className="mono" style={{ color: 'var(--color-holo-cyan)' }}>{Math.round(localSfx * 100)}%</span>
+          <div className="settings-content" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xl)' }}>
+
+            {/* Music Volume Slider */}
+            <div className="settings-slider-group">
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span className="label" style={{ color: 'var(--color-text-primary)' }}>MUSIC VOLUME</span>
+                <span className="mono" style={{ color: 'var(--color-holo-cyan)' }}>{Math.round(localMusic * 100)}%</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value={localMusic}
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value);
+                  setLocalMusic(val);
+                  setMusicVolume(val);
+                }}
+                className="settings-slider"
+                data-testid="music-volume-slider"
+              />
             </div>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.05"
-              value={localSfx}
-              onChange={(e) => {
-                const val = parseFloat(e.target.value);
-                setLocalSfx(val);
-                setSfxVolume(val);
-              }}
-              className="settings-slider"
-              data-testid="sfx-volume-slider"
-            />
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px' }}>
-              <button 
-                className="btn btn--secondary" 
-                style={{ fontSize: '0.8rem', padding: '4px 12px' }}
-                onClick={handleTestSound}
-              >
-                TEST SOUND
-              </button>
+
+            {/* SFX Volume Slider */}
+            <div className="settings-slider-group">
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span className="label" style={{ color: 'var(--color-text-primary)' }}>SFX VOLUME</span>
+                <span className="mono" style={{ color: 'var(--color-holo-cyan)' }}>{Math.round(localSfx * 100)}%</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value={localSfx}
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value);
+                  setLocalSfx(val);
+                  setSfxVolume(val);
+                }}
+                className="settings-slider"
+                data-testid="sfx-volume-slider"
+              />
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px' }}>
+                <button
+                  className="btn btn--secondary"
+                  style={{ fontSize: '0.8rem', padding: '4px 12px' }}
+                  onClick={handleTestSound}
+                >
+                  TEST SOUND
+                </button>
+              </div>
             </div>
+
           </div>
 
-        </div>
-
-        {/* ── Navigation Section (hidden when on main menu) ─────────── */}
-        {returnToMenuCallback && (
-          <div
-            data-testid="navigation-section"
-            style={{
-              marginTop: 'var(--space-xl)',
-              paddingTop: 'var(--space-lg)',
-              borderTop: '1px solid var(--color-border)',
-            }}
-          >
+          {/* ── Navigation Section (hidden when on main menu) ─────────── */}
+          {returnToMenuCallback && (
             <div
-              className="label"
-              style={{ color: 'var(--color-text-secondary)', marginBottom: 'var(--space-md)', letterSpacing: '2px' }}
+              data-testid="navigation-section"
+              style={{
+                marginTop: 'var(--space-xl)',
+                paddingTop: 'var(--space-lg)',
+                borderTop: '1px solid var(--color-border)',
+              }}
             >
-              NAVIGATION
+              <div
+                className="label"
+                style={{ color: 'var(--color-text-secondary)', marginBottom: 'var(--space-md)', letterSpacing: '2px' }}
+              >
+                NAVIGATION
+              </div>
+
+              {/* ── Idle state: show buttons ────────────────────────────── */}
+              {confirmState === 'idle' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
+                  {/* Quick Save button — only when on a savable phase */}
+                  {isCampaignSavable && (
+                    <button
+                      className="btn btn--primary"
+                      data-testid="save-game-btn"
+                      style={{ width: '100%', padding: '8px 16px' }}
+                      onClick={() => setSaveModalContext('save-only')}
+                    >
+                      SAVE GAME
+                    </button>
+                  )}
+
+                  <button
+                    className="btn"
+                    data-testid="return-to-menu-btn"
+                    style={{
+                      width: '100%',
+                      borderColor: 'rgba(210, 72, 72, 0.45)',
+                      background: 'rgba(210, 72, 72, 0.07)',
+                      color: 'var(--color-hostile-red)',
+                      padding: '8px 16px',
+                    }}
+                    onClick={handleReturnToMenuClick}
+                  >
+                    RETURN TO MAIN MENU
+                  </button>
+                </div>
+              )}
+
+              {/* ── Campaign-save confirmation ─────────────────────────── */}
+              {confirmState === 'campaign-save' && (
+                <div
+                  data-testid="campaign-save-confirm"
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 'var(--space-sm)',
+                    padding: 'var(--space-md)',
+                    border: '1px solid rgba(230, 160, 0, 0.35)',
+                    borderRadius: 'var(--radius-sm)',
+                    background: 'rgba(230, 160, 0, 0.05)',
+                  }}
+                >
+                  <p style={{ color: 'var(--color-alert-amber)', margin: 0, fontSize: '0.88rem' }}>
+                    Return to the main menu? You can save your campaign progress first.
+                  </p>
+                  <div style={{ display: 'flex', gap: 'var(--space-sm)', flexWrap: 'wrap' }}>
+                    <button
+                      className="btn btn--primary"
+                      data-testid="save-and-exit-btn"
+                      style={{ flex: 1 }}
+                      onClick={() => setSaveModalContext('save-and-exit')}
+                    >
+                      SAVE &amp; EXIT
+                    </button>
+                    <button
+                      className="btn"
+                      data-testid="exit-without-saving-btn"
+                      style={{
+                        flex: 1,
+                        borderColor: 'rgba(210, 72, 72, 0.45)',
+                        background: 'rgba(210, 72, 72, 0.07)',
+                        color: 'var(--color-hostile-red)',
+                      }}
+                      onClick={triggerReturnToMenu}
+                    >
+                      EXIT WITHOUT SAVING
+                    </button>
+                    <button
+                      className="btn btn--secondary"
+                      data-testid="cancel-return-btn"
+                      style={{ flex: 1 }}
+                      onClick={() => setConfirmState('idle')}
+                    >
+                      CANCEL
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Combat / tutorial warning ──────────────────────────── */}
+              {confirmState === 'combat-warn' && (
+                <div
+                  data-testid="combat-warn-confirm"
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 'var(--space-sm)',
+                    padding: 'var(--space-md)',
+                    border: '1px solid rgba(210, 72, 72, 0.35)',
+                    borderRadius: 'var(--radius-sm)',
+                    background: 'rgba(210, 72, 72, 0.05)',
+                  }}
+                >
+                  <p style={{ color: 'var(--color-hostile-red)', margin: 0, fontSize: '0.88rem' }}>
+                    Combat progress cannot be saved. Abandoning now will lose all progress from this battle.
+                  </p>
+                  <div style={{ display: 'flex', gap: 'var(--space-sm)', flexWrap: 'wrap' }}>
+                    <button
+                      className="btn"
+                      data-testid="abandon-combat-btn"
+                      style={{
+                        flex: 1,
+                        borderColor: 'rgba(210, 72, 72, 0.45)',
+                        background: 'rgba(210, 72, 72, 0.07)',
+                        color: 'var(--color-hostile-red)',
+                      }}
+                      onClick={triggerReturnToMenu}
+                    >
+                      ABANDON &amp; EXIT
+                    </button>
+                    <button
+                      className="btn btn--secondary"
+                      data-testid="cancel-return-btn"
+                      style={{ flex: 1 }}
+                      onClick={() => setConfirmState('idle')}
+                    >
+                      CANCEL
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
-
-            {/* ── Idle state: show the button ───────────────────────── */}
-            {confirmState === 'idle' && (
-              <button
-                className="btn"
-                data-testid="return-to-menu-btn"
-                style={{
-                  width: '100%',
-                  borderColor: 'rgba(210, 72, 72, 0.45)',
-                  background: 'rgba(210, 72, 72, 0.07)',
-                  color: 'var(--color-hostile-red)',
-                  padding: '8px 16px',
-                }}
-                onClick={handleReturnToMenuClick}
-              >
-                RETURN TO MAIN MENU
-              </button>
-            )}
-
-            {/* ── Campaign-save confirmation ─────────────────────────── */}
-            {confirmState === 'campaign-save' && (
-              <div
-                data-testid="campaign-save-confirm"
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 'var(--space-sm)',
-                  padding: 'var(--space-md)',
-                  border: '1px solid rgba(230, 160, 0, 0.35)',
-                  borderRadius: 'var(--radius-sm)',
-                  background: 'rgba(230, 160, 0, 0.05)',
-                }}
-              >
-                <p style={{ color: 'var(--color-alert-amber)', margin: 0, fontSize: '0.88rem' }}>
-                  Return to the main menu? You can save your campaign progress first.
-                </p>
-                <div style={{ display: 'flex', gap: 'var(--space-sm)', flexWrap: 'wrap' }}>
-                  <button
-                    className="btn btn--primary"
-                    data-testid="save-and-exit-btn"
-                    style={{ flex: 1 }}
-                    onClick={handleSaveAndExit}
-                  >
-                    SAVE &amp; EXIT
-                  </button>
-                  <button
-                    className="btn"
-                    data-testid="exit-without-saving-btn"
-                    style={{
-                      flex: 1,
-                      borderColor: 'rgba(210, 72, 72, 0.45)',
-                      background: 'rgba(210, 72, 72, 0.07)',
-                      color: 'var(--color-hostile-red)',
-                    }}
-                    onClick={triggerReturnToMenu}
-                  >
-                    EXIT WITHOUT SAVING
-                  </button>
-                  <button
-                    className="btn btn--secondary"
-                    data-testid="cancel-return-btn"
-                    style={{ flex: 1 }}
-                    onClick={() => setConfirmState('idle')}
-                  >
-                    CANCEL
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* ── Combat / tutorial warning ──────────────────────────── */}
-            {confirmState === 'combat-warn' && (
-              <div
-                data-testid="combat-warn-confirm"
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 'var(--space-sm)',
-                  padding: 'var(--space-md)',
-                  border: '1px solid rgba(210, 72, 72, 0.35)',
-                  borderRadius: 'var(--radius-sm)',
-                  background: 'rgba(210, 72, 72, 0.05)',
-                }}
-              >
-                <p style={{ color: 'var(--color-hostile-red)', margin: 0, fontSize: '0.88rem' }}>
-                  Combat progress cannot be saved. Abandoning now will lose all progress from this battle.
-                </p>
-                <div style={{ display: 'flex', gap: 'var(--space-sm)', flexWrap: 'wrap' }}>
-                  <button
-                    className="btn"
-                    data-testid="abandon-combat-btn"
-                    style={{
-                      flex: 1,
-                      borderColor: 'rgba(210, 72, 72, 0.45)',
-                      background: 'rgba(210, 72, 72, 0.07)',
-                      color: 'var(--color-hostile-red)',
-                    }}
-                    onClick={triggerReturnToMenu}
-                  >
-                    ABANDON &amp; EXIT
-                  </button>
-                  <button
-                    className="btn btn--secondary"
-                    data-testid="cancel-return-btn"
-                    style={{ flex: 1 }}
-                    onClick={() => setConfirmState('idle')}
-                  >
-                    CANCEL
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
+
+      {/* Save Slot Modal — rendered outside the settings backdrop so z-index stacks correctly */}
+      {saveModalContext !== null && (
+        <SaveSlotModal
+          mode="save"
+          onSaved={(_meta) => {
+            setSaveModalContext(null);
+            if (saveModalContext === 'save-and-exit') {
+              triggerReturnToMenu();
+            } else {
+              // Just saved — close the settings modal too
+              closeSettings();
+            }
+          }}
+          onClose={() => {
+            setSaveModalContext(null);
+            // If they cancel a save-and-exit, go back to the confirm panel
+            if (saveModalContext === 'save-and-exit') {
+              setConfirmState('campaign-save');
+            }
+          }}
+        />
+      )}
+    </>
   );
 }

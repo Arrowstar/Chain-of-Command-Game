@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { CampaignSaveManager } from '../../utils/CampaignSaveManager';
+import SaveSlotModal from '../SaveSlotModal';
 
 interface MainMenuProps {
   onStart?: () => void;
@@ -52,10 +53,16 @@ const STATUS_INDICATORS = [
 ];
 
 export default function MainMenu({ onStart, onStartCampaign, onContinueCampaign, onStartTutorial, onExit }: MainMenuProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [displayedTitle, setDisplayedTitle] = useState('');
   const [titleDone, setTitleDone] = useState(false);
   const [showExitHint, setShowExitHint] = useState(false);
+  const [showLoadModal, setShowLoadModal] = useState(false);
+  const [hasSaves, setHasSaves] = useState(false);
+
+  // Check for existing saves on mount
+  useEffect(() => {
+    setHasSaves(CampaignSaveManager.hasSaves());
+  }, []);
 
   // Typewriter effect
   useEffect(() => {
@@ -75,13 +82,9 @@ export default function MainMenu({ onStart, onStartCampaign, onContinueCampaign,
     return () => clearTimeout(startDelay);
   }, []);
 
-  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const success = await CampaignSaveManager.importFromDisk(e.target.files[0]);
-      if (success && onContinueCampaign) {
-        onContinueCampaign();
-      }
-    }
+  const handleLoadSuccess = (_slotId: string) => {
+    setShowLoadModal(false);
+    if (onContinueCampaign) onContinueCampaign();
   };
 
   return (
@@ -187,32 +190,15 @@ export default function MainMenu({ onStart, onStartCampaign, onContinueCampaign,
               START CAMPAIGN
             </button>
 
-            {CampaignSaveManager.hasBrowserSave() && (
+            {hasSaves && (
               <button
                 className="btn btn--secondary main-menu-btn"
-                onClick={() => {
-                  if (CampaignSaveManager.loadFromBrowser() && onContinueCampaign) {
-                    onContinueCampaign();
-                  }
-                }}
+                onClick={() => setShowLoadModal(true)}
+                data-testid="load-campaign-btn"
               >
-                CONTINUE CAMPAIGN
+                LOAD CAMPAIGN
               </button>
             )}
-
-            <button
-              className="btn btn--secondary main-menu-btn"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              IMPORT CAMPAIGN
-            </button>
-            <input
-              type="file"
-              accept=".json"
-              ref={fileInputRef}
-              style={{ display: 'none' }}
-              onChange={handleImport}
-            />
 
             {/* Exit button — works on Capacitor native; shows a hint on web */}
             {showExitHint ? (
@@ -275,7 +261,15 @@ export default function MainMenu({ onStart, onStartCampaign, onContinueCampaign,
           </div>
         ))}
       </div>
-      
+
+      {/* Load Campaign Modal */}
+      {showLoadModal && (
+        <SaveSlotModal
+          mode="load"
+          onLoad={handleLoadSuccess}
+          onClose={() => setShowLoadModal(false)}
+        />
+      )}
     </div>
   );
 }

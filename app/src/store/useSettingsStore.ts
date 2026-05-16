@@ -71,8 +71,8 @@ export interface SettingsStore {
   setSfxVolume: (v: number) => void;
   openSettings: () => void;
   closeSettings: () => void;
-  /** Register the app-level "go to main menu" callback. */
-  setReturnToMenuCallback: (cb: () => void) => void;
+  /** Register the app-level "go to main menu" callback, or clear it by passing null. */
+  setReturnToMenuCallback: (cb: (() => void) | null) => void;
   /** Execute the registered returnToMenuCallback (closes settings first). */
   triggerReturnToMenu: () => void;
 }

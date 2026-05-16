@@ -188,17 +188,14 @@ describe('SettingsModal', () => {
     expect(screen.queryByTestId('combat-warn-confirm')).not.toBeInTheDocument();
   });
 
-  it('Save & Exit saves and triggers menu navigation', async () => {
+  it('Save & Exit opens the save slot modal', async () => {
     const user = userEvent.setup();
-    const saveSpy = vi.spyOn(
-      await import('../utils/CampaignSaveManager').then(m => m.CampaignSaveManager),
-      'saveToBrowser',
-    ).mockImplementation(() => {});
     const cb = vi.fn();
 
     act(() => {
       useCampaignStore.setState({
-        campaign: { campaignPhase: 'sectorMap' } as any,
+        campaign: { campaignPhase: 'sectorMap', difficulty: 'normal', currentSector: 1 } as any,
+        persistedShips: [],
       });
     });
     openWithCallback(cb);
@@ -207,23 +204,23 @@ describe('SettingsModal', () => {
     await user.click(screen.getByTestId('return-to-menu-btn'));
     await user.click(screen.getByTestId('save-and-exit-btn'));
 
-    expect(saveSpy).toHaveBeenCalled();
-    expect(cb).toHaveBeenCalled();
-
-    saveSpy.mockRestore();
+    // The save slot modal should be open
+    expect(screen.getByTestId('save-slot-modal')).toBeInTheDocument();
+    // Callback not called yet — user hasn't confirmed save
+    expect(cb).not.toHaveBeenCalled();
   });
 
   it('Exit Without Saving triggers navigation without saving', async () => {
     const user = userEvent.setup();
     const saveSpy = vi.spyOn(
       await import('../utils/CampaignSaveManager').then(m => m.CampaignSaveManager),
-      'saveToBrowser',
-    ).mockImplementation(() => {});
+      'save',
+    ).mockImplementation(() => null);
     const cb = vi.fn();
 
     act(() => {
       useCampaignStore.setState({
-        campaign: { campaignPhase: 'sectorMap' } as any,
+        campaign: { campaignPhase: 'sectorMap', difficulty: 'normal', currentSector: 1 } as any,
       });
     });
     openWithCallback(cb);
@@ -237,6 +234,7 @@ describe('SettingsModal', () => {
 
     saveSpy.mockRestore();
   });
+
 
   // ── Escape key dismisses confirmation, not the whole modal ───
 

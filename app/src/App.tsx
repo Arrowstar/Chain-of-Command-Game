@@ -35,9 +35,14 @@ function App() {
 
   // Register the "return to main menu" navigation callback in the global
   // settings store so SettingsModal can trigger it without prop drilling.
+  // We only set it when we are NOT on the main menu so that it naturally hides.
   useEffect(() => {
-    setReturnToMenuCallback(() => setAppMode('menu'));
-  }, [setReturnToMenuCallback]);
+    if (appMode === 'menu') {
+      setReturnToMenuCallback(null);
+    } else {
+      setReturnToMenuCallback(() => setAppMode('menu'));
+    }
+  }, [appMode, setReturnToMenuCallback]);
 
   // Handler for the native app exit button on the main menu.
   const handleExit = async () => {
