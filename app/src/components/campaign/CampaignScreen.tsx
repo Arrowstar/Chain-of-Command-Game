@@ -8,6 +8,7 @@ import CampaignLog from './CampaignLog';
 import FleetFavorConversionPanel from './FleetFavorConversionPanel';
 import TechBadge from './TechBadge';
 import CampaignStoryScreen from './CampaignStoryScreen';
+import ScoreLedgerModal from './ScoreLedgerModal';
 import { CampaignSaveManager } from '../../utils/CampaignSaveManager';
 import { useViewport } from '../../utils/useViewport';
 import { motion } from 'framer-motion';
@@ -20,6 +21,7 @@ interface Props {
 export default function CampaignScreen({ onStartCombat, onLeaveCampaign }: Props) {
   const campaign = useCampaignStore(s => s.campaign);
   const [showConversionPanel, setShowConversionPanel] = useState(false);
+  const [showLedger, setShowLedger] = useState(false);
   const { isPhone } = useViewport();
 
   if (!campaign) return null;
@@ -63,6 +65,15 @@ export default function CampaignScreen({ onStartCombat, onLeaveCampaign }: Props
                 SAVE
               </button>
             )}
+            {/* Score display */}
+            <button
+              className="btn"
+              style={{ padding: '3px 8px', fontSize: '0.7rem', borderColor: 'rgba(251,191,36,0.5)', color: '#fbbf24', fontFamily: 'var(--font-mono)' }}
+              title="Fleet Commendation Score — tap to view ledger"
+              onClick={() => setShowLedger(true)}
+            >
+              ★ {(campaign.currentScore ?? 0).toLocaleString()}
+            </button>
           </div>
         </header>
       ) : (
@@ -81,6 +92,18 @@ export default function CampaignScreen({ onStartCombat, onLeaveCampaign }: Props
               <span className="label" style={{ color: 'var(--color-hostile-red)' }}>FLEET FAVOR (FF)</span>
               <span style={{ fontSize: '1.2rem', fontWeight: 'bold', marginLeft: 'var(--space-xs)', color: 'var(--color-hostile-red)' }}>{campaign.fleetFavor}</span>
             </div>
+            {/* Score display */}
+            <button
+              className="btn"
+              style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '0', display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}
+              title="Fleet Commendation Score — click to view ledger"
+              onClick={() => setShowLedger(true)}
+            >
+              <span className="label" style={{ color: '#fbbf2488', fontSize: '0.65rem', letterSpacing: '1px' }}>COMMENDATION</span>
+              <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#fbbf24', textShadow: '0 0 10px #fbbf2466', fontFamily: 'var(--font-mono)' }}>
+                ★ {(campaign.currentScore ?? 0).toLocaleString()}
+              </span>
+            </button>
           </div>
           
           <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
@@ -155,6 +178,90 @@ export default function CampaignScreen({ onStartCombat, onLeaveCampaign }: Props
           <CampaignGameOverScreen campaign={campaign} onLeave={onLeaveCampaign} />
         )}
       </main>
+
+      {/* Score Ledger Modal */}
+      {showLedger && <ScoreLedgerModal onClose={() => setShowLedger(false)} />}
+      
+      {/* Dev Menu */}
+      <CampaignDebugMenu />
+    </div>
+  );
+}
+
+// ── Dev Menu ───────────────────────────────────────────────────────────────
+
+function CampaignDebugMenu() {
+  const [visible, setVisible] = React.useState(false);
+  const [open, setOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.altKey && e.key.toLowerCase() === 'd') {
+        setVisible(v => !v);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  if (!visible) return null;
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: '8px',
+      right: '8px',
+      zIndex: 200,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'flex-end',
+      gap: '4px',
+    }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          background: 'rgba(20,20,30,0.85)',
+          border: '1px solid rgba(255,200,0,0.4)',
+          color: 'rgba(255,200,0,0.7)',
+          borderRadius: '4px',
+          padding: '2px 8px',
+          fontSize: '0.65rem',
+          fontFamily: 'var(--font-mono)',
+          cursor: 'pointer',
+          letterSpacing: '0.08em',
+        }}
+        title="Toggle debug tools"
+      >
+        {open ? 'DEV ^' : 'DEV'}
+      </button>
+      {open && (
+        <div style={{
+          background: 'rgba(10,10,20,0.95)',
+          border: '1px solid rgba(255,200,0,0.35)',
+          borderRadius: '6px',
+          padding: '8px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '6px',
+          minWidth: '140px',
+        }}>
+          <div style={{ fontSize: '0.6rem', color: 'rgba(255,200,0,0.5)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>
+            DEBUG TOOLS
+          </div>
+          <button
+            className="btn btn--execute"
+            style={{ fontSize: '0.72rem', padding: '4px 10px' }}
+            onClick={() => {
+              useCampaignStore.setState(s => ({
+                campaign: s.campaign ? { ...s.campaign, campaignPhase: 'story', pendingStoryId: 'victory' } : null
+              }));
+              setOpen(false);
+            }}
+          >
+            Auto-Win Campaign
+          </button>
+        </div>
+      )}
     </div>
   );
 }

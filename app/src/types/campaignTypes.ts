@@ -12,6 +12,61 @@ export type CampaignLogType =
   | 'officer'
   | 'system';
 
+// ─── Score Ledger ──────────────────────────────────────────────────
+
+export type ScoreSource =
+  | 'combat'    // enemy destroyed, flawless bonus, ship destroyed penalty
+  | 'attrition' // post-combat: scars, traumas
+  | 'event'     // event rewards/penalties
+  | 'economy'   // tech acquired, FF conversion
+  | 'sector'    // sector clear bonus
+  | 'victory';  // final difficulty multiplier
+
+export interface ScoreLedgerEntry {
+  id: string;
+  timestamp: number;
+  /** Sector the entry was recorded in */
+  sector: number;
+  source: ScoreSource;
+  /** Human-readable description of what caused this change */
+  reason: string;
+  /** Positive = score gained, negative = score lost */
+  amount: number;
+  /** Running total AFTER this entry was applied */
+  runningTotal: number;
+}
+
+// ─── High Score Record ─────────────────────────────────────────────
+
+export interface HighScoreShipSnapshot {
+  shipId: string;
+  shipName: string;
+  chassisId: string;
+  equippedWeapons: (string | null)[];
+  equippedSubsystems: (string | null)[];
+  officers: { officerId: string; station: string; tier: string }[];
+}
+
+export interface HighScoreRecord {
+  id: string;
+  /** Display-friendly run label, e.g. "Sector 3 – Hard" */
+  runLabel: string;
+  completedAt: number; // Unix ms timestamp
+  difficulty: CampaignDifficulty;
+  /** Pre-multiplier score */
+  rawScore: number;
+  /** Score after difficulty multiplier */
+  finalScore: number;
+  difficultyMultiplier: number;
+  grade: 'S' | 'A' | 'B' | 'C' | 'D' | 'F';
+  /** Was the campaign won? */
+  victory: boolean;
+  /** How many sectors were cleared */
+  sectorsCleared: number;
+  shipSnapshots: HighScoreShipSnapshot[];
+  scoreLedger: ScoreLedgerEntry[];
+}
+
 // ─── Campaign Phase ───────────────────────────────────────────────
 
 export type CampaignPhase =
@@ -356,6 +411,15 @@ export interface CampaignState {
   /** Combat results to be displayed in the post-combat summary */
   lastCombatVictory?: boolean;
   lastCombatReason?: string;
+
+  // ── Fleet Commendation Score ─────────────────────────────────
+  /** Running total score for this campaign run */
+  currentScore: number;
+  /** Full audit log of every score change */
+  scoreLedger: ScoreLedgerEntry[];
+
+  /** Score at start of current combat (used to calculate delta for PostCombatSummary) */
+  scoreAtCombatStart?: number;
 }
 
 export interface CampaignLogEntry {

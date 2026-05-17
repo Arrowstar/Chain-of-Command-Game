@@ -253,10 +253,13 @@ function App() {
       return <GameOverScreen onReturn={() => setAppMode('campaign')} />;
     }
     return (
-      <div className={`app-root ${isRedAlert ? 'red-alert' : ''}`}>
-        <GameScreen />
-        <ModalOverlay />
-      </div>
+      <>
+        <div className={`app-root ${isRedAlert ? 'red-alert' : ''}`}>
+          <GameScreen />
+          <ModalOverlay />
+        </div>
+        <ToastContainer />
+      </>
     );
   }
 

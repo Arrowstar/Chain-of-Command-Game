@@ -16,6 +16,7 @@ import TechBadge from '../campaign/TechBadge';
 import TutorialOverlay from '../tutorial/TutorialOverlay';
 import CombatToastContainer from '../board/CombatToastContainer';
 import AstroCafNotification from '../campaign/AstroCafNotification';
+import ScoreLedgerModal from '../campaign/ScoreLedgerModal';
 import { useGameStore } from '../../store/useGameStore';
 import { useCampaignStore } from '../../store/useCampaignStore';
 import { useTutorialStore } from '../../store/useTutorialStore';
@@ -47,12 +48,14 @@ export default function GameScreen() {
   const tutorialSteps = useTutorialStore(s => s.steps);
   const tutorialIsHidden = useTutorialStore(s => s.isHidden);
   const isCampaign = useCampaignStore(s => !!s.campaign);
+  const campaignScore = useCampaignStore(s => s.campaign?.currentScore ?? 0);
 
   const [pendingActionDrop, setPendingActionDrop] = React.useState<{ actionDef: any; ctCost: number; stressCost: number } | null>(null);
   const [showScenarioTracker, setShowScenarioTracker] = React.useState(false);
   const [showRoE, setShowRoE] = React.useState(false);
   const [showEnemyTactic, setShowEnemyTactic] = React.useState(false);
   const [hasUnreadEnemyTactic, setHasUnreadEnemyTactic] = React.useState(false);
+  const [showScoreLedger, setShowScoreLedger] = React.useState(false);
   const previousTacticIdRef = useRef<string | null>(currentTactic?.id ?? null);
 
   const [activePlayerId, setActivePlayerId] = useState(players[0]?.id);
@@ -276,6 +279,17 @@ export default function GameScreen() {
                     )}
                     {showEnemyTactic ? 'HIDE TACTIC' : 'TACTIC'}
                   </button>
+                  {/* Score counter — campaign only */}
+                  {isCampaign && (
+                    <button
+                      className="btn"
+                      style={{ pointerEvents: 'auto', padding: '8px 10px', minHeight: '40px', fontSize: '0.75rem', borderColor: 'rgba(251,191,36,0.4)', background: 'rgba(12, 18, 28, 0.92)', color: '#fbbf24', fontFamily: 'var(--font-mono)' }}
+                      onClick={() => setShowScoreLedger(true)}
+                      title="Fleet Commendation Score — tap to view ledger"
+                    >
+                      ★ {campaignScore.toLocaleString()}
+                    </button>
+                  )}
                 </div>
                 <div style={{ display: 'grid', gap: '8px' }}>
                   <div style={{ pointerEvents: showRoE ? 'auto' : 'none', opacity: showRoE ? 1 : 0, maxHeight: showRoE ? '320px' : '0px', overflow: 'hidden', transform: showRoE ? 'translateY(0)' : 'translateY(-18px)', transition: 'opacity 180ms ease, transform 180ms ease, max-height 180ms ease' }}>
@@ -413,6 +427,9 @@ export default function GameScreen() {
             </div>
           </div>
         )}
+
+        {/* Score Ledger Modal */}
+        {showScoreLedger && isCampaign && <ScoreLedgerModal onClose={() => setShowScoreLedger(false)} />}
       </div>
     );
   }
@@ -547,6 +564,26 @@ export default function GameScreen() {
                 )}
                 {showEnemyTactic ? 'HIDE ENEMY TACTIC' : 'SHOW ENEMY TACTIC'}
               </button>
+              {/* Score counter — campaign only */}
+              {isCampaign && (
+                <button
+                  className="btn"
+                  style={{
+                    pointerEvents: 'auto',
+                    padding: isCoarsePointer ? '10px 16px' : '6px 14px',
+                    minHeight: isCoarsePointer ? '44px' : undefined,
+                    fontSize: isCoarsePointer ? '0.82rem' : '0.75rem',
+                    borderColor: 'rgba(251,191,36,0.4)',
+                    background: 'rgba(12, 18, 28, 0.92)',
+                    color: '#fbbf24',
+                    fontFamily: 'var(--font-mono)',
+                  }}
+                  onClick={() => setShowScoreLedger(true)}
+                  title="Fleet Commendation Score — click to view ledger"
+                >
+                  ★ {campaignScore.toLocaleString()}
+                </button>
+              )}
             </div>
 
             <div
@@ -798,6 +835,9 @@ export default function GameScreen() {
           </div>
         </div>
       )}
+
+      {/* Score Ledger Modal */}
+      {showScoreLedger && isCampaign && <ScoreLedgerModal onClose={() => setShowScoreLedger(false)} />}
     </div>
   );
 }

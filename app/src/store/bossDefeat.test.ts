@@ -34,6 +34,8 @@ describe('Boss or Bust Campaign Logic', () => {
         difficulty: 'normal',
         dpBudget: 100,
         pendingStoryId: null,
+        currentScore: 0,
+        scoreLedger: [],
       },
       sectorMap: {
         nodes: [

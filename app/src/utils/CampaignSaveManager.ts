@@ -18,7 +18,7 @@ import type { CampaignPhase, CampaignDifficulty } from '../types/campaignTypes';
 // ══════════════════════════════════════════════════════════════════
 
 const DB_NAME = 'ChainOfCommandDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_NAME = 'saves' as const;
 
 /** localStorage keys used by the previous implementation — migrated once. */
@@ -73,19 +73,31 @@ const PHASE_LABELS: Record<CampaignPhase, string> = {
 
 // ─── DB singleton ─────────────────────────────────────────────────
 
-let dbPromise: Promise<IDBPDatabase<CoCSchema>> | null = null;
+let dbPromise: Promise<IDBPDatabase<any>> | null = null;
 
-function getDB(): Promise<IDBPDatabase<CoCSchema>> {
+export function getDB(): Promise<IDBPDatabase<any>> {
   if (!dbPromise) {
-    dbPromise = openDB<CoCSchema>(DB_NAME, DB_VERSION, {
-      upgrade(db) {
-        const store = db.createObjectStore(STORE_NAME, { keyPath: 'meta.id' });
-        store.createIndex('by-date', 'meta.savedAt');
+    dbPromise = openDB(DB_NAME, DB_VERSION, {
+      upgrade(db, oldVersion) {
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          const store = db.createObjectStore(STORE_NAME, { keyPath: 'meta.id' });
+          store.createIndex('by-date', 'meta.savedAt');
+        }
+        if (oldVersion < 2 && !db.objectStoreNames.contains('high_scores')) {
+          const hsStore = db.createObjectStore('high_scores', { keyPath: 'id' });
+          hsStore.createIndex('by-score', 'finalScore');
+        }
       },
     }).then(async db => {
       // One-time migration from localStorage → IndexedDB
       await migrateFromLocalStorage(db);
       return db;
+    }).catch(err => {
+      // Reset the singleton so future calls can try again rather than
+      // permanently returning the same rejected promise.
+      console.error('[CampaignSaveManager] Failed to open IndexedDB:', err);
+      dbPromise = null;
+      throw err;
     });
   }
   return dbPromise;
@@ -99,7 +111,7 @@ function getDB(): Promise<IDBPDatabase<CoCSchema>> {
  * localStorage.  Safe to call multiple times — it no-ops if nothing remains
  * to migrate.
  */
-async function migrateFromLocalStorage(db: IDBPDatabase<CoCSchema>): Promise<void> {
+async function migrateFromLocalStorage(db: IDBPDatabase<any>): Promise<void> {
   try {
     // 1. Migrate the old single-slot legacy key first
     const legacy = localStorage.getItem(LS_LEGACY_KEY);
@@ -206,44 +218,44 @@ export class CampaignSaveManager {
    * Returns the new slot metadata, or null if the save failed.
    */
   static async save(name: string): Promise<SaveSlotMeta | null> {
-    const state = useCampaignStore.getState();
-    const campaign = state.campaign;
-    if (!campaign) {
-      fireToast({ type: 'warning', message: 'No active campaign to save' });
-      return null;
-    }
-
-    const db = await getDB();
-    const slotCount = await db.count(STORE_NAME);
-
-    if (slotCount >= MAX_SAVE_SLOTS) {
-      fireToast({ type: 'warning', message: `Max ${MAX_SAVE_SLOTS} save slots reached – delete a save first` });
-      return null;
-    }
-
-    const meta: SaveSlotMeta = {
-      id: generateId(),
-      name: name.trim() || this.generateSaveName(),
-      savedAt: Date.now(),
-      sector: campaign.currentSector,
-      phase: campaign.campaignPhase,
-      difficulty: campaign.difficulty,
-      fleetFavor: campaign.fleetFavor,
-      requisitionPoints: campaign.requisitionPoints,
-      shipCount: state.persistedShips.length,
-    };
-
-    const slotData: SaveSlotData = {
-      meta,
-      campaign: state.campaign,
-      campaignLog: state.campaignLog,
-      persistedPlayers: state.persistedPlayers,
-      persistedShips: state.persistedShips,
-      officerDataMap: state.officerDataMap,
-      sectorMap: state.sectorMap,
-    };
-
     try {
+      const state = useCampaignStore.getState();
+      const campaign = state.campaign;
+      if (!campaign) {
+        fireToast({ type: 'warning', message: 'No active campaign to save' });
+        return null;
+      }
+
+      const db = await getDB();
+      const slotCount = await db.count(STORE_NAME);
+
+      if (slotCount >= MAX_SAVE_SLOTS) {
+        fireToast({ type: 'warning', message: `Max ${MAX_SAVE_SLOTS} save slots reached – delete a save first` });
+        return null;
+      }
+
+      const meta: SaveSlotMeta = {
+        id: generateId(),
+        name: name.trim() || this.generateSaveName(),
+        savedAt: Date.now(),
+        sector: campaign.currentSector,
+        phase: campaign.campaignPhase,
+        difficulty: campaign.difficulty,
+        fleetFavor: campaign.fleetFavor,
+        requisitionPoints: campaign.requisitionPoints,
+        shipCount: state.persistedShips.length,
+      };
+
+      const slotData: SaveSlotData = {
+        meta,
+        campaign: state.campaign,
+        campaignLog: state.campaignLog,
+        persistedPlayers: state.persistedPlayers,
+        persistedShips: state.persistedShips,
+        officerDataMap: state.officerDataMap,
+        sectorMap: state.sectorMap,
+      };
+
       await db.put(STORE_NAME, slotData);
 
       useCampaignStore.getState().setActiveSaveSlotId(meta.id);
@@ -267,43 +279,43 @@ export class CampaignSaveManager {
    * Returns the updated slot metadata, or null if the operation failed.
    */
   static async overwrite(slotId: string, name: string): Promise<SaveSlotMeta | null> {
-    const state = useCampaignStore.getState();
-    const campaign = state.campaign;
-    if (!campaign) {
-      fireToast({ type: 'warning', message: 'No active campaign to save' });
-      return null;
-    }
-
-    const db = await getDB();
-    const existing = await db.get(STORE_NAME, slotId);
-    if (!existing) {
-      fireToast({ type: 'warning', message: 'Save slot not found' });
-      return null;
-    }
-
-    const meta: SaveSlotMeta = {
-      id: slotId,
-      name: name.trim() || this.generateSaveName(),
-      savedAt: Date.now(),
-      sector: campaign.currentSector,
-      phase: campaign.campaignPhase,
-      difficulty: campaign.difficulty,
-      fleetFavor: campaign.fleetFavor,
-      requisitionPoints: campaign.requisitionPoints,
-      shipCount: state.persistedShips.length,
-    };
-
-    const slotData: SaveSlotData = {
-      meta,
-      campaign: state.campaign,
-      campaignLog: state.campaignLog,
-      persistedPlayers: state.persistedPlayers,
-      persistedShips: state.persistedShips,
-      officerDataMap: state.officerDataMap,
-      sectorMap: state.sectorMap,
-    };
-
     try {
+      const state = useCampaignStore.getState();
+      const campaign = state.campaign;
+      if (!campaign) {
+        fireToast({ type: 'warning', message: 'No active campaign to save' });
+        return null;
+      }
+
+      const db = await getDB();
+      const existing = await db.get(STORE_NAME, slotId);
+      if (!existing) {
+        fireToast({ type: 'warning', message: 'Save slot not found' });
+        return null;
+      }
+
+      const meta: SaveSlotMeta = {
+        id: slotId,
+        name: name.trim() || this.generateSaveName(),
+        savedAt: Date.now(),
+        sector: campaign.currentSector,
+        phase: campaign.campaignPhase,
+        difficulty: campaign.difficulty,
+        fleetFavor: campaign.fleetFavor,
+        requisitionPoints: campaign.requisitionPoints,
+        shipCount: state.persistedShips.length,
+      };
+
+      const slotData: SaveSlotData = {
+        meta,
+        campaign: state.campaign,
+        campaignLog: state.campaignLog,
+        persistedPlayers: state.persistedPlayers,
+        persistedShips: state.persistedShips,
+        officerDataMap: state.officerDataMap,
+        sectorMap: state.sectorMap,
+      };
+
       await db.put(STORE_NAME, slotData);
 
       useCampaignStore.getState().setActiveSaveSlotId(meta.id);
@@ -316,7 +328,7 @@ export class CampaignSaveManager {
       return meta;
     } catch (e) {
       console.error('[CampaignSaveManager] Failed to overwrite:', e);
-      fireToast({ type: 'warning', message: 'Failed to overwrite save' });
+      fireToast({ type: 'warning', message: 'Failed to overwrite campaign' });
       return null;
     }
   }

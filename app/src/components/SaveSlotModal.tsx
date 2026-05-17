@@ -217,22 +217,28 @@ export default function SaveSlotModal({ mode, onLoad, onSaved, onClose }: SaveSl
   const handleSaveNew = async () => {
     if (isSaving) return;
     setIsSaving(true);
-    const meta = await CampaignSaveManager.save(saveName);
-    setIsSaving(false);
-    if (meta) {
-      await refreshSaves();
-      if (onSaved) onSaved(meta);
+    try {
+      const meta = await CampaignSaveManager.save(saveName);
+      if (meta) {
+        await refreshSaves();
+        if (onSaved) onSaved(meta);
+      }
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleOverwrite = async (slotId: string) => {
     if (isSaving) return;
     setIsSaving(true);
-    const meta = await CampaignSaveManager.overwrite(slotId, saveName);
-    setIsSaving(false);
-    if (meta) {
-      await refreshSaves();
-      if (onSaved) onSaved(meta);
+    try {
+      const meta = await CampaignSaveManager.overwrite(slotId, saveName);
+      if (meta) {
+        await refreshSaves();
+        if (onSaved) onSaved(meta);
+      }
+    } finally {
+      setIsSaving(false);
     }
   };
 

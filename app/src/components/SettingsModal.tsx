@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useCampaignStore } from '../store/useCampaignStore';
+import { useGameStore } from '../store/useGameStore';
 import { CampaignSaveManager } from '../utils/CampaignSaveManager';
 import SaveSlotModal from './SaveSlotModal';
 
@@ -30,6 +31,8 @@ export default function SettingsModal() {
 
   // Campaign context — used to determine which confirmation to show
   const campaign = useCampaignStore(s => s.campaign);
+  const gamePhase = useGameStore(s => s.phase);
+  const isCombatActive = gamePhase !== 'setup' && gamePhase !== 'gameOver';
 
   // Use local state while dragging the slider for responsiveness,
   // then sync to store on change.
@@ -91,7 +94,7 @@ export default function SettingsModal() {
 
     const savablePhases = ['sectorMap', 'drydock', 'nodeResolution'];
     const isCampaignSavable =
-      campaign !== null && savablePhases.includes(campaign.campaignPhase);
+      campaign !== null && !isCombatActive && savablePhases.includes(campaign.campaignPhase);
 
     if (isCampaignSavable) {
       setConfirmState('campaign-save');
@@ -108,7 +111,7 @@ export default function SettingsModal() {
 
   // Savable phases (mirrors above)
   const savablePhases = ['sectorMap', 'drydock', 'nodeResolution'];
-  const isCampaignSavable = campaign !== null && savablePhases.includes(campaign.campaignPhase);
+  const isCampaignSavable = campaign !== null && !isCombatActive && savablePhases.includes(campaign.campaignPhase);
 
   return (
     <>

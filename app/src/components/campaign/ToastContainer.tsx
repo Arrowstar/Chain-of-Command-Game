@@ -1,9 +1,10 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
+import { create } from 'zustand';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // ── Toast types ──────────────────────────────────────────────────────────────
 
-export type ToastType = 'rp-gain' | 'rp-loss' | 'ff-gain' | 'ff-loss' | 'tech' | 'warning' | 'info' | 'system';
+export type ToastType = 'rp-gain' | 'rp-loss' | 'ff-gain' | 'ff-loss' | 'tech' | 'warning' | 'info' | 'system' | 'score-gain' | 'score-loss';
 
 export interface Toast {
   id: string;
@@ -12,7 +13,39 @@ export interface Toast {
   value?: number;
 }
 
-// ── Context ──────────────────────────────────────────────────────────────────
+// ── Zustand store — the stable backing for fireToast ─────────────────────────
+// Using a store (instead of window.__campaignToast) means fireToast() is always
+// callable regardless of whether the React component is mounted, and is immune
+// to React StrictMode's effect cleanup / remount cycle.
+
+interface ToastStore {
+  toasts: Toast[];
+  addToast: (toast: Omit<Toast, 'id'>) => void;
+  removeToast: (id: string) => void;
+}
+
+const useToastStore = create<ToastStore>((set) => ({
+  toasts: [],
+  addToast: (toast) => {
+    const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    set(state => ({ toasts: [...state.toasts, { ...toast, id }] }));
+    setTimeout(() => {
+      set(state => ({ toasts: state.toasts.filter(t => t.id !== id) }));
+    }, 3500);
+  },
+  removeToast: (id) => set(state => ({ toasts: state.toasts.filter(t => t.id !== id) })),
+}));
+
+/**
+ * Fire a campaign toast from anywhere in the app — no React context or
+ * component mount required.  Backed by a Zustand store so it is safe to call
+ * during async operations, from utility classes, or from Zustand store actions.
+ */
+export function fireToast(toast: Omit<Toast, 'id'>) {
+  useToastStore.getState().addToast(toast);
+}
+
+// ── Legacy Context API (kept for backward compat with ToastProvider) ──────────
 
 interface ToastContextValue {
   addToast: (toast: Omit<Toast, 'id'>) => void;
@@ -45,31 +78,17 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-// ── Standalone Container (used by App.tsx when not using provider) ────────────
+// ── Standalone Container ──────────────────────────────────────────────────────
 
 interface ToastContainerProps {
+  /** When provided (e.g. from ToastProvider), these override the store toasts. */
   toasts?: Toast[];
 }
 
 export default function ToastContainer({ toasts: externalToasts }: ToastContainerProps) {
-  // When used standalone (not via provider), we listen to campaign store mutations
-  const [internalToasts, setInternalToasts] = useState<Toast[]>([]);
-
-  const addInternal = useCallback((toast: Omit<Toast, 'id'>) => {
-    const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    setInternalToasts(prev => [...prev, { ...toast, id }]);
-    setTimeout(() => {
-      setInternalToasts(prev => prev.filter(t => t.id !== id));
-    }, 3500);
-  }, []);
-
-  // Expose globally so CampaignStore can dispatch toasts
-  useEffect(() => {
-    (window as any).__campaignToast = addInternal;
-    return () => { delete (window as any).__campaignToast; };
-  }, [addInternal]);
-
-  const toasts = externalToasts ?? internalToasts;
+  // Subscribe to the module-level Zustand store for standalone usage
+  const storeToasts = useToastStore(s => s.toasts);
+  const toasts = externalToasts ?? storeToasts;
 
   return (
     <div style={{
@@ -121,48 +140,48 @@ export default function ToastContainer({ toasts: externalToasts }: ToastContaine
 
 function getBorderColor(type: ToastType): string {
   switch (type) {
-    case 'rp-gain':  return 'var(--color-alert-amber)';
-    case 'rp-loss':  return 'var(--color-hostile-red)';
-    case 'ff-gain':  return 'var(--color-holo-green)';
-    case 'ff-loss':  return 'var(--color-hostile-red)';
-    case 'tech':     return 'var(--color-holo-cyan)';
-    case 'warning':  return 'var(--color-alert-amber)';
-    case 'system':   return 'var(--color-holo-cyan)';
+    case 'rp-gain':    return 'var(--color-alert-amber)';
+    case 'rp-loss':    return 'var(--color-hostile-red)';
+    case 'ff-gain':    return 'var(--color-holo-green)';
+    case 'ff-loss':    return 'var(--color-hostile-red)';
+    case 'tech':       return 'var(--color-holo-cyan)';
+    case 'warning':    return 'var(--color-alert-amber)';
+    case 'system':     return 'var(--color-holo-cyan)';
+    case 'score-gain': return '#fbbf24';
+    case 'score-loss': return '#f87171';
     case 'info':
-    default:         return 'var(--color-border)';
+    default:           return 'var(--color-border)';
   }
 }
 
 function getIcon(type: ToastType): string {
   switch (type) {
-    case 'rp-gain':  return '⬆';
-    case 'rp-loss':  return '⬇';
-    case 'ff-gain':  return '★';
-    case 'ff-loss':  return '☆';
-    case 'tech':     return '🔬';
-    case 'warning':  return '⚠';
-    case 'system':   return '⚙';
+    case 'rp-gain':    return '⬆';
+    case 'rp-loss':    return '⬇';
+    case 'ff-gain':    return '★';
+    case 'ff-loss':    return '☆';
+    case 'tech':       return '🔬';
+    case 'warning':    return '⚠';
+    case 'system':     return '⚙';
+    case 'score-gain': return '⚓';
+    case 'score-loss': return '⚓';
     case 'info':
-    default:         return 'ℹ';
+    default:           return 'ℹ';
   }
 }
 
 function getLabel(type: ToastType): string {
   switch (type) {
-    case 'rp-gain':  return 'RP Gained';
-    case 'rp-loss':  return 'RP Spent';
-    case 'ff-gain':  return 'Fleet Favor +';
-    case 'ff-loss':  return 'Fleet Favor −';
-    case 'tech':     return 'Tech Acquired';
-    case 'warning':  return 'Warning';
-    case 'system':   return 'System';
+    case 'rp-gain':    return 'RP Gained';
+    case 'rp-loss':    return 'RP Spent';
+    case 'ff-gain':    return 'Fleet Favor +';
+    case 'ff-loss':    return 'Fleet Favor −';
+    case 'tech':       return 'Tech Acquired';
+    case 'warning':    return 'Warning';
+    case 'system':     return 'System';
+    case 'score-gain': return 'Commendation +';
+    case 'score-loss': return 'Commendation −';
     case 'info':
-    default:         return 'Update';
+    default:           return 'Update';
   }
-}
-
-/** Utility: fire a toast from anywhere in the app (no React context needed) */
-export function fireToast(toast: Omit<Toast, 'id'>) {
-  const fn = (window as any).__campaignToast;
-  if (fn) fn(toast);
 }

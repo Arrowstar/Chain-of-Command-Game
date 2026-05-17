@@ -2,6 +2,7 @@ import { describe, expect, it, beforeEach, vi } from 'vitest';
 import { useGameStore } from './useGameStore';
 import { useUIStore } from './useUIStore';
 import { ShipSize } from '../types/game';
+import * as hexGrid from '../engine/hexGrid';
 
 // Mock UI store to prevent side effects
 vi.mock('./useUIStore', () => ({
@@ -209,7 +210,13 @@ describe('Massive Store Edge Cases', () => {
             ctCost: 0, 
             stressCost: 0, 
         });
-        store.resolveAction('p1', 's1', 'fire', { targetShipId: 'e1', weaponIndex: 0 });
+        
+        const isInFiringArcSpy = vi.spyOn(hexGrid, 'isInFiringArc').mockReturnValue(false);
+        try {
+            store.resolveAction('p1', 's1', 'fire', { targetShipId: 'e1', weaponIndex: 0 });
+        } finally {
+            isInFiringArcSpy.mockRestore();
+        }
 
         expect(useGameStore.getState().tacticalOverrideShipIds).not.toContain('s1');
     });

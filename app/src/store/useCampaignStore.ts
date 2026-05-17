@@ -7,8 +7,11 @@ import type {
   CampaignLogEntry,
   CampaignLogType,
   StoryBeatId,
+  ScoreLedgerEntry,
+  ScoreSource,
 } from '../types/campaignTypes';
 import type { OfficerData, ShipState, PlayerState } from '../types/game';
+import { HighScoreManager, DIFFICULTY_MULTIPLIERS, calculateGrade } from '../utils/HighScoreManager';
 import { generateSectorMap, NodeType, type SectorMap } from '../engine/mapGenerator';
 import {
   executePostCombatLoop,
@@ -130,6 +133,9 @@ interface CampaignStore {
     details?: Record<string, unknown>;
   }) => void;
 
+  // ── Score Ledger ───────────────────────────────────────────────
+  addScore: (amount: number, reason: string, source: ScoreSource) => void;
+
   // ── Selectors ─────────────────────────────────────────────────
   getOwnedTechIds: () => string[];
   hasTech: (id: string) => boolean;
@@ -172,6 +178,9 @@ function makeCampaignState(params: {
     victory: null,
     difficulty: params.difficulty,
     dpBudget: params.dpBudget,
+    currentScore: 0,
+    scoreLedger: [],
+    scoreAtCombatStart: 0,
   };
 }
 
@@ -340,7 +349,15 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
   // ── Load Campaign ──────────────────────────────────────────────
   loadCampaignState: (stateToLoad) => {
     set({
-      campaign: stateToLoad.campaign || null,
+      campaign: stateToLoad.campaign
+        ? {
+            ...stateToLoad.campaign,
+            // Back-fill score fields for saves that pre-date the scoring system
+            currentScore: stateToLoad.campaign.currentScore ?? 0,
+            scoreLedger: stateToLoad.campaign.scoreLedger ?? [],
+            scoreAtCombatStart: stateToLoad.campaign.scoreAtCombatStart ?? 0,
+          }
+        : null,
       campaignLog: stateToLoad.campaignLog || [],
       persistedPlayers: stateToLoad.persistedPlayers || [],
       persistedShips: stateToLoad.persistedShips || [],
@@ -349,6 +366,37 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
     });
   },
 
+
+  // ── Score Ledger Action ────────────────────────────────────────
+  addScore: (amount, reason, source) => {
+    set(state => {
+      if (!state.campaign) return state;
+      const newTotal = (state.campaign.currentScore ?? 0) + amount;
+      const entry: ScoreLedgerEntry = {
+        id: `score-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+        timestamp: Date.now(),
+        sector: state.campaign.currentSector,
+        source,
+        reason,
+        amount,
+        runningTotal: newTotal,
+      };
+      return {
+        campaign: {
+          ...state.campaign,
+          currentScore: newTotal,
+          scoreLedger: [...(state.campaign.scoreLedger ?? []), entry],
+        },
+      };
+    });
+
+    if (amount !== 0) {
+      fireToast({
+        type: amount > 0 ? 'score-gain' : 'score-loss',
+        message: `${amount > 0 ? '+' : ''}${amount} Commendation — ${reason}`,
+      });
+    }
+  },
 
   // ── Combat End Callback ────────────────────────────────────────
   onCombatEnd: ({ players, ships, earnedFF, victory, reason }) => {
@@ -407,6 +455,35 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
           0,
         )
       : 0;
+
+    // ── Score: Combat outcome ───────────────────────────────────────
+    // Record score-at-combat-start for post-combat delta display
+    set(state => ({
+      campaign: state.campaign ? { ...state.campaign, scoreAtCombatStart: state.campaign.currentScore ?? 0 } : null,
+    }));
+
+    if (victory) {
+      // +200 per positive FF earned (roughly 1 FF per enemy small ship)
+      if (earnedFF > 0) {
+        get().addScore(earnedFF * 200, `Combat victory – Fleet Favor earned (+${earnedFF} FF)`, 'combat');
+      }
+      // Flawless bonus: no ships destroyed during combat
+      if (destroyedShipCount === 0 && isBossNode) {
+        get().addScore(500, 'Sector Boss destroyed without losing a ship (Flawless)', 'combat');
+      } else if (destroyedShipCount === 0 && earnedFF > 0) {
+        get().addScore(150, 'Combat victory with no ships lost (Flawless)', 'combat');
+      }
+    } else {
+      // Penalty for losing FF from a defeat
+      if (earnedFF < 0) {
+        get().addScore(earnedFF * 100, `Tactical withdrawal – Fleet Favor lost (${earnedFF} FF)`, 'combat');
+      }
+    }
+    // Penalty per ship destroyed
+    if (destroyedShipCount > 0) {
+      get().addScore(destroyedShipCount * -600, `${destroyedShipCount} ship(s) lost in combat`, 'combat');
+    }
+
     get().pushCampaignLog({
       type: 'combat',
       message: `Combat resolved at ${currentNode ? getNodeLabel(currentNode.type) : 'engagement zone'}`,
@@ -516,6 +593,14 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
           }
         : null,
     }));
+    // ── Score: Traumas & Scars ──────────────────────────────────────
+    if (finalResult.traumasGained.length > 0) {
+      get().addScore(finalResult.traumasGained.length * -200, `${finalResult.traumasGained.length} officer trauma(s) sustained`, 'attrition');
+    }
+    if (finalResult.scarsGained.length > 0) {
+      get().addScore(finalResult.scarsGained.length * -100, `${finalResult.scarsGained.length} ship scar(s) recorded`, 'attrition');
+    }
+
     if (finalResult.traumasGained.length > 0) {
       fireToast({ type: 'warning', message: `${finalResult.traumasGained.length} officer(s) gained Trauma` });
     }
@@ -576,10 +661,46 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
   },
 
   finishPostCombat: () => {
-    const { campaign } = get();
+    const { campaign, persistedShips, persistedPlayers } = get();
     if (!campaign) return;
 
     if (campaign.isGameOver) {
+      // ── Score: Game over (defeat) – apply multiplier and save ──────
+      const rawScore = campaign.currentScore ?? 0;
+      const multiplier = DIFFICULTY_MULTIPLIERS[campaign.difficulty] ?? 1.0;
+      const bonus = Math.round(rawScore * (multiplier - 1.0));
+      if (bonus > 0) {
+        get().addScore(bonus, `Campaign ended – ${campaign.difficulty.toUpperCase()} difficulty multiplier (×${multiplier})`, 'victory');
+      }
+      const finalCampaign = get().campaign;
+      if (finalCampaign) {
+        const finalScore = finalCampaign.currentScore ?? 0;
+        void HighScoreManager.saveHighScore({
+          runLabel: `Sector ${campaign.currentSector} – ${campaign.difficulty.toUpperCase()} (Defeated)`,
+          completedAt: Date.now(),
+          difficulty: campaign.difficulty,
+          rawScore,
+          finalScore,
+          difficultyMultiplier: multiplier,
+          grade: calculateGrade(finalScore),
+          victory: false,
+          sectorsCleared: Math.max(0, campaign.currentSector - 1),
+          shipSnapshots: persistedShips.map(ship => ({
+            shipId: ship.id,
+            shipName: ship.name,
+            chassisId: ship.chassisId,
+            equippedWeapons: ship.equippedWeapons,
+            equippedSubsystems: ship.equippedSubsystems,
+            officers: (persistedPlayers.find(p => p.shipId === ship.id)?.officers ?? []).map(o => ({
+              officerId: o.officerId,
+              station: o.station,
+              tier: o.currentTier,
+            })),
+          })),
+          scoreLedger: finalCampaign.scoreLedger ?? [],
+        });
+      }
+
       set(state => ({
         campaign: state.campaign ? { ...state.campaign, campaignPhase: 'gameOver' } : null
       }));
@@ -801,6 +922,26 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
     for (const techId of resolution.techAwarded ?? []) {
       const t = getTechById(techId);
       if (t) fireToast({ type: 'tech', message: `Acquired: ${t.name}` });
+    }
+
+    // ── Score: Event outcome ───────────────────────────────────────
+    const techCount = resolution.techAwarded?.length ?? 0;
+    if (techCount > 0) {
+      get().addScore(techCount * 300, `Acquired ${techCount} Experimental Tech from event: ${event?.title ?? eventId}`, 'event');
+    }
+    const weaponCount = resolution.grantedWeapons?.length ?? 0;
+    if (weaponCount > 0) {
+      get().addScore(weaponCount * 150, `Recovered ${weaponCount} weapon(s) from event: ${event?.title ?? eventId}`, 'event');
+    }
+    const subsystemCount = resolution.grantedSubsystems?.length ?? 0;
+    if (subsystemCount > 0) {
+      get().addScore(subsystemCount * 100, `Recovered ${subsystemCount} subsystem(s) from event: ${event?.title ?? eventId}`, 'event');
+    }
+    // Score for roll success/failure on events
+    if (typeof resolution.roll === 'number' && resolution.rolledGood === true) {
+      get().addScore(20, `Skill check succeeded – ${event?.title ?? eventId}`, 'event');
+    } else if (typeof resolution.roll === 'number' && resolution.rolledGood === false) {
+      get().addScore(-10, `Skill check failed – ${event?.title ?? eventId}`, 'event');
     }
 
     get().pushCampaignLog({
@@ -1222,6 +1363,8 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
     }));
 
     fireToast({ type: 'tech', message: `Purchased: ${tech.name}` });
+    // ── Score: Tech purchase ──────────────────────────────────────────
+    get().addScore(250, `Acquired Experimental Tech: ${tech.name}`, 'economy');
     get().pushCampaignLog({
       type: 'market',
       message: `Purchased experimental tech ${tech.name}`,
@@ -1506,6 +1649,10 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
           }
         : null,
     }));
+    // ── Score: Sector clear bonus ───────────────────────────────────
+    const clearedSector = campaign.currentSector;
+    get().addScore(1000 + (clearedSector - 1) * 500, `Sector ${clearedSector} Boss destroyed – sector cleared`, 'sector');
+
     fireToast({ type: 'rp-gain', message: `Sector Cleared! +${transition.rpBonus} RP` });
     get().pushCampaignLog({
       type: 'resource',
@@ -1521,15 +1668,56 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
 
   // ── Story Dismissal ────────────────────────────────────────────
   dismissStory: () => {
-    const { campaign } = get();
+    const { campaign, persistedShips, persistedPlayers } = get();
     if (!campaign || campaign.campaignPhase !== 'story') return;
 
     if (campaign.pendingStoryId === 'victory') {
+      // ── Score: Victory! Apply difficulty multiplier ──────────────
+      const rawScore = campaign.currentScore ?? 0;
+      const multiplier = DIFFICULTY_MULTIPLIERS[campaign.difficulty] ?? 1.0;
+      const bonus = Math.round(rawScore * (multiplier - 1.0));
+      if (bonus > 0) {
+        get().addScore(bonus, `Campaign Victory – ${campaign.difficulty.toUpperCase()} difficulty multiplier (×${multiplier})`, 'victory');
+      }
+      // Also add flat victory bonus
+      get().addScore(2000, 'Full campaign completed – Victory bonus', 'victory');
+
       set(state => ({
         campaign: state.campaign
           ? { ...state.campaign, isGameOver: true, victory: true, campaignPhase: 'gameOver', pendingStoryId: null }
           : null,
       }));
+
+      // Save to high scores
+      const finalCampaign = get().campaign;
+      if (finalCampaign) {
+        const finalScore = finalCampaign.currentScore ?? 0;
+        void HighScoreManager.saveHighScore({
+          runLabel: `Sector ${campaign.currentSector} – ${campaign.difficulty.toUpperCase()}`,
+          completedAt: Date.now(),
+          difficulty: campaign.difficulty,
+          rawScore,
+          finalScore,
+          difficultyMultiplier: multiplier,
+          grade: calculateGrade(finalScore),
+          victory: true,
+          sectorsCleared: campaign.currentSector,
+          shipSnapshots: persistedShips.map(ship => ({
+            shipId: ship.id,
+            shipName: ship.name,
+            chassisId: ship.chassisId,
+            equippedWeapons: ship.equippedWeapons,
+            equippedSubsystems: ship.equippedSubsystems,
+            officers: (persistedPlayers.find(p => p.shipId === ship.id)?.officers ?? []).map(o => ({
+              officerId: o.officerId,
+              station: o.station,
+              tier: o.currentTier,
+            })),
+          })),
+          scoreLedger: finalCampaign.scoreLedger ?? [],
+        });
+      }
+
       get().pushCampaignLog({
         type: 'system',
         message: 'Campaign concluded',

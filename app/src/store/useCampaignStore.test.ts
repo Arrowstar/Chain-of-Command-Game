@@ -72,6 +72,8 @@ describe('useCampaignStore event resolution', () => {
         difficulty: 'normal',
         dpBudget: 100,
         pendingStoryId: null,
+        currentScore: 0,
+        scoreLedger: [],
       },
       sectorMap: {
         nodes: [{ id: 'node-event', type: NodeType.Event, layer: 1, position: 0.5, paths: [], isRevealed: true, eventId: 'event-21' }],

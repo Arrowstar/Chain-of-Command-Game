@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { CampaignSaveManager } from '../../utils/CampaignSaveManager';
 import SaveSlotModal from '../SaveSlotModal';
+import HighScoresScreen from './HighScoresScreen';
 
 interface MainMenuProps {
   onStart?: () => void;
@@ -56,6 +57,7 @@ export default function MainMenu({ onStart, onStartCampaign, onContinueCampaign,
   const [displayedTitle, setDisplayedTitle] = useState('');
   const [titleDone, setTitleDone] = useState(false);
   const [showLoadModal, setShowLoadModal] = useState(false);
+  const [showHighScores, setShowHighScores] = useState(false);
   const [hasSaves, setHasSaves] = useState(false);
 
   // Check for existing saves on mount
@@ -202,6 +204,19 @@ export default function MainMenu({ onStart, onStartCampaign, onContinueCampaign,
               </button>
             )}
 
+            <button
+              className="btn main-menu-btn"
+              style={{
+                borderColor: 'rgba(251, 191, 36, 0.55)',
+                background: 'rgba(251, 191, 36, 0.06)',
+                color: '#fbbf24',
+              }}
+              onClick={() => setShowHighScores(true)}
+              data-testid="high-scores-btn"
+            >
+              HIGH SCORES
+            </button>
+
           </div>
         </div>
       </div>
@@ -230,6 +245,11 @@ export default function MainMenu({ onStart, onStartCampaign, onContinueCampaign,
           onLoad={handleLoadSuccess}
           onClose={() => setShowLoadModal(false)}
         />
+      )}
+
+      {/* High Scores */}
+      {showHighScores && (
+        <HighScoresScreen onClose={() => setShowHighScores(false)} />
       )}
     </div>
   );

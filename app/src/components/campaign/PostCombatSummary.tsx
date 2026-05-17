@@ -4,15 +4,21 @@ import type { PostCombatResult } from '../../types/campaignTypes';
 import { getScarImpactLegendText, getScarStatusMeta } from '../console/scarStatus';
 import FleetFavorConversionPanel from './FleetFavorConversionPanel';
 import { NodeType } from '../../engine/mapGenerator';
+import ScoreLedgerModal from './ScoreLedgerModal';
 
 export default function PostCombatSummary() {
   const [result, setResult] = useState<PostCombatResult | null>(null);
+  const [showLedger, setShowLedger] = useState(false);
   
   const executePostCombat = useCampaignStore(s => s.executePostCombat);
   const finishPostCombat = useCampaignStore(s => s.finishPostCombat);
   const completeBossNode = useCampaignStore(s => s.completeBossNode);
   const campaign = useCampaignStore(s => s.campaign);
   const sectorMap = useCampaignStore(s => s.sectorMap);
+
+  const scoreAtCombatStart = campaign?.scoreAtCombatStart ?? 0;
+  const currentScore = campaign?.currentScore ?? 0;
+  const scoreDelta = currentScore - scoreAtCombatStart;
 
   const isBossNode = sectorMap?.nodes.find(n => n.id === campaign?.currentNodeId)?.type === NodeType.Boss;
   const isBossDefeat = isBossNode && result && !result.victory;
@@ -60,6 +66,33 @@ export default function PostCombatSummary() {
             <div className="label" style={{ color: 'var(--color-alert-amber)' }}>CURRENT RP</div>
             <div className="mono" style={{ fontSize: '2.5rem', color: 'var(--color-alert-amber)' }}>{campaign.requisitionPoints}</div>
           </div>
+        </div>
+
+        {/* Score Delta */}
+        <div className="panel panel--raised" style={{ padding: 'var(--space-md)', marginBottom: 'var(--space-lg)', textAlign: 'center', border: '1px solid rgba(251,191,36,0.25)', background: 'rgba(251,191,36,0.05)' }}>
+          <div className="label" style={{ color: '#fbbf2488', fontSize: '0.65rem', letterSpacing: '2px', marginBottom: '6px' }}>FLEET COMMENDATION — COMBAT PHASE</div>
+          <div style={{ display: 'flex', gap: 'var(--space-lg)', justifyContent: 'center', alignItems: 'baseline' }}>
+            <div>
+              <div className="mono" style={{ fontSize: '1.8rem', fontWeight: 'bold', color: scoreDelta >= 0 ? 'var(--color-holo-green)' : 'var(--color-hostile-red)' }}>
+                {scoreDelta >= 0 ? `+${scoreDelta.toLocaleString()}` : scoreDelta.toLocaleString()}
+              </div>
+              <div className="label" style={{ color: 'var(--color-text-dim)', fontSize: '0.6rem' }}>THIS ENGAGEMENT</div>
+            </div>
+            <div style={{ color: 'var(--color-text-dim)' }}>=</div>
+            <div>
+              <div className="mono" style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#fbbf24' }}>
+                {currentScore.toLocaleString()}
+              </div>
+              <div className="label" style={{ color: 'var(--color-text-dim)', fontSize: '0.6rem' }}>TOTAL SCORE</div>
+            </div>
+          </div>
+          <button
+            className="btn"
+            style={{ marginTop: '10px', padding: '3px 14px', fontSize: '0.7rem', borderColor: 'rgba(251,191,36,0.4)', color: '#fbbf24' }}
+            onClick={() => setShowLedger(true)}
+          >
+            VIEW FULL LEDGER
+          </button>
         </div>
 
         <div style={{ marginBottom: 'var(--space-lg)' }}>
@@ -138,6 +171,9 @@ export default function PostCombatSummary() {
           {isBossDefeat ? 'ACCEPT DEFEAT' : (isBossNode ? 'PROCEED TO NEXT SECTOR' : 'RETURN TO SECTOR MAP')}
         </button>
       </div>
+
+      {/* Score Ledger Modal */}
+      {showLedger && <ScoreLedgerModal onClose={() => setShowLedger(false)} />}
     </div>
   );
 }
