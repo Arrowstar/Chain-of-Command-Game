@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { App as CapacitorApp } from '@capacitor/app';
 import { useSettingsStore } from '../store/useSettingsStore';
 
 /**
@@ -6,6 +7,7 @@ import { useSettingsStore } from '../store/useSettingsStore';
  *
  * Handles the browser autoplay policy by listening for the first user
  * interaction (click or keydown) and retrying playback at that point.
+ * Also pauses the music when the app/tab is minimized and resumes it when active.
  *
  * @param src - Public URL of the audio file (e.g. '/assets/music/foo.mp3')
  * @param _volume - Legacy parameter (ignored, volume is now controlled by useSettingsStore)
@@ -45,12 +47,34 @@ export function useBgm(src: string, _volume = 0.15): void {
       }
     };
 
+    // Handle App/Visibility State changes
+    const onVisibilityChange = () => {
+      if (!audioRef.current) return;
+      if (document.hidden) {
+        audioRef.current.pause();
+      } else if (playedRef.current) {
+        audioRef.current.play().catch(() => {});
+      }
+    };
+
+    const appStatePromise = CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+      if (!audioRef.current) return;
+      if (!isActive) {
+        audioRef.current.pause();
+      } else if (playedRef.current) {
+        audioRef.current.play().catch(() => {});
+      }
+    });
+
     document.addEventListener('click',   onInteraction, { once: true });
     document.addEventListener('keydown', onInteraction, { once: true });
+    document.addEventListener('visibilitychange', onVisibilityChange);
 
     return () => {
       document.removeEventListener('click',   onInteraction);
       document.removeEventListener('keydown', onInteraction);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      appStatePromise.then(listener => listener.remove());
       audio.pause();
       audio.src = '';
       audioRef.current = null;
