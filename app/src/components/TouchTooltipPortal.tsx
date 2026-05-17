@@ -27,7 +27,7 @@ export default function TouchTooltipPortal({
   children,
   width = 'max-content',
 }: TouchTooltipPortalProps) {
-  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
+  const [coords, setCoords] = useState<{ top: number; left: number; caretOffset: number } | null>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
@@ -39,10 +39,24 @@ export default function TouchTooltipPortal({
     const rect = anchorRef.current.getBoundingClientRect();
     const tipRect = tooltipRef.current.getBoundingClientRect();
     
+    const anchorCenter = rect.left + rect.width / 2;
+    let left = anchorCenter;
+    const padding = 8;
+    
+    // Clamp to screen edges
+    if (left - tipRect.width / 2 < padding) {
+      left = tipRect.width / 2 + padding;
+    } else if (left + tipRect.width / 2 > window.innerWidth - padding) {
+      left = window.innerWidth - tipRect.width / 2 - padding;
+    }
+
+    const caretOffset = anchorCenter - left;
+
     // Position fully above the anchor
     setCoords({
       top: rect.top - tipRect.height - 12,
-      left: rect.left + rect.width / 2,
+      left,
+      caretOffset,
     });
   }, [show, anchorRef]);
 
@@ -80,7 +94,7 @@ export default function TouchTooltipPortal({
       <span style={{
         position: 'absolute',
         top: '100%',
-        left: '50%',
+        left: `calc(50% + ${coords ? coords.caretOffset : 0}px)`,
         transform: 'translateX(-50%)',
         borderLeft: '6px solid transparent',
         borderRight: '6px solid transparent',

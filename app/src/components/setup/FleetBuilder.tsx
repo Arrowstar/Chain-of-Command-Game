@@ -12,6 +12,7 @@ import { HexFacing } from '../../types/game';
 import { isInFiringArc, hexDistance } from '../../engine/hexGrid';
 import type { CustomScenarioConfig } from './ScenarioEditor';
 import { useViewport } from '../../utils/useViewport';
+import TouchTooltipPortal from '../TouchTooltipPortal';
 
 
 const WEAPON_COLORS = ['#4FD1C5', '#F6E05E', '#F6AD55', '#FC8181', '#B794F4', '#63B3ED'];
@@ -237,6 +238,76 @@ function ShipLoadoutPreview({ chassis, selectedWeaponIds, hoveredWeaponId, isPho
         )}
       </div>
     </div>
+  );
+}
+
+function ReadinessBadge({ 
+  label, 
+  valueText, 
+  isGood, 
+  tooltipText
+}: { 
+  label: string; 
+  valueText: string; 
+  isGood: boolean; 
+  tooltipText: string;
+}) {
+  const [showTooltip, setShowTooltip] = React.useState(false);
+  const ref = React.useRef<HTMLSpanElement>(null);
+
+  const bgColor = isGood ? 'rgba(0,200,100,0.15)' : 'rgba(255,80,80,0.15)';
+  const color = isGood ? 'var(--color-holo-green)' : '#ff7070';
+
+  return (
+    <>
+      <span 
+        ref={ref}
+        onClick={(e) => { e.stopPropagation(); setShowTooltip(!showTooltip); }}
+        onMouseEnter={() => setShowTooltip(true)}
+        onMouseLeave={() => setShowTooltip(false)}
+        style={{ 
+          fontSize: '0.62rem', 
+          padding: '1px 5px', 
+          borderRadius: '3px', 
+          background: bgColor, 
+          color: color, 
+          fontFamily: 'var(--font-mono)',
+          cursor: 'pointer'
+        }}
+      >
+        {valueText} {label}
+      </span>
+      <TouchTooltipPortal show={showTooltip} anchorRef={ref}>
+        {tooltipText}
+      </TouchTooltipPortal>
+    </>
+  );
+}
+
+function WeaponTagBadge({ tag }: { tag: string }) {
+  const [showTooltip, setShowTooltip] = React.useState(false);
+  const ref = React.useRef<HTMLSpanElement>(null);
+
+  return (
+    <>
+      <span 
+        ref={ref}
+        onClick={(e) => { e.stopPropagation(); setShowTooltip(!showTooltip); }}
+        onMouseEnter={() => setShowTooltip(true)}
+        onMouseLeave={() => setShowTooltip(false)}
+        className="mono"
+        style={{
+          fontSize: '0.6rem', padding: '1px 5px', borderRadius: '3px',
+          background: 'rgba(255, 255, 255, 0.1)', color: 'var(--color-text-bright)',
+          cursor: 'pointer', border: '1px dotted rgba(255, 255, 255, 0.3)'
+        }}
+      >
+        {TAG_LABELS[tag] || tag.toUpperCase()}
+      </span>
+      <TouchTooltipPortal show={showTooltip} anchorRef={ref}>
+        {TAG_DESCRIPTIONS[tag] || tag}
+      </TouchTooltipPortal>
+    </>
   );
 }
 
@@ -1181,10 +1252,10 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
                           }}
                         />
                       )}
-                    <div style={{ flex: 1 }}>
-                    <div className="flex-between">
-                      <strong>{weapon.name}</strong>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
+                      <strong style={{ wordBreak: 'break-word' }}>{weapon.name}</strong>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                         <span className="mono" style={{ fontSize: '0.7rem', color: 'var(--color-text-dim)' }}>RP: {weapon.rpCost}</span>
                         <span className="mono" style={{
                           fontSize: '0.68rem', padding: '1px 6px', borderRadius: '3px',
@@ -1236,18 +1307,7 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
                     {weapon.tags && weapon.tags.length > 0 && (
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '5px' }}>
                         {weapon.tags.map((tag: string) => (
-                          <span 
-                            key={tag} 
-                            className="mono" 
-                            title={TAG_DESCRIPTIONS[tag] || tag}
-                            style={{
-                              fontSize: '0.6rem', padding: '1px 5px', borderRadius: '3px',
-                              background: 'rgba(255, 255, 255, 0.1)', color: 'var(--color-text-bright)',
-                              cursor: 'help', border: '1px dotted rgba(255, 255, 255, 0.3)'
-                            }}
-                          >
-                            {TAG_LABELS[tag] || tag.toUpperCase()}
-                          </span>
+                          <WeaponTagBadge key={tag} tag={tag} />
                         ))}
                       </div>
                     )}
@@ -1314,10 +1374,10 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
                                 }}
                               />
                             )}
-                          <div style={{ flex: 1 }}>
-                          <div className="flex-between">
-                            <strong>{sub.name}</strong>
-                            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
+                            <strong style={{ wordBreak: 'break-word' }}>{sub.name}</strong>
+                            <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
                               <span className="mono" style={{ fontSize: '0.7rem', color: 'var(--color-text-dim)' }}>RP: {sub.rpCost}</span>
                               <span className="mono" style={{
                                 fontSize: '0.68rem', padding: '1px 6px', borderRadius: '3px',
@@ -1396,16 +1456,25 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
                   }} />
                   <span className="mono" style={{ fontSize: '0.7rem', color: idx === currentPlayerIndex ? 'var(--color-text-bright)' : 'var(--color-text-secondary)', flex: 1 }}>{shipLabel}</span>
                   <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                    <span title={`Officers: ${officersFilled}/4`} style={{ fontSize: '0.62rem', padding: '1px 5px', borderRadius: '3px', background: hasOfficers ? 'rgba(0,200,100,0.15)' : 'rgba(255,80,80,0.15)', color: hasOfficers ? 'var(--color-holo-green)' : '#ff7070', fontFamily: 'var(--font-mono)' }}>
-                      {hasOfficers ? '✓' : `${officersFilled}/4`} OFF
-                    </span>
-                    <span title={hasWeapons ? 'Weapons equipped' : 'No weapons equipped'} style={{ fontSize: '0.62rem', padding: '1px 5px', borderRadius: '3px', background: hasWeapons ? 'rgba(0,200,100,0.15)' : 'rgba(255,80,80,0.15)', color: hasWeapons ? 'var(--color-holo-green)' : '#ff7070', fontFamily: 'var(--font-mono)' }}>
-                      {hasWeapons ? '✓' : '!'} WPN
-                    </span>
+                    <ReadinessBadge 
+                      label="OFF" 
+                      valueText={hasOfficers ? '✓' : `${officersFilled}/4`} 
+                      isGood={hasOfficers} 
+                      tooltipText={hasOfficers ? "All 4 Officer stations manned" : `Need ${4 - officersFilled} more Officer${4 - officersFilled > 1 ? 's' : ''} to deploy`}
+                    />
+                    <ReadinessBadge 
+                      label="WPN" 
+                      valueText={hasWeapons ? '✓' : '!'} 
+                      isGood={hasWeapons} 
+                      tooltipText={hasWeapons ? "Ship has weapons equipped" : "Ship requires at least 1 weapon to deploy"}
+                    />
                     {isCampaignSetup && (
-                      <span title={isOver ? 'Over DP budget' : 'Within DP budget'} style={{ fontSize: '0.62rem', padding: '1px 5px', borderRadius: '3px', background: isOver ? 'rgba(255,80,80,0.15)' : 'rgba(0,200,100,0.15)', color: isOver ? '#ff7070' : 'var(--color-holo-green)', fontFamily: 'var(--font-mono)' }}>
-                        {isOver ? '!' : '✓'} DP
-                      </span>
+                      <ReadinessBadge 
+                        label="DP" 
+                        valueText={isOver ? '!' : '✓'} 
+                        isGood={!isOver} 
+                        tooltipText={isOver ? "Ship loadout exceeds Deployment Point budget" : "Ship loadout is within Deployment Point budget"}
+                      />
                     )}
                   </div>
                 </div>
