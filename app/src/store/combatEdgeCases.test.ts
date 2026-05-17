@@ -192,4 +192,32 @@ describe('Combat Engine Edge Cases (Faction & Serialization)', () => {
       expect(updatedAlliedAI?.targetLocks.length).toBe(0); // No locks against player
     });
   });
+
+  describe('Developer Cheats / Debug Menu Actions', () => {
+    it('debugAutoLose instantly destroys all player ships and triggers defeat', () => {
+      const playerShip: ShipState = { kind: 'ship', faction: 'player',  
+        id: 'ps1', name: 'Player Ship 1', chassisId: 'manticore', ownerId: 'p1',
+        position: { q: 0, r: 0 }, facing: 0, currentSpeed: 0, currentHull: 10, maxHull: 10,
+        shields: { fore: 2, aft: 2, forePort: 2, aftPort: 2, foreStarboard: 2, aftStarboard: 2 }, maxShieldsPerSector: 2,
+        equippedWeapons: [], equippedSubsystems: [], criticalDamage: [], scars: [], armorDie: 'd4', baseEvasion: 5, evasionModifiers: 0,
+        isDestroyed: false, hasDroppedBelow50: false, hasDrifted: false, targetLocks: []
+      };
+
+      useGameStore.setState({
+        playerShips: [playerShip],
+        enemyShips: [],
+        gameOver: false,
+        victory: null,
+      });
+
+      useGameStore.getState().debugAutoLose();
+
+      const state = useGameStore.getState();
+      expect(state.playerShips[0].isDestroyed).toBe(true);
+      expect(state.playerShips[0].currentHull).toBe(0);
+      expect(state.gameOver).toBe(true);
+      expect(state.victory).toBe(false);
+    });
+  });
 });
+

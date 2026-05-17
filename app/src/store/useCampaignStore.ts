@@ -67,6 +67,7 @@ interface CampaignStore {
     difficulty: import('../types/campaignTypes').CampaignDifficulty;
     dpBudget: number;
   }) => void;
+  clearCampaign: () => void;
 
   /** Called when a combat scenario ends. Persists updated player/ship state. */
   onCombatEnd: (params: {
@@ -322,6 +323,17 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
       persistedShips: ships,
       officerDataMap,
       sectorMap,
+    });
+  },
+
+  clearCampaign: () => {
+    set({
+      campaign: null,
+      campaignLog: [],
+      persistedPlayers: [],
+      persistedShips: [],
+      officerDataMap: {},
+      sectorMap: null,
     });
   },
 

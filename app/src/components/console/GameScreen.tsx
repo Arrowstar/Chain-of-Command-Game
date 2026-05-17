@@ -38,6 +38,7 @@ export default function GameScreen() {
   const confirmDeployment = useGameStore(s => s.confirmDeployment);
   const assignToken = useGameStore(s => s.assignToken);
   const debugAutoWin = useGameStore(s => s.debugAutoWin);
+  const debugAutoLose = useGameStore(s => s.debugAutoLose);
   const phase = useGameStore(s => s.phase);
   const currentTactic = useGameStore(s => s.currentTactic);
   const experimentalTech = useGameStore(s => s.experimentalTech);
@@ -197,7 +198,7 @@ export default function GameScreen() {
         <CombatToastContainer />
         {tutorialActive && <TutorialOverlay />}
         <AstroCafNotification />
-        <DebugMenu onAutoWin={debugAutoWin} />
+        <DebugMenu onAutoWin={debugAutoWin} onAutoLose={debugAutoLose} />
 
         {/* Experimental tech badges — fixed below tab bar */}
         {phase !== 'briefing' && experimentalTech.length > 0 && (
@@ -427,7 +428,7 @@ export default function GameScreen() {
       <AstroCafNotification />
 
       {/* Debug Menu */}
-      <DebugMenu onAutoWin={debugAutoWin} />
+      <DebugMenu onAutoWin={debugAutoWin} onAutoLose={debugAutoLose} />
 
       {phase !== 'briefing' && experimentalTech.length > 0 && (
         <div
@@ -922,7 +923,7 @@ function DeploymentPanel({
   );
 }
 
-function DebugMenu({ onAutoWin }: { onAutoWin: () => void }) {
+function DebugMenu({ onAutoWin, onAutoLose }: { onAutoWin: () => void; onAutoLose: () => void }) {
   const [visible, setVisible] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -986,6 +987,13 @@ function DebugMenu({ onAutoWin }: { onAutoWin: () => void }) {
             onClick={() => { onAutoWin(); setOpen(false); }}
           >
             Auto-Win
+          </button>
+          <button
+            className="btn btn--danger"
+            style={{ fontSize: '0.72rem', padding: '4px 10px' }}
+            onClick={() => { onAutoLose(); setOpen(false); }}
+          >
+            Auto-Lose
           </button>
         </div>
       )}

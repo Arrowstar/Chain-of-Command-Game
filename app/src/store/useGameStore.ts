@@ -212,6 +212,8 @@ interface GameStore {
   // Debug
   /** DEV ONLY: Instantly destroy all enemy ships and trigger victory. */
   debugAutoWin: () => void;
+  /** DEV ONLY: Instantly destroy all player ships and trigger defeat. */
+  debugAutoLose: () => void;
   selectDeploymentShip: (shipId: string) => void;
   setDeploymentShipPosition: (shipId: string, position: HexCoord) => boolean;
   rotateDeploymentShip: (shipId: string, delta?: 1 | -1) => void;
@@ -5859,6 +5861,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
       successfulEscapes: state.playerShips.length,
       objectiveMarkers: state.objectiveMarkers.map(m => m.name === 'Hegemony Comms Array' ? { ...m, isDestroyed: true } : m),
       round: Math.max(state.round, 7),
+    }));
+    get().checkGameOver();
+  },
+
+  debugAutoLose: () => {
+    get().addLog('system', '⚡ [DEBUG] Auto-Lose triggered — forcing defeat conditions.');
+    set(state => ({
+      playerShips: state.playerShips.map(p => ({ ...p, isDestroyed: true, currentHull: 0 })),
     }));
     get().checkGameOver();
   },

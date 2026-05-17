@@ -242,6 +242,18 @@ describe('useCampaignStore event resolution', () => {
     expect(campaign?.campaignPhase).toBe('postCombat');
   });
 
+  it('resets all campaign state variables when clearCampaign is called', () => {
+    useCampaignStore.getState().clearCampaign();
+    const state = useCampaignStore.getState();
+
+    expect(state.campaign).toBeNull();
+    expect(state.sectorMap).toBeNull();
+    expect(state.persistedPlayers).toEqual([]);
+    expect(state.persistedShips).toEqual([]);
+    expect(state.officerDataMap).toEqual({});
+    expect(state.campaignLog).toEqual([]);
+  });
+
   describe('purchaseMarketItem', () => {
     it('sets the purchased market slot to null in drydockMarket to enforce one purchase per slot', () => {
       useCampaignStore.setState(state => ({

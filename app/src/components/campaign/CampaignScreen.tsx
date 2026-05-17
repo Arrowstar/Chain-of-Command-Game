@@ -10,12 +10,14 @@ import TechBadge from './TechBadge';
 import CampaignStoryScreen from './CampaignStoryScreen';
 import { CampaignSaveManager } from '../../utils/CampaignSaveManager';
 import { useViewport } from '../../utils/useViewport';
+import { motion } from 'framer-motion';
 
 interface Props {
   onStartCombat: () => void;
+  onLeaveCampaign: () => void;
 }
 
-export default function CampaignScreen({ onStartCombat }: Props) {
+export default function CampaignScreen({ onStartCombat, onLeaveCampaign }: Props) {
   const campaign = useCampaignStore(s => s.campaign);
   const [showConversionPanel, setShowConversionPanel] = useState(false);
   const { isPhone } = useViewport();
@@ -150,13 +152,192 @@ export default function CampaignScreen({ onStartCombat }: Props) {
         {campaign.campaignPhase === 'postCombat' && <PostCombatSummary />}
         {campaign.campaignPhase === 'drydock' && <DrydockView />}
         {campaign.campaignPhase === 'gameOver' && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-            <h1 style={{ color: campaign.victory ? 'var(--color-holo-green)' : 'var(--color-hostile-red)' }}>
-              {campaign.victory ? 'CAMPAIGN VICTORY' : 'CAMPAIGN FAILED'}
-            </h1>
-          </div>
+          <CampaignGameOverScreen campaign={campaign} onLeave={onLeaveCampaign} />
         )}
       </main>
+    </div>
+  );
+}
+
+const TYPE_CONFIG = {
+  navigation: { icon: '►', color: 'var(--color-holo-cyan)' },
+  event: { icon: '✦', color: 'var(--color-alert-amber)' },
+  combat: { icon: '⚔', color: 'var(--color-hostile-red)' },
+  resource: { icon: '◈', color: 'var(--color-alert-amber)' },
+  repair: { icon: '🔧', color: 'var(--color-holo-green)' },
+  market: { icon: '⬡', color: 'var(--color-shield-blue)' },
+  officer: { icon: '◎', color: 'var(--color-stress-orange)' },
+  system: { icon: '◇', color: 'var(--color-text-dim)' },
+};
+
+function CampaignGameOverScreen({ campaign, onLeave }: { campaign: any; onLeave: () => void }) {
+  const log = useCampaignStore(s => s.campaignLog);
+  const victory = !!campaign.victory;
+
+  return (
+    <div style={{
+      width: '100%',
+      height: '100%',
+      background: 'var(--color-bg-deep)',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 'var(--space-md)',
+      overflowY: 'auto',
+      boxSizing: 'border-box',
+    }}>
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: 'spring', damping: 15 }}
+        className="panel panel--glow"
+        style={{
+          padding: 'var(--space-lg)',
+          textAlign: 'center',
+          maxWidth: '650px',
+          width: '100%',
+          boxShadow: victory
+            ? '0 0 80px rgba(49, 151, 149, 0.4)'
+            : '0 0 80px rgba(229, 62, 62, 0.4)',
+          border: victory
+            ? '1px solid rgba(49, 151, 149, 0.4)'
+            : '1px solid rgba(229, 62, 62, 0.4)',
+          borderRadius: '12px',
+          background: 'rgba(10,12,20,0.95)',
+          backdropFilter: 'blur(8px)',
+        }}
+      >
+        <h1 style={{
+          fontSize: '2.5rem',
+          color: victory ? 'var(--color-holo-cyan)' : 'var(--color-hostile-red)',
+          textShadow: victory ? 'var(--glow-cyan)' : '0 0 20px var(--color-hostile-red)',
+          marginBottom: 'var(--space-xs)',
+          fontFamily: 'var(--font-mono)',
+          letterSpacing: '0.05em',
+        }}>
+          {victory ? 'CAMPAIGN SECURED' : 'SECTOR COMMAND LOST'}
+        </h1>
+
+        <div className="label" style={{
+          color: 'var(--color-text-secondary)',
+          fontSize: '0.9rem',
+          lineHeight: '1.4',
+          marginBottom: 'var(--space-md)',
+          padding: '0 var(--space-md)'
+        }}>
+          {victory
+            ? 'You have successfully secured the sector jump gates, neutralizing the Hegemony blockades. The flotilla is safe under your protection. Fleet Command recognizes your exemplary service.'
+            : 'Fleet assets have been depleted or key objectives were lost. High Command has officially terminated your commission, and all contact with the vanguard task force has been severed.'}
+        </div>
+
+        {/* Statistics Grid */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+          gap: 'var(--space-sm)',
+          marginBottom: 'var(--space-md)'
+        }}>
+          <div className="panel panel--raised" style={{ padding: 'var(--space-sm)', background: 'rgba(255,255,255,0.02)' }}>
+            <div className="label" style={{ fontSize: '0.65rem', color: 'var(--color-text-dim)', letterSpacing: '0.05em' }}>SECTORS REACHED</div>
+            <div className="mono" style={{ fontSize: '1.6rem', color: 'var(--color-holo-cyan)', fontWeight: 'bold' }}>
+              {campaign.currentSector}
+            </div>
+          </div>
+          <div className="panel panel--raised" style={{ padding: 'var(--space-sm)', background: 'rgba(255,255,255,0.02)' }}>
+            <div className="label" style={{ fontSize: '0.65rem', color: 'var(--color-text-dim)', letterSpacing: '0.05em' }}>REQUISITION POINTS</div>
+            <div className="mono" style={{ fontSize: '1.6rem', color: 'var(--color-alert-amber)', fontWeight: 'bold' }}>
+              {campaign.requisitionPoints}
+            </div>
+          </div>
+          <div className="panel panel--raised" style={{ padding: 'var(--space-sm)', background: 'rgba(255,255,255,0.02)' }}>
+            <div className="label" style={{ fontSize: '0.65rem', color: 'var(--color-text-dim)', letterSpacing: '0.05em' }}>FLEET FAVOR</div>
+            <div className="mono" style={{
+              fontSize: '1.6rem',
+              color: campaign.fleetFavor >= 0 ? 'var(--color-holo-green)' : 'var(--color-hostile-red)',
+              fontWeight: 'bold'
+            }}>
+              {campaign.fleetFavor}
+            </div>
+          </div>
+          <div className="panel panel--raised" style={{ padding: 'var(--space-sm)', background: 'rgba(255,255,255,0.02)' }}>
+            <div className="label" style={{ fontSize: '0.65rem', color: 'var(--color-text-dim)', letterSpacing: '0.05em' }}>DIFFICULTY</div>
+            <div className="mono" style={{ fontSize: '1.1rem', color: 'var(--color-text-primary)', paddingTop: '6px', fontWeight: 'bold' }}>
+              {campaign.difficulty.toUpperCase()}
+            </div>
+          </div>
+        </div>
+
+        {/* Scrollable Campaign Log Chronology */}
+        <div style={{ textAlign: 'left', marginBottom: 'var(--space-md)' }}>
+          <div className="label" style={{ fontSize: '0.7rem', color: 'var(--color-text-dim)', marginBottom: '6px', letterSpacing: '0.1em' }}>
+            OPERATIONAL LOG CHRONOLOGY
+          </div>
+          <div className="panel panel--raised" style={{
+            padding: 'var(--space-xs)',
+            background: 'rgba(5,5,10,0.6)',
+            border: '1px solid rgba(255,255,255,0.05)',
+            maxHeight: '160px',
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '6px',
+            borderRadius: '6px',
+          }}>
+            {log.length === 0 ? (
+              <div style={{ color: 'var(--color-text-dim)', fontSize: '0.7rem', textAlign: 'center', padding: 'var(--space-md)' }}>
+                No operations logged for this campaign.
+              </div>
+            ) : (
+              log.slice().reverse().map(entry => {
+                const config = TYPE_CONFIG[entry.type] ?? { icon: '◇', color: 'var(--color-text-dim)' };
+                return (
+                  <div key={entry.id} style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '8px',
+                    fontSize: '0.68rem',
+                    fontFamily: 'var(--font-mono)',
+                    borderBottom: '1px solid rgba(255,255,255,0.03)',
+                    paddingBottom: '4px',
+                  }}>
+                    <span style={{ color: config.color, flexShrink: 0 }}>{config.icon}</span>
+                    <div style={{ flex: 1 }}>
+                      <span style={{ color: 'var(--color-text-primary)', fontWeight: 'bold' }}>{entry.message}</span>
+                      {entry.outcome && (
+                        <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.62rem', marginTop: '2px' }}>
+                          {entry.outcome}
+                        </div>
+                      )}
+                    </div>
+                    <span style={{ color: 'var(--color-text-dim)', fontSize: '0.58rem', flexShrink: 0 }}>
+                      S{entry.sector}
+                    </span>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        <button
+          className="btn"
+          style={{
+            width: '100%',
+            fontSize: '1rem',
+            padding: '10px',
+            borderColor: victory ? 'var(--color-holo-cyan)' : 'var(--color-hostile-red)',
+            color: '#fff',
+            background: victory ? 'rgba(49,151,149,0.2)' : 'rgba(229,62,62,0.2)',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+          }}
+          onClick={onLeave}
+          data-testid="campaign-return-to-menu-btn"
+        >
+          RETURN TO HIGH COMMAND
+        </button>
+      </motion.div>
     </div>
   );
 }

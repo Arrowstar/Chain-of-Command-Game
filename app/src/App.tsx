@@ -235,7 +235,13 @@ function App() {
     }
     return (
       <>
-        <CampaignScreen onStartCombat={() => setAppMode('campaign-combat')} />
+        <CampaignScreen 
+          onStartCombat={() => setAppMode('campaign-combat')} 
+          onLeaveCampaign={() => {
+            useCampaignStore.getState().clearCampaign();
+            setAppMode('menu');
+          }}
+        />
         <ToastContainer />
       </>
     );
