@@ -812,7 +812,7 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
 
       {/* ── Active Player Banner (only shown during officer/module steps) ── */}
       {step >= 2 && (
-        <div style={{ padding: '10px var(--space-lg)', background: 'rgba(0, 204, 255, 0.05)', borderBottom: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
+        <div style={{ padding: '10px var(--space-lg)', background: 'rgba(0, 204, 255, 0.05)', borderBottom: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', gap: 'var(--space-md)', flexWrap: 'wrap' }}>
           <span className="label" style={{ color: 'var(--color-holo-cyan)' }}>NOW CONFIGURING:</span>
           <span className="mono" style={{ color: 'var(--color-text-bright)', fontSize: '1.1rem' }}>{currentShipName}</span>
           {totalPlayers > 1 && <span className="mono" style={{ color: 'var(--color-text-dim)', fontSize: '0.8rem' }}>(Player {currentPlayerIndex + 1} of {totalPlayers})</span>}
