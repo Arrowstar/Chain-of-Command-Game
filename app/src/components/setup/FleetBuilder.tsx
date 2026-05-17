@@ -724,6 +724,7 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
               <div key={s} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div 
                   onClick={() => isClickable && setStep(s)}
+                  role={isClickable ? "button" : undefined}
                   style={{ 
                     width: '24px', height: '24px', borderRadius: '50%', 
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -738,6 +739,7 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
                 </div>
                 <span 
                   onClick={() => isClickable && setStep(s)}
+                  role={isClickable ? "button" : undefined}
                   className="label" 
                   style={{ 
                     fontSize: '0.7rem', 
@@ -775,6 +777,7 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
             return (
               <div
                 key={idx}
+                role="button"
                 onClick={() => handleTabClick(idx)}
                 style={{
                   flex: 1,
@@ -1445,6 +1448,7 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
               {readinessRows.map(({ idx, shipLabel, officersFilled, hasOfficers, hasWeapons, isOver, ready }) => (
                 <div
                   key={idx}
+                  role="button"
                   onClick={() => handleTabClick(idx)}
                   style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 10px', borderBottom: idx < totalPlayers - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none', cursor: idx === currentPlayerIndex ? 'default' : 'pointer', background: idx === currentPlayerIndex ? 'rgba(0,204,255,0.06)' : 'transparent', transition: 'background 0.15s' }}
                 >
