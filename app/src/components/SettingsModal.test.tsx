@@ -215,7 +215,7 @@ describe('SettingsModal', () => {
     const saveSpy = vi.spyOn(
       await import('../utils/CampaignSaveManager').then(m => m.CampaignSaveManager),
       'save',
-    ).mockImplementation(() => null);
+    ).mockImplementation(async () => null);
     const cb = vi.fn();
 
     act(() => {

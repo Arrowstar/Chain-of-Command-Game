@@ -7,6 +7,8 @@ interface MainMenuProps {
   onStartCampaign?: () => void;
   onContinueCampaign?: () => void;
   onStartTutorial?: () => void;
+  /** Optional recovery banner rendered at the top of the menu panel */
+  recoveryBanner?: React.ReactNode;
 }
 
 const TITLE_TEXT = 'CHAIN OF COMMAND';
@@ -50,7 +52,7 @@ const STATUS_INDICATORS = [
   { label: 'COMMS',   color: 'var(--color-holo-green)',  delay: '1.8s' },
 ];
 
-export default function MainMenu({ onStart, onStartCampaign, onContinueCampaign, onStartTutorial }: MainMenuProps) {
+export default function MainMenu({ onStart, onStartCampaign, onContinueCampaign, onStartTutorial, recoveryBanner }: MainMenuProps) {
   const [displayedTitle, setDisplayedTitle] = useState('');
   const [titleDone, setTitleDone] = useState(false);
   const [showLoadModal, setShowLoadModal] = useState(false);
@@ -58,7 +60,7 @@ export default function MainMenu({ onStart, onStartCampaign, onContinueCampaign,
 
   // Check for existing saves on mount
   useEffect(() => {
-    setHasSaves(CampaignSaveManager.hasSaves());
+    void CampaignSaveManager.hasSaves().then(setHasSaves);
   }, []);
 
   // Typewriter effect
@@ -128,6 +130,9 @@ export default function MainMenu({ onStart, onStartCampaign, onContinueCampaign,
       {/* Centre menu panel */}
       <div className="main-menu-center-wrapper">
         <div className="panel panel--glow main-menu-panel">
+          {/* Recovery banner — rendered at top when a background-killed battle is detected */}
+          {recoveryBanner}
+
           {/* Title with typewriter + glitch */}
           <h1
             className={titleDone ? 'main-menu-title-glitch' : ''}

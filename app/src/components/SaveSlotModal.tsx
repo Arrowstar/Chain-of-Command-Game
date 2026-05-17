@@ -157,12 +157,12 @@ export default function SaveSlotModal({ mode, onLoad, onSaved, onClose }: SaveSl
 
   // ── Load saves list ──────────────────────────────────────────
 
-  function refreshSaves() {
-    setSaves(CampaignSaveManager.listSaves());
+  async function refreshSaves() {
+    setSaves(await CampaignSaveManager.listSaves());
   }
 
   useEffect(() => {
-    refreshSaves();
+    void refreshSaves();
     const autoName = CampaignSaveManager.generateSaveName();
     setSaveName(autoName);
   }, []);
@@ -195,43 +195,43 @@ export default function SaveSlotModal({ mode, onLoad, onSaved, onClose }: SaveSl
     setConfirmingDeleteId(id);
   };
 
-  const handleDeleteConfirm = (id: string) => {
-    CampaignSaveManager.deleteSave(id);
+  const handleDeleteConfirm = async (id: string) => {
+    await CampaignSaveManager.deleteSave(id);
     if (selectedId === id) setSelectedId(null);
     setConfirmingDeleteId(null);
-    refreshSaves();
+    await refreshSaves();
   };
 
   const handleExport = (id: string) => {
-    CampaignSaveManager.exportSlot(id);
+    void CampaignSaveManager.exportSlot(id);
   };
 
-  const handleLoad = () => {
+  const handleLoad = async () => {
     if (!selectedId) return;
-    const success = CampaignSaveManager.load(selectedId);
+    const success = await CampaignSaveManager.load(selectedId);
     if (success && onLoad) {
       onLoad(selectedId);
     }
   };
 
-  const handleSaveNew = () => {
+  const handleSaveNew = async () => {
     if (isSaving) return;
     setIsSaving(true);
-    const meta = CampaignSaveManager.save(saveName);
+    const meta = await CampaignSaveManager.save(saveName);
     setIsSaving(false);
     if (meta) {
-      refreshSaves();
+      await refreshSaves();
       if (onSaved) onSaved(meta);
     }
   };
 
-  const handleOverwrite = (slotId: string) => {
+  const handleOverwrite = async (slotId: string) => {
     if (isSaving) return;
     setIsSaving(true);
-    const meta = CampaignSaveManager.overwrite(slotId, saveName);
+    const meta = await CampaignSaveManager.overwrite(slotId, saveName);
     setIsSaving(false);
     if (meta) {
-      refreshSaves();
+      await refreshSaves();
       if (onSaved) onSaved(meta);
     }
   };

@@ -57,7 +57,7 @@ export default function CampaignScreen({ onStartCombat }: Props) {
               </button>
             )}
             {['sectorMap', 'drydock'].includes(campaign.campaignPhase) && (
-              <button className="btn" style={{ padding: '3px 7px', fontSize: '0.7rem' }} onClick={() => CampaignSaveManager.quickSave()}>
+              <button className="btn" style={{ padding: '3px 7px', fontSize: '0.7rem' }} onClick={() => { void CampaignSaveManager.quickSave(); }}>
                 SAVE
               </button>
             )}
@@ -112,14 +112,14 @@ export default function CampaignScreen({ onStartCombat }: Props) {
                 <button 
                   className="btn btn--secondary" 
                   style={{ padding: '4px 8px', fontSize: '0.8rem' }}
-                  onClick={() => CampaignSaveManager.quickSave()}
+                  onClick={() => { void CampaignSaveManager.quickSave(); }}
                 >
                   QUICK SAVE
                 </button>
                 <button 
                   className="btn btn--secondary" 
                   style={{ padding: '4px 8px', fontSize: '0.8rem' }}
-                  onClick={() => CampaignSaveManager.exportToDisk()}
+                  onClick={() => { void CampaignSaveManager.exportToDisk(); }}
                 >
                   EXPORT SAVE
                 </button>

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 // ── Toast types ──────────────────────────────────────────────────────────────
 
-export type ToastType = 'rp-gain' | 'rp-loss' | 'ff-gain' | 'ff-loss' | 'tech' | 'warning' | 'info';
+export type ToastType = 'rp-gain' | 'rp-loss' | 'ff-gain' | 'ff-loss' | 'tech' | 'warning' | 'info' | 'system';
 
 export interface Toast {
   id: string;
@@ -127,6 +127,7 @@ function getBorderColor(type: ToastType): string {
     case 'ff-loss':  return 'var(--color-hostile-red)';
     case 'tech':     return 'var(--color-holo-cyan)';
     case 'warning':  return 'var(--color-alert-amber)';
+    case 'system':   return 'var(--color-holo-cyan)';
     case 'info':
     default:         return 'var(--color-border)';
   }
@@ -140,6 +141,7 @@ function getIcon(type: ToastType): string {
     case 'ff-loss':  return '☆';
     case 'tech':     return '🔬';
     case 'warning':  return '⚠';
+    case 'system':   return '⚙';
     case 'info':
     default:         return 'ℹ';
   }
@@ -153,6 +155,7 @@ function getLabel(type: ToastType): string {
     case 'ff-loss':  return 'Fleet Favor −';
     case 'tech':     return 'Tech Acquired';
     case 'warning':  return 'Warning';
+    case 'system':   return 'System';
     case 'info':
     default:         return 'Update';
   }

@@ -1,21 +1,34 @@
+import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import { useCampaignStore } from '../store/useCampaignStore';
 import { fireToast } from '../components/campaign/ToastContainer';
 import type { CampaignPhase, CampaignDifficulty } from '../types/campaignTypes';
 
 // ══════════════════════════════════════════════════════════════════
-// Multi-Slot Campaign Save Manager
-// Each slot is stored in its own localStorage key.
-// A separate index key stores lightweight metadata for listing.
+// Multi-Slot Campaign Save Manager — IndexedDB backend
+//
+// Stores each save slot as a record in the `saves` object store of
+// "ChainOfCommandDB".  The keyPath is `meta.id`, so every record is
+// self-indexing.  A secondary index (`by-date`) on `meta.savedAt`
+// lets us sort by recency cheaply.
+//
+// On first open we run a one-time migration that imports any
+// existing CoC_Save_* localStorage slots (including the old index
+// and the legacy single-slot key) into IndexedDB, then removes
+// them from localStorage.
 // ══════════════════════════════════════════════════════════════════
 
-const INDEX_KEY = 'CoC_Save_Index';
-const SLOT_PREFIX = 'CoC_Save_';
-/** Legacy single-slot key — migrated automatically on first listSaves() call. */
-const LEGACY_KEY = 'CoC_Campaign_Save';
+const DB_NAME = 'ChainOfCommandDB';
+const DB_VERSION = 1;
+const STORE_NAME = 'saves' as const;
+
+/** localStorage keys used by the previous implementation — migrated once. */
+const LS_INDEX_KEY = 'CoC_Save_Index';
+const LS_SLOT_PREFIX = 'CoC_Save_';
+const LS_LEGACY_KEY = 'CoC_Campaign_Save';
 
 export const MAX_SAVE_SLOTS = 25;
 
-// ─── Types ────────────────────────────────────────────────────────
+// ─── DB Schema ────────────────────────────────────────────────────
 
 export interface SaveSlotMeta {
   id: string;
@@ -39,6 +52,14 @@ interface SaveSlotData {
   sectorMap: unknown;
 }
 
+interface CoCSchema extends DBSchema {
+  saves: {
+    key: string;
+    value: SaveSlotData;
+    indexes: { 'by-date': number };
+  };
+}
+
 // ─── Phase display labels ─────────────────────────────────────────
 
 const PHASE_LABELS: Record<CampaignPhase, string> = {
@@ -50,49 +71,91 @@ const PHASE_LABELS: Record<CampaignPhase, string> = {
   gameOver: 'Game Over',
 };
 
-// ─── Local helpers ────────────────────────────────────────────────
+// ─── DB singleton ─────────────────────────────────────────────────
 
-function readIndex(): SaveSlotMeta[] {
+let dbPromise: Promise<IDBPDatabase<CoCSchema>> | null = null;
+
+function getDB(): Promise<IDBPDatabase<CoCSchema>> {
+  if (!dbPromise) {
+    dbPromise = openDB<CoCSchema>(DB_NAME, DB_VERSION, {
+      upgrade(db) {
+        const store = db.createObjectStore(STORE_NAME, { keyPath: 'meta.id' });
+        store.createIndex('by-date', 'meta.savedAt');
+      },
+    }).then(async db => {
+      // One-time migration from localStorage → IndexedDB
+      await migrateFromLocalStorage(db);
+      return db;
+    });
+  }
+  return dbPromise;
+}
+
+// ─── One-time localStorage → IndexedDB migration ─────────────────
+
+/**
+ * Reads any save slots previously stored in localStorage and writes them
+ * into IndexedDB, then removes all CoC_Save_* and index keys from
+ * localStorage.  Safe to call multiple times — it no-ops if nothing remains
+ * to migrate.
+ */
+async function migrateFromLocalStorage(db: IDBPDatabase<CoCSchema>): Promise<void> {
   try {
-    const raw = localStorage.getItem(INDEX_KEY);
-    if (!raw) return [];
-    return JSON.parse(raw) as SaveSlotMeta[];
-  } catch {
-    return [];
+    // 1. Migrate the old single-slot legacy key first
+    const legacy = localStorage.getItem(LS_LEGACY_KEY);
+    if (legacy) {
+      try {
+        const raw = JSON.parse(legacy);
+        const campaign = raw.campaign;
+        const meta: SaveSlotMeta = {
+          id: generateId(),
+          name: 'Migrated Save',
+          savedAt: Date.now(),
+          sector: campaign?.currentSector ?? 1,
+          phase: campaign?.campaignPhase ?? 'sectorMap',
+          difficulty: campaign?.difficulty ?? 'normal',
+          fleetFavor: campaign?.fleetFavor ?? 0,
+          requisitionPoints: campaign?.requisitionPoints ?? 0,
+          shipCount: (raw.persistedShips as unknown[])?.length ?? 0,
+        };
+        const slotData: SaveSlotData = { meta, ...raw };
+        await db.put(STORE_NAME, slotData);
+      } catch {
+        // Corrupted legacy key — silently discard
+      }
+      localStorage.removeItem(LS_LEGACY_KEY);
+    }
+
+    // 2. Migrate the multi-slot index
+    const rawIndex = localStorage.getItem(LS_INDEX_KEY);
+    if (!rawIndex) return;
+
+    const index: SaveSlotMeta[] = JSON.parse(rawIndex);
+    for (const meta of index) {
+      const rawSlot = localStorage.getItem(`${LS_SLOT_PREFIX}${meta.id}`);
+      if (!rawSlot) continue;
+      try {
+        const slotData: SaveSlotData = JSON.parse(rawSlot);
+        // Only write if not already present (idempotent)
+        const existing = await db.get(STORE_NAME, meta.id);
+        if (!existing) {
+          await db.put(STORE_NAME, slotData);
+        }
+      } catch {
+        // Skip corrupted slots
+      }
+      localStorage.removeItem(`${LS_SLOT_PREFIX}${meta.id}`);
+    }
+    localStorage.removeItem(LS_INDEX_KEY);
+  } catch (e) {
+    console.warn('[CampaignSaveManager] localStorage migration encountered an error:', e);
   }
 }
 
-function writeIndex(index: SaveSlotMeta[]): void {
-  localStorage.setItem(INDEX_KEY, JSON.stringify(index));
-}
-
-function slotKey(id: string): string {
-  return `${SLOT_PREFIX}${id}`;
-}
+// ─── Local helpers ────────────────────────────────────────────────
 
 function generateId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-/**
- * Estimates the byte size of a value when JSON-serialized.
- */
-function estimatedJsonSize(value: unknown): number {
-  return JSON.stringify(value).length;
-}
-
-/**
- * Returns a rough estimate of how full localStorage is (0–1).
- * The W3C spec suggests ~5 MB; some browsers allow more.
- */
-function localStorageUsageFraction(): number {
-  const ESTIMATED_MAX_BYTES = 5 * 1024 * 1024; // 5 MB
-  let total = 0;
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i)!;
-    total += key.length + (localStorage.getItem(key)?.length ?? 0);
-  }
-  return total / ESTIMATED_MAX_BYTES;
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -101,57 +164,22 @@ function localStorageUsageFraction(): number {
 
 export class CampaignSaveManager {
 
-  // ── Migration ─────────────────────────────────────────────────
-
-  /**
-   * If the old single-slot key exists, import it as a named slot and
-   * delete the old key.  Called lazily by listSaves().
-   */
-  static migrateLegacySave(): void {
-    const legacy = localStorage.getItem(LEGACY_KEY);
-    if (!legacy) return;
-
-    try {
-      const data = JSON.parse(legacy);
-      const campaign = data.campaign;
-      const meta: SaveSlotMeta = {
-        id: generateId(),
-        name: 'Migrated Save',
-        savedAt: Date.now(),
-        sector: campaign?.currentSector ?? 1,
-        phase: campaign?.campaignPhase ?? 'sectorMap',
-        difficulty: campaign?.difficulty ?? 'normal',
-        fleetFavor: campaign?.fleetFavor ?? 0,
-        requisitionPoints: campaign?.requisitionPoints ?? 0,
-        shipCount: (data.persistedShips as unknown[])?.length ?? 0,
-      };
-      const slotData: SaveSlotData = { meta, ...data };
-      localStorage.setItem(slotKey(meta.id), JSON.stringify(slotData));
-
-      const index = readIndex();
-      index.unshift(meta);
-      writeIndex(index);
-
-      localStorage.removeItem(LEGACY_KEY);
-    } catch {
-      // If migration fails just remove the broken legacy key
-      localStorage.removeItem(LEGACY_KEY);
-    }
-  }
-
   // ── Metadata / Listing ────────────────────────────────────────
 
   /** Returns all save slot metadata sorted by most recent first. */
-  static listSaves(): SaveSlotMeta[] {
-    this.migrateLegacySave();
-    const index = readIndex();
-    return [...index].sort((a, b) => b.savedAt - a.savedAt);
+  static async listSaves(): Promise<SaveSlotMeta[]> {
+    const db = await getDB();
+    const allSlots = await db.getAll(STORE_NAME);
+    return allSlots
+      .map(s => s.meta)
+      .sort((a, b) => b.savedAt - a.savedAt);
   }
 
   /** True if at least one save slot exists. */
-  static hasSaves(): boolean {
-    this.migrateLegacySave();
-    return readIndex().length > 0;
+  static async hasSaves(): Promise<boolean> {
+    const db = await getDB();
+    const count = await db.count(STORE_NAME);
+    return count > 0;
   }
 
   // ── Auto-name Generation ──────────────────────────────────────
@@ -171,14 +199,13 @@ export class CampaignSaveManager {
     return `Sector ${campaign.currentSector ?? 1} – ${difficulty} – ${phaseLabel}`;
   }
 
-
   // ── Save ──────────────────────────────────────────────────────
 
   /**
    * Saves current campaign state as a new slot with the given name.
    * Returns the new slot metadata, or null if the save failed.
    */
-  static save(name: string): SaveSlotMeta | null {
+  static async save(name: string): Promise<SaveSlotMeta | null> {
     const state = useCampaignStore.getState();
     const campaign = state.campaign;
     if (!campaign) {
@@ -186,18 +213,12 @@ export class CampaignSaveManager {
       return null;
     }
 
-    const index = readIndex();
+    const db = await getDB();
+    const slotCount = await db.count(STORE_NAME);
 
-    if (index.length >= MAX_SAVE_SLOTS) {
+    if (slotCount >= MAX_SAVE_SLOTS) {
       fireToast({ type: 'warning', message: `Max ${MAX_SAVE_SLOTS} save slots reached – delete a save first` });
       return null;
-    }
-
-    // Warn if localStorage is nearing capacity
-    const usageFraction = localStorageUsageFraction();
-    if (usageFraction > 0.8) {
-      console.warn('[CampaignSaveManager] localStorage is over 80% full.');
-      fireToast({ type: 'warning', message: 'Storage nearly full – consider exporting and deleting old saves' });
     }
 
     const meta: SaveSlotMeta = {
@@ -223,11 +244,7 @@ export class CampaignSaveManager {
     };
 
     try {
-      localStorage.setItem(slotKey(meta.id), JSON.stringify(slotData));
-
-      // Prepend to index (newest first)
-      index.unshift(meta);
-      writeIndex(index);
+      await db.put(STORE_NAME, slotData);
 
       useCampaignStore.getState().setActiveSaveSlotId(meta.id);
       useCampaignStore.getState().pushCampaignLog({
@@ -235,16 +252,11 @@ export class CampaignSaveManager {
         message: 'Campaign saved',
         outcome: `Saved to slot "${meta.name}".`,
       });
-      fireToast({ type: 'tech', message: `Saved: "${meta.name}"` });
+      fireToast({ type: 'system', message: `Saved: "${meta.name}"` });
       return meta;
     } catch (e) {
       console.error('[CampaignSaveManager] Failed to save:', e);
-      // Check if storage quota exceeded
-      if (e instanceof DOMException && e.name === 'QuotaExceededError') {
-        fireToast({ type: 'warning', message: 'Storage full – export and delete old saves' });
-      } else {
-        fireToast({ type: 'warning', message: 'Failed to save campaign' });
-      }
+      fireToast({ type: 'warning', message: 'Failed to save campaign' });
       return null;
     }
   }
@@ -254,7 +266,7 @@ export class CampaignSaveManager {
    * keeping the same slot ID but updating all other fields.
    * Returns the updated slot metadata, or null if the operation failed.
    */
-  static overwrite(slotId: string, name: string): SaveSlotMeta | null {
+  static async overwrite(slotId: string, name: string): Promise<SaveSlotMeta | null> {
     const state = useCampaignStore.getState();
     const campaign = state.campaign;
     if (!campaign) {
@@ -262,9 +274,9 @@ export class CampaignSaveManager {
       return null;
     }
 
-    const index = readIndex();
-    const existingIdx = index.findIndex(m => m.id === slotId);
-    if (existingIdx === -1) {
+    const db = await getDB();
+    const existing = await db.get(STORE_NAME, slotId);
+    if (!existing) {
       fireToast({ type: 'warning', message: 'Save slot not found' });
       return null;
     }
@@ -292,13 +304,7 @@ export class CampaignSaveManager {
     };
 
     try {
-      localStorage.setItem(slotKey(slotId), JSON.stringify(slotData));
-
-      const idx = index.findIndex(s => s.id === slotId);
-      if (idx !== -1) {
-        index[idx] = meta;
-        writeIndex(index);
-      }
+      await db.put(STORE_NAME, slotData);
 
       useCampaignStore.getState().setActiveSaveSlotId(meta.id);
       useCampaignStore.getState().pushCampaignLog({
@@ -306,7 +312,7 @@ export class CampaignSaveManager {
         message: 'Campaign overwritten',
         outcome: `Overwrote slot "${meta.name}".`,
       });
-      fireToast({ type: 'tech', message: `Saved: "${meta.name}"` });
+      fireToast({ type: 'system', message: `Saved: "${meta.name}"` });
       return meta;
     } catch (e) {
       console.error('[CampaignSaveManager] Failed to overwrite:', e);
@@ -318,14 +324,14 @@ export class CampaignSaveManager {
   // ── Load ──────────────────────────────────────────────────────
 
   /** Loads a save slot by ID. Returns true on success. */
-  static load(slotId: string): boolean {
+  static async load(slotId: string): Promise<boolean> {
     try {
-      const raw = localStorage.getItem(slotKey(slotId));
-      if (!raw) {
+      const db = await getDB();
+      const slotData = await db.get(STORE_NAME, slotId);
+      if (!slotData) {
         fireToast({ type: 'warning', message: 'Save slot not found' });
         return false;
       }
-      const slotData: SaveSlotData = JSON.parse(raw);
       useCampaignStore.getState().loadCampaignState(slotData as any);
       useCampaignStore.getState().setActiveSaveSlotId(slotId);
       useCampaignStore.getState().pushCampaignLog({
@@ -333,7 +339,7 @@ export class CampaignSaveManager {
         message: 'Campaign loaded',
         outcome: `Loaded from slot "${slotData.meta?.name ?? slotId}".`,
       });
-      fireToast({ type: 'tech', message: `Loaded: "${slotData.meta?.name ?? 'Campaign'}"` });
+      fireToast({ type: 'system', message: `Loaded: "${slotData.meta?.name ?? 'Campaign'}"` });
       return true;
     } catch (e) {
       console.error('[CampaignSaveManager] Failed to load slot:', e);
@@ -344,18 +350,16 @@ export class CampaignSaveManager {
 
   // ── Delete ────────────────────────────────────────────────────
 
-  /** Permanently deletes a save slot and removes it from the index. */
-  static deleteSave(slotId: string): void {
+  /** Permanently deletes a save slot. */
+  static async deleteSave(slotId: string): Promise<void> {
     try {
-      localStorage.removeItem(slotKey(slotId));
-      const index = readIndex();
-      const filtered = index.filter(s => s.id !== slotId);
-      writeIndex(filtered);
+      const db = await getDB();
+      await db.delete(STORE_NAME, slotId);
 
       if (useCampaignStore.getState().activeSaveSlotId === slotId) {
         useCampaignStore.getState().setActiveSaveSlotId(null);
       }
-      fireToast({ type: 'tech', message: 'Save deleted' });
+      fireToast({ type: 'system', message: 'Save deleted' });
     } catch (e) {
       console.error('[CampaignSaveManager] Failed to delete slot:', e);
       fireToast({ type: 'warning', message: 'Failed to delete save' });
@@ -366,21 +370,20 @@ export class CampaignSaveManager {
 
   /**
    * Exports a single save slot to a JSON file on disk.
-   * If no slotId is provided, exports from the current campaign state
-   * (matching the old exportToDisk() behavior).
+   * If no slotId is provided, exports from the current campaign state.
    */
-  static exportSlot(slotId?: string): void {
+  static async exportSlot(slotId?: string): Promise<void> {
     try {
       let dataStr: string;
       let filename: string;
 
       if (slotId) {
-        const raw = localStorage.getItem(slotKey(slotId));
-        if (!raw) {
+        const db = await getDB();
+        const slotData = await db.get(STORE_NAME, slotId);
+        if (!slotData) {
           fireToast({ type: 'warning', message: 'Save slot not found for export' });
           return;
         }
-        const slotData: SaveSlotData = JSON.parse(raw);
         dataStr = JSON.stringify(slotData, null, 2);
         const safeName = (slotData.meta?.name ?? slotId).replace(/[^a-zA-Z0-9\-_ ]/g, '').trim();
         filename = `coc_save_${safeName || slotId}_${new Date().toISOString().slice(0, 10)}.json`;
@@ -409,7 +412,7 @@ export class CampaignSaveManager {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      fireToast({ type: 'tech', message: 'Campaign exported to disk' });
+      fireToast({ type: 'system', message: 'Campaign exported to disk' });
     } catch (e) {
       console.error('[CampaignSaveManager] Failed to export:', e);
       fireToast({ type: 'warning', message: 'Failed to export save' });
@@ -417,8 +420,8 @@ export class CampaignSaveManager {
   }
 
   /** @deprecated Use exportSlot() instead. */
-  static exportToDisk(): void {
-    this.exportSlot();
+  static async exportToDisk(): Promise<void> {
+    return this.exportSlot();
   }
 
   /**
@@ -430,7 +433,7 @@ export class CampaignSaveManager {
   static async importFromDisk(file: File): Promise<boolean> {
     return new Promise(resolve => {
       const reader = new FileReader();
-      reader.onload = e => {
+      reader.onload = async e => {
         try {
           const raw = JSON.parse(e.target?.result as string);
 
@@ -466,10 +469,9 @@ export class CampaignSaveManager {
             shipCount: ((data as any).persistedShips as unknown[])?.length ?? 0,
           };
           const slotData: SaveSlotData = { meta, ...(data as any) };
-          localStorage.setItem(slotKey(meta.id), JSON.stringify(slotData));
-          const index = readIndex();
-          index.unshift(meta);
-          writeIndex(index);
+
+          const db = await getDB();
+          await db.put(STORE_NAME, slotData);
 
           useCampaignStore.getState().setActiveSaveSlotId(meta.id);
           useCampaignStore.getState().pushCampaignLog({
@@ -477,7 +479,7 @@ export class CampaignSaveManager {
             message: 'Campaign imported',
             outcome: `Imported from "${file.name}".`,
           });
-          fireToast({ type: 'tech', message: `Imported: "${meta.name}"` });
+          fireToast({ type: 'system', message: `Imported: "${meta.name}"` });
           resolve(true);
         } catch (err) {
           console.error('[CampaignSaveManager] Failed to parse import:', err);
@@ -499,24 +501,27 @@ export class CampaignSaveManager {
   /**
    * Overwrites the active save slot if one exists, otherwise creates a new slot.
    */
-  static quickSave(): boolean {
+  static async quickSave(): Promise<boolean> {
     const activeId = useCampaignStore.getState().activeSaveSlotId;
-    if (activeId && this.listSaves().some(s => s.id === activeId)) {
-      const existingName = this.listSaves().find(s => s.id === activeId)?.name || '';
-      return !!this.overwrite(activeId, existingName);
+    if (activeId) {
+      const saves = await this.listSaves();
+      const existing = saves.find(s => s.id === activeId);
+      if (existing) {
+        return !!(await this.overwrite(activeId, existing.name));
+      }
     }
-    const meta = this.save('');
+    const meta = await this.save('');
     return !!meta;
   }
 
   /** @deprecated use save() and handle slot IDs manually */
-  static saveToBrowser(): boolean {
-    const meta = this.save('');
+  static async saveToBrowser(): Promise<boolean> {
+    const meta = await this.save('');
     return !!meta;
   }
 
   /** @deprecated use hasSaves() instead */
-  static hasBrowserSave(): boolean {
+  static async hasBrowserSave(): Promise<boolean> {
     return this.hasSaves();
   }
 
@@ -524,9 +529,17 @@ export class CampaignSaveManager {
    * @deprecated Use load() with a slot ID instead.
    * Loads the most-recently-saved slot.
    */
-  static loadFromBrowser(): boolean {
-    const saves = this.listSaves();
+  static async loadFromBrowser(): Promise<boolean> {
+    const saves = await this.listSaves();
     if (saves.length === 0) return false;
     return this.load(saves[0].id);
+  }
+
+  /**
+   * @deprecated — retained only for the legacy single-slot migration flow.
+   * All migration is now handled inside getDB() → migrateFromLocalStorage().
+   */
+  static migrateLegacySave(): void {
+    // No-op: migration is performed automatically when the DB is first opened.
   }
 }

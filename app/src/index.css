@@ -2319,3 +2319,113 @@ body.is-phone .save-slot-mode-selector {
 }
 
 
+/* ─── Recovery Banner ────────────────────────────────────────────────── */
+
+@keyframes recovery-pulse {
+  0%, 100% { box-shadow: 0 0 10px hsla(35, 100%, 55%, 0.3), inset 0 0 12px hsla(35, 100%, 55%, 0.05); }
+  50%       { box-shadow: 0 0 24px hsla(35, 100%, 55%, 0.6), inset 0 0 20px hsla(35, 100%, 55%, 0.10); }
+}
+
+.recovery-banner {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid hsla(35, 100%, 55%, 0.55);
+  border-radius: var(--radius-md);
+  background: linear-gradient(
+    135deg,
+    hsla(35, 100%, 55%, 0.07) 0%,
+    hsla(220, 25%, 8%, 0.96) 50%,
+    hsla(35, 100%, 55%, 0.04) 100%
+  );
+  animation: recovery-pulse 2.4s ease-in-out infinite;
+  margin-bottom: var(--space-lg);
+}
+
+/* Left amber accent strip */
+.recovery-banner-accent {
+  flex: 0 0 5px;
+  background: linear-gradient(
+    to bottom,
+    var(--color-alert-amber) 0%,
+    hsla(35, 100%, 55%, 0.5) 100%
+  );
+  box-shadow: 2px 0 10px hsla(35, 100%, 55%, 0.5);
+}
+
+.recovery-banner-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-lg);
+}
+
+.recovery-banner-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.recovery-banner-icon {
+  font-size: 1.1rem;
+  color: var(--color-alert-amber);
+  text-shadow: var(--glow-amber);
+}
+
+.recovery-banner-label {
+  color: var(--color-alert-amber);
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+  text-shadow: var(--glow-amber);
+}
+
+.recovery-banner-message {
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  font-family: var(--font-ui);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.recovery-banner-highlight {
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+}
+
+.recovery-banner-actions {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+  margin-top: var(--space-xs);
+}
+
+.recovery-banner-btn {
+  font-size: 0.8rem;
+  padding: 6px 18px;
+}
+
+.recovery-banner-btn--discard {
+  border-color: hsla(210, 15%, 45%, 0.5);
+  color: var(--color-text-secondary);
+}
+
+.recovery-banner-btn--discard:hover {
+  border-color: var(--color-hostile-red);
+  color: var(--color-hostile-red);
+  background: var(--color-red-dim);
+  box-shadow: var(--glow-red);
+}
+
+/* Phone layout: stack the buttons vertically */
+body.is-phone .recovery-banner-actions {
+  flex-direction: column;
+}
+
+body.is-phone .recovery-banner-btn {
+  width: 100%;
+}

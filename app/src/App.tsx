@@ -16,6 +16,9 @@ import { useCampaignStore } from './store/useCampaignStore';
 import ToastContainer from './components/campaign/ToastContainer';
 import { buildTutorialGameConfig } from './data/tutorialScenario';
 import { useViewport } from './utils/useViewport';
+import RecoveryBanner from './components/setup/RecoveryBanner';
+import { CombatRecoveryManager } from './utils/CombatRecoveryManager';
+import type { AppMode } from './utils/CombatRecoveryManager';
 
 import { ScreenOrientation } from '@capacitor/screen-orientation';
 import { App as CapacitorApp } from '@capacitor/app';
@@ -32,8 +35,16 @@ function App() {
   const endTutorial = useTutorialStore(s => s.endTutorial);
   
   // App-level routing state
-  const [appMode, setAppMode] = useState<'menu' | 'editor' | 'skirmish-builder' | 'campaign-builder' | 'skirmish' | 'campaign' | 'campaign-combat' | 'tutorial'>('menu');
+  const [appMode, setAppMode] = useState<AppMode>('menu');
   const [scenarioConfig, setScenarioConfig] = useState<CustomScenarioConfig | null>(null);
+
+  // ── Combat Recovery ───────────────────────────────────────────────
+  // On mount, check whether a background-killed battle was cached.
+  const [recoveryMeta, setRecoveryMeta] = useState<ReturnType<typeof CombatRecoveryManager.getSnapshotMeta>>(null);
+
+  useEffect(() => {
+    setRecoveryMeta(CombatRecoveryManager.getSnapshotMeta());
+  }, []);
 
   // Register the "return to main menu" navigation callback in the global
   // settings store so SettingsModal can trigger it without prop drilling.
@@ -43,6 +54,8 @@ function App() {
       setReturnToMenuCallback(null);
     } else {
       setReturnToMenuCallback(() => {
+        // Deliberate exit — clear recovery cache so no stale prompt appears
+        CombatRecoveryManager.clearRecovery();
         endTutorial();
         setAppMode('menu');
       });
@@ -68,6 +81,28 @@ function App() {
     initListener();
     return () => { handle?.remove(); };
   }, []);
+
+  // ── Background Recovery Save ──────────────────────────────────────
+  // When the app is sent to the background during an active battle,
+  // write the current combat state to the recovery cache so it can be
+  // restored if Android kills the process to free RAM.
+  useEffect(() => {
+    let handle: ReturnType<typeof CapacitorApp.addListener> | null = null;
+    const registerListener = async () => {
+      try {
+        handle = CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+          if (!isActive) {
+            // App going to background — save combat state
+            CombatRecoveryManager.saveRecovery(appMode);
+          }
+        });
+      } catch (e) {
+        // Not running in a Capacitor context (web/dev) — ignore
+      }
+    };
+    registerListener();
+    return () => { handle?.then(l => l.remove()); };
+  }, [appMode]);
 
   useEffect(() => {
     // Lock to portrait for the main menu, fleet builders, and campaign map.
@@ -105,10 +140,33 @@ function App() {
   // GameOverScreen will render when gameOver is true, and the user clicks the return button to trigger onCombatEnd.
 
   if (appMode === 'menu') {
+    const handleRecoveryResume = () => {
+      const restoredMode = CombatRecoveryManager.loadRecovery();
+      setRecoveryMeta(null);
+      if (restoredMode) {
+        setAppMode(restoredMode);
+      }
+    };
+
+    const handleRecoveryDiscard = () => {
+      CombatRecoveryManager.clearRecovery();
+      setRecoveryMeta(null);
+    };
+
     return (
-      <MainMenu 
-        onStart={() => setAppMode('editor')} 
-        onStartCampaign={() => setAppMode('campaign-builder')} 
+      <MainMenu
+        recoveryBanner={
+          recoveryMeta ? (
+            <RecoveryBanner
+              round={recoveryMeta.round}
+              savedAt={recoveryMeta.savedAt}
+              onResume={handleRecoveryResume}
+              onDiscard={handleRecoveryDiscard}
+            />
+          ) : null
+        }
+        onStart={() => setAppMode('editor')}
+        onStartCampaign={() => setAppMode('campaign-builder')}
         onContinueCampaign={() => setAppMode('campaign')}
         onStartTutorial={() => {
           resetGame();
@@ -159,6 +217,8 @@ function App() {
 
   if (appMode === 'tutorial') {
     if (gameOver) {
+      // Battle ended — clear recovery cache (nothing left to recover)
+      CombatRecoveryManager.clearRecovery();
       return <GameOverScreen onReturn={() => { endTutorial(); setAppMode('menu'); }} />;
     }
     return (
@@ -183,6 +243,7 @@ function App() {
 
   if (appMode === 'campaign-combat') {
     if (gameOver) {
+      CombatRecoveryManager.clearRecovery();
       return <GameOverScreen onReturn={() => setAppMode('campaign')} />;
     }
     return (
@@ -195,6 +256,7 @@ function App() {
 
   // ── Skirmish mode ───────────────────────────────────────────────
   if (gameOver) {
+    CombatRecoveryManager.clearRecovery();
     return <GameOverScreen onReturn={() => setAppMode('menu')} />;
   }
 
