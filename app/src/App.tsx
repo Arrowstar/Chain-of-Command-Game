@@ -29,6 +29,7 @@ function App() {
   const isRedAlert = useUIStore(s => s.isRedAlert);
   const setReturnToMenuCallback = useSettingsStore(s => s.setReturnToMenuCallback);
   const isSettingsOpen = useSettingsStore(s => s.isSettingsOpen);
+  const endTutorial = useTutorialStore(s => s.endTutorial);
   
   // App-level routing state
   const [appMode, setAppMode] = useState<'menu' | 'editor' | 'skirmish-builder' | 'campaign-builder' | 'skirmish' | 'campaign' | 'campaign-combat' | 'tutorial'>('menu');
@@ -41,9 +42,12 @@ function App() {
     if (appMode === 'menu') {
       setReturnToMenuCallback(null);
     } else {
-      setReturnToMenuCallback(() => setAppMode('menu'));
+      setReturnToMenuCallback(() => {
+        endTutorial();
+        setAppMode('menu');
+      });
     }
-  }, [appMode, setReturnToMenuCallback]);
+  }, [appMode, setReturnToMenuCallback, endTutorial]);
 
   // Register the Capacitor hardware back-button listener.
   useEffect(() => {
@@ -96,7 +100,6 @@ function App() {
   const resetGame = useGameStore(s => s.resetGame);
   const initializeGame = useGameStore(s => s.initializeGame);
   const startTutorial = useTutorialStore(s => s.startTutorial);
-  const endTutorial = useTutorialStore(s => s.endTutorial);
 
   // We no longer aggressively auto-advance campaign combat.
   // GameOverScreen will render when gameOver is true, and the user clicks the return button to trigger onCombatEnd.
