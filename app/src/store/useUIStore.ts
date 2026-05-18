@@ -53,7 +53,7 @@ interface UIStore {
 
   // Targeting Mode
   targetingMode: 'ship' | 'hex' | 'weapon' | null;
-  activeTargetingAction: { shipId: string; actionId: string } | null;
+  activeTargetingAction: { shipId: string; actionId: string; actionDefId?: string } | null;
   activeTargetingContext: Record<string, unknown> | null;
 
   // Actions
@@ -62,7 +62,7 @@ interface UIStore {
   hoverShip: (id: string | null) => void;
 
   // Selection Picker Actions
-  openSelectionPicker: (hex: HexCoord, targets: SelectionTarget[], position: { x: number; y: number }, action?: { shipId: string; actionId: string } | null, context?: Record<string, unknown> | null) => void;
+  openSelectionPicker: (hex: HexCoord, targets: SelectionTarget[], position: { x: number; y: number }, action?: { shipId: string; actionId: string; actionDefId?: string } | null, context?: Record<string, unknown> | null) => void;
   closeSelectionPicker: () => void;
   setDragging: (dragging: boolean, station?: string | null) => void;
   panCamera: (dx: number, dy: number) => void;
@@ -83,7 +83,7 @@ interface UIStore {
   resetUnreadCount: () => void;
   
   // Targeting
-  startTargeting: (mode: 'ship' | 'hex' | 'weapon', action: { shipId: string; actionId: string }, context?: Record<string, unknown>) => void;
+  startTargeting: (mode: 'ship' | 'hex' | 'weapon', action: { shipId: string; actionId: string; actionDefId?: string }, context?: Record<string, unknown>) => void;
   updateTargetingContext: (context: Record<string, unknown>) => void;
   clearTargeting: () => void;
 

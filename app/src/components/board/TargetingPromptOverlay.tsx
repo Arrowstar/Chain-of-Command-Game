@@ -22,20 +22,20 @@ export default function TargetingPromptOverlay() {
       const isDefensive = beh === 'escort' || beh === 'screen';
       if (isDefensive) return `SELECT FRIENDLY SHIP TO ${beh === 'escort' ? 'ESCORT' : 'SCREEN'}...`;
       return 'SELECT ENEMY ENGAGEMENT TARGET...';
-    } else if (activeTargetingAction?.actionId === 'vector-orders') {
+    } else if ((activeTargetingAction?.actionDefId || activeTargetingAction?.actionId) === 'vector-orders') {
       const beh = ctx?.behavior as string | undefined;
       const isDefensive = beh === 'escort' || beh === 'screen';
       if (isDefensive) return `SELECT FRIENDLY SHIP TO ${beh === 'escort' ? 'ESCORT' : 'SCREEN'}...`;
       return 'SELECT ENEMY ENGAGEMENT TARGET...';
-    } else if (activeTargetingAction?.actionId === 'target-lock') {
+    } else if ((activeTargetingAction?.actionDefId || activeTargetingAction?.actionId) === 'target-lock') {
       return 'SELECT ENEMY SHIP TO LOCK ONTO...';
-    } else if (activeTargetingAction?.actionId.startsWith('fire-')) {
+    } else if ((activeTargetingAction?.actionDefId || activeTargetingAction?.actionId || '').startsWith('fire-')) {
       return 'SELECT ENEMY TARGET TO FIRE UPON...';
-    } else if (activeTargetingAction?.actionId === 'electronic-warfare') {
+    } else if ((activeTargetingAction?.actionDefId || activeTargetingAction?.actionId) === 'electronic-warfare') {
       return 'SELECT ENEMY TARGET TO JAM...';
-    } else if (activeTargetingAction?.actionId === 'sensor-sweep') {
+    } else if ((activeTargetingAction?.actionDefId || activeTargetingAction?.actionId) === 'sensor-sweep') {
       return 'SELECT ENEMY TARGET TO SCAN...';
-    } else if (activeTargetingAction?.actionId === 'boarding-party') {
+    } else if ((activeTargetingAction?.actionDefId || activeTargetingAction?.actionId) === 'boarding-party') {
       return 'SELECT ENEMY SHIP TO BOARD...';
     } else if (targetingMode === 'ship') {
       return 'SELECT TARGET SHIP...';

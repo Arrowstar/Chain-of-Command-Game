@@ -1,6 +1,7 @@
 import React from 'react';
 import { TERRAIN_DATA } from '../../data/terrain';
 import { TerrainType } from '../../types/game';
+import { useViewport } from '../../utils/useViewport';
 
 // Colour swatches matching HexMap.tsx terrain rendering
 const TERRAIN_COLORS: Record<TerrainType, { bg: string; border: string }> = {
@@ -27,6 +28,10 @@ const DISPLAY_ORDER: TerrainType[] = [
 ];
 
 export const TerrainLegend: React.FC = () => {
+  const { isPhone } = useViewport();
+
+  if (isPhone) return null;
+
   return (
     <div style={{
       position: 'absolute',

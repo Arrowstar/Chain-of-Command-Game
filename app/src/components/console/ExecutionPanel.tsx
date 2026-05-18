@@ -140,7 +140,7 @@ export default function ExecutionPanel() {
     : activeEnemy.length === 0 && enemyFighters.length === 0 && enemyTorpedoes.length === 0 && activeStations.length === 0;
 
   let noValidTargets = false;
-  if (targetingMode && activeTargetingAction?.actionId === 'fire-primary' && activeTargetingContext?.weaponId) {
+  if (targetingMode && (activeTargetingAction?.actionDefId || activeTargetingAction?.actionId) === 'fire-primary' && activeTargetingContext?.weaponId) {
     const weapon = getWeaponById(activeTargetingContext.weaponId as string);
     const attackerShip = playerShips.find(s => s.id === activeTargetingAction.shipId);
     if (weapon && attackerShip) {
@@ -197,20 +197,20 @@ export default function ExecutionPanel() {
                   const isDefensive = beh === 'escort' || beh === 'screen';
                   if (isDefensive) return `🛡 SQUADRON DEPLOYED. SELECT FRIENDLY SHIP TO ${beh === 'escort' ? 'ESCORT' : 'SCREEN'}...`;
                   return '🎯 SQUADRON DEPLOYED. SELECT ENEMY ENGAGEMENT TARGET...';
-                } else if (activeTargetingAction?.actionId === 'vector-orders') {
+                } else if ((activeTargetingAction?.actionDefId || activeTargetingAction?.actionId) === 'vector-orders') {
                   const beh = ctx?.behavior as string | undefined;
                   const isDefensive = beh === 'escort' || beh === 'screen';
                   if (isDefensive) return `🛡 SELECT FRIENDLY SHIP TO ${beh === 'escort' ? 'ESCORT' : 'SCREEN'}...`;
                   return '🎯 SELECT ENEMY ENGAGEMENT TARGET...';
-                } else if (activeTargetingAction?.actionId === 'target-lock') {
+                } else if ((activeTargetingAction?.actionDefId || activeTargetingAction?.actionId) === 'target-lock') {
                   return 'SELECT ENEMY SHIP TO LOCK ONTO...';
-                } else if (activeTargetingAction?.actionId.startsWith('fire-')) {
+                } else if ((activeTargetingAction?.actionDefId || activeTargetingAction?.actionId || '').startsWith('fire-')) {
                   return 'SELECT ENEMY TARGET TO FIRE UPON...';
-                } else if (activeTargetingAction?.actionId === 'electronic-warfare') {
+                } else if ((activeTargetingAction?.actionDefId || activeTargetingAction?.actionId) === 'electronic-warfare') {
                   return 'SELECT ENEMY TARGET TO JAM...';
-                } else if (activeTargetingAction?.actionId === 'sensor-sweep') {
+                } else if ((activeTargetingAction?.actionDefId || activeTargetingAction?.actionId) === 'sensor-sweep') {
                   return 'SELECT ENEMY TARGET TO SCAN...';
-                } else if (activeTargetingAction?.actionId === 'boarding-party') {
+                } else if ((activeTargetingAction?.actionDefId || activeTargetingAction?.actionId) === 'boarding-party') {
                   return 'SELECT ENEMY SHIP TO BOARD...';
                 } else if (targetingMode === 'ship') {
                   return 'SELECT TARGET SHIP...';
@@ -289,9 +289,9 @@ export default function ExecutionPanel() {
                     if (needsExpansion) {
                       setExpandedActionId(isExpanded ? null : action.id);
                     } else if (def?.requiresHexTarget) {
-                      startTargeting('hex', { shipId: ship.id, actionId: action.id });
+                      startTargeting('hex', { shipId: ship.id, actionId: action.id, actionDefId: action.actionId });
                     } else if (def?.requiresTarget) {
-                      startTargeting('ship', { shipId: ship.id, actionId: action.id });
+                      startTargeting('ship', { shipId: ship.id, actionId: action.id, actionDefId: action.actionId });
                     } else {
                       resolveAction(owner!.id, ship.id, action.id);
                     }
@@ -448,7 +448,7 @@ export default function ExecutionPanel() {
                                   className="btn btn--execute"
                                   style={{ width: '100%', padding: '8px', fontWeight: 'bold' }}
                                   onClick={() => {
-                                    startTargeting('hex', { shipId: ship.id, actionId: action.id }, {
+                                    startTargeting('hex', { shipId: ship.id, actionId: action.id, actionDefId: action.actionId }, {
                                       classId: selection.classId,
                                       behavior: selection.behavior,
                                     });
@@ -556,7 +556,7 @@ export default function ExecutionPanel() {
                                   className="btn btn--execute"
                                   style={{ width: '100%', padding: '8px', fontWeight: 'bold' }}
                                   onClick={() => {
-                                    startTargeting('ship', { shipId: ship.id, actionId: action.id }, {
+                                    startTargeting('ship', { shipId: ship.id, actionId: action.id, actionDefId: action.actionId }, {
                                       fighterId: currentFighterId,
                                       behavior: selection.behavior,
                                     });
@@ -703,7 +703,7 @@ export default function ExecutionPanel() {
                                           disabled={!canFire}
                                           onClick={() => {
                                             const isAoE = weapon?.tags?.includes('areaOfEffect');
-                                            startTargeting(isAoE ? 'hex' : 'ship', { shipId: ship.id, actionId: action.id }, { weaponId: wId, weaponIndex: i });
+                                            startTargeting(isAoE ? 'hex' : 'ship', { shipId: ship.id, actionId: action.id, actionDefId: action.actionId }, { weaponId: wId, weaponIndex: i });
                                             setExpandedActionId(null);
                                           }}
                                         >
