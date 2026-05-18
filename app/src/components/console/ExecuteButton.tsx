@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useGameStore } from '../../store/useGameStore';
+import { useTutorialStore } from '../../store/useTutorialStore';
 
 export default function ExecuteButton() {
   const phase = useGameStore(s => s.phase);
@@ -8,7 +9,14 @@ export default function ExecuteButton() {
   const playerShips = useGameStore(s => s.playerShips);
   const [showConfirm, setShowConfirm] = useState(false);
 
+  const tutorialActive = useTutorialStore(s => s.isActive);
+  const isFreePlay = useTutorialStore(s => s.isFreePlay);
+  const currentStep = useTutorialStore(s => s.currentStep);
+  const steps = useTutorialStore(s => s.steps);
+
   const isCommandPhase = phase === 'command';
+  const currentStepObj = steps[currentStep];
+  const canExecute = isCommandPhase && (!tutorialActive || isFreePlay || currentStepObj?.waitForCondition === 'PHASE_EXECUTION');
   
   const playersWithUnspent = players.filter(p => p.commandTokens > 0);
 
@@ -28,13 +36,13 @@ export default function ExecuteButton() {
   return (
     <>
       <button 
-        className={`btn btn--execute ${!isCommandPhase ? 'disabled' : ''}`}
+        className={`btn btn--execute ${!canExecute ? 'disabled' : ''}`}
         onClick={handleExecuteClick}
-        disabled={!isCommandPhase}
+        disabled={!canExecute}
         data-testid="execute-button"
         style={{
-          opacity: isCommandPhase ? 1 : 0.4,
-          cursor: isCommandPhase ? 'pointer' : 'not-allowed',
+          opacity: canExecute ? 1 : 0.4,
+          cursor: canExecute ? 'pointer' : 'not-allowed',
           width: '100%',
           marginTop: 'var(--space-md)'
         }}

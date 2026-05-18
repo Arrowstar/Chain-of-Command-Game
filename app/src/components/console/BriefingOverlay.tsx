@@ -12,7 +12,13 @@ export default function BriefingOverlay() {
   const overrideRoE = useGameStore(s => s.overrideRoE);
   const advancePhase = useGameStore(s => s.advancePhase);
   const tutorialActive = useTutorialStore(s => s.isActive);
+  const isFreePlay = useTutorialStore(s => s.isFreePlay);
+  const currentStep = useTutorialStore(s => s.currentStep);
+  const steps = useTutorialStore(s => s.steps);
   const isCampaign = useCampaignStore(s => !!s.campaign);
+  
+  const currentStepObj = steps[currentStep];
+  const canProceed = !tutorialActive || isFreePlay || currentStepObj?.waitForCondition === 'PHASE_COMMAND';
 
   return (
     <div style={{
@@ -48,9 +54,15 @@ export default function BriefingOverlay() {
         </div>
 
         <button
-          className="btn btn--execute"
-          style={{ width: '100%', padding: 'var(--space-md)' }}
+          className={`btn btn--execute ${!canProceed ? 'disabled' : ''}`}
+          style={{ 
+            width: '100%', 
+            padding: 'var(--space-md)',
+            opacity: canProceed ? 1 : 0.4,
+            cursor: canProceed ? 'pointer' : 'not-allowed'
+          }}
           onClick={advancePhase}
+          disabled={!canProceed}
         >
           PROCEED TO COMMAND PHASE
         </button>
