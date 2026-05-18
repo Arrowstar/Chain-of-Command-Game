@@ -63,6 +63,14 @@ function App() {
     }
   }, [appMode, setReturnToMenuCallback, endTutorial]);
 
+  // Safeguard: Ensure the combat tutorial is automatically disarmed/reset
+  // whenever the player is in any other game mode (skirmish, campaign, builder, menu).
+  useEffect(() => {
+    if (appMode !== 'tutorial') {
+      endTutorial();
+    }
+  }, [appMode, endTutorial]);
+
   // Register the Capacitor hardware back-button listener.
   useEffect(() => {
     let handle: any = null;
