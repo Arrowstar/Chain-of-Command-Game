@@ -13,6 +13,7 @@ import { isInFiringArc, hexDistance } from '../../engine/hexGrid';
 import type { CustomScenarioConfig } from './ScenarioEditor';
 import { useViewport } from '../../utils/useViewport';
 import TouchTooltipPortal from '../TouchTooltipPortal';
+import FleetBuilderTutorial from '../tutorial/FleetBuilderTutorial';
 
 
 const WEAPON_COLORS = ['#4FD1C5', '#F6E05E', '#F6AD55', '#FC8181', '#B794F4', '#63B3ED'];
@@ -1432,7 +1433,7 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
                 data-testid="launch-btn"
                 title={!allReady ? "Not all ships are ready" : undefined}
               >
-                {scenarioConfig && currentPlayerIndex < scenarioConfig.playerSpawns.length - 1 ? 'NEXT PLAYER' : 'LAUNCH MISSION'}
+                {scenarioConfig && currentPlayerIndex < scenarioConfig.playerSpawns.length - 1 ? 'NEXT PLAYER' : (isCampaignSetup ? 'LAUNCH CAMPAIGN' : 'LAUNCH MISSION')}
               </button>
             </div>
           </>
@@ -1487,6 +1488,8 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
           </div>
         );
       })()}
+
+      {isCampaignSetup && <FleetBuilderTutorial currentPage={step as any} />}
     </div>
   );
 }

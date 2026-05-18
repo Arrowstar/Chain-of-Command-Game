@@ -19,6 +19,7 @@ import { useViewport } from './utils/useViewport';
 import RecoveryBanner from './components/setup/RecoveryBanner';
 import { CombatRecoveryManager } from './utils/CombatRecoveryManager';
 import type { AppMode } from './utils/CombatRecoveryManager';
+import { useFleetBuilderTutorialStore } from './store/useFleetBuilderTutorialStore';
 
 import { ScreenOrientation } from '@capacitor/screen-orientation';
 import { App as CapacitorApp } from '@capacitor/app';
@@ -166,7 +167,10 @@ function App() {
           ) : null
         }
         onStart={() => setAppMode('editor')}
-        onStartCampaign={() => setAppMode('campaign-builder')}
+        onStartCampaign={() => {
+          useFleetBuilderTutorialStore.getState().resetForNewCampaign();
+          setAppMode('campaign-builder');
+        }}
         onContinueCampaign={() => setAppMode('campaign')}
         onStartTutorial={() => {
           resetGame();

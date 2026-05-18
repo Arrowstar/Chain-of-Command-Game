@@ -140,6 +140,8 @@ interface GameStore {
   hardLightTriggeredShipIds: string[];
   shipsWithHullDamageThisRound: string[];
   pendingAstroCafPlayers: string[];
+  /** True once Damage Control has been assigned this round — cleared on new round start. */
+  damageControlUsedThisRound: boolean;
 
   // ═ ══ ══ ═ Actions ═ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ═
   initializeGame: (config: GameInitConfig) => void;
@@ -218,6 +220,14 @@ interface GameStore {
   setDeploymentShipPosition: (shipId: string, position: HexCoord) => boolean;
   rotateDeploymentShip: (shipId: string, delta?: 1 | -1) => void;
   confirmDeployment: () => void;
+
+  // Tutorial support
+  /**
+   * Forces a guaranteed fumble on the Tactical officer in the next Execute Orders.
+   * Used by the tutorial to let players see cause-and-effect of stress overload.
+   * Inflates the Tactical officer's stress above their max so evaluateCommandPhaseFumbles fires.
+   */
+  armTutorialFumbleOnTactical: () => void;
 }
 
 export interface GameInitConfig {
@@ -666,6 +676,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   hardLightTriggeredShipIds: [],
   shipsWithHullDamageThisRound: [],
   pendingAstroCafPlayers: [],
+  damageControlUsedThisRound: false,
 
   // ═ ══ ══ ═ Initialize ═ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ═
   initializeGame: (config) => {
@@ -981,6 +992,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         resolvedSteps: [],
         recycledCoolantUsedThisRound: false,
         shipsWithHullDamageThisRound: [],
+        damageControlUsedThisRound: false,
       });
       fireCombatToast({ type: 'phase', message: `⊡ ROUND ${state.round + 1} BEGINS` });
       get().executeBriefingPhase();
@@ -1440,6 +1452,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       if (action.actionId === 'damage-control' && activeRoE?.mechanicalEffect.damageControlCostOverride !== undefined) {
         ctCost = activeRoE.mechanicalEffect.damageControlCostOverride;
       }
+      // Track for DAMAGE_CONTROL_USED tutorial condition
+      const isDamageControlAction = action.actionId === 'damage-control';
       if (ship && player.assignedActions.length === 0 && hasScar(ship, 'power-bus-leak')) {
         ctCost += 1;
       }
@@ -1495,6 +1509,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return {
         players: updatedPlayers,
         recycledCoolantUsedThisRound,
+        ...(isDamageControlAction ? { damageControlUsedThisRound: true } : {}),
       };
     });
   },
@@ -6395,5 +6410,29 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!get().gameOver) {
       get().advancePhase();
     }
+  },
+
+  // ─── Tutorial support ──────────────────────────────────────────────────────
+  armTutorialFumbleOnTactical: () => {
+    set(state => {
+      // Find the first player and inflate their Tactical officer's stress to maxStress + 1
+      // so that evaluateCommandPhaseFumbles will guarantee a fumble on the next Execute.
+      const updatedPlayers = state.players.map(player => {
+        const officerIndex = player.officers.findIndex(o => o.station === 'tactical');
+        if (officerIndex === -1) return player;
+        const officer = player.officers[officerIndex];
+        const officerData = getOfficerById(officer.officerId);
+        if (!officerData || officerData.stressLimit === null) return player;
+        const maxStress = getCombatMaxStress(officer, officerData, state.experimentalTech);
+        if (maxStress === null) return player;
+        // Inflate to max + 1 to guarantee the fumble check triggers
+        const newStress = maxStress + 1;
+        if (officer.currentStress >= newStress) return player; // already above threshold
+        const updatedOfficers = [...player.officers];
+        updatedOfficers[officerIndex] = { ...officer, currentStress: newStress };
+        return { ...player, officers: updatedOfficers };
+      });
+      return { players: updatedPlayers };
+    });
   },
 }));

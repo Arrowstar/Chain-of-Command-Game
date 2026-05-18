@@ -55,6 +55,8 @@ function useConditionMet(condition?: string): boolean {
   const phase = useGameStore(s => s.phase);
   const round = useGameStore(s => s.round);
   const players = useGameStore(s => s.players);
+  const playerShips = useGameStore(s => s.playerShips);
+  const damageControlUsed = useGameStore(s => s.damageControlUsedThisRound);
 
   if (!condition || condition === 'NONE') return true;
 
@@ -71,6 +73,13 @@ function useConditionMet(condition?: string): boolean {
       return players.some(p => p.assignedActions.length > 0);
     case 'EXECUTE_CLICKED':
       return phase === 'execution';
+    case 'SENSOR_LOCK_APPLIED':
+      // True when any player ship has at least one active target lock queued
+      return players.some(p =>
+        p.assignedActions.some(a => a.actionId === 'target-lock')
+      ) || playerShips.some(s => (s.targetLocks?.length ?? 0) > 0);
+    case 'DAMAGE_CONTROL_USED':
+      return damageControlUsed;
     default:
       return true;
   }
@@ -151,11 +160,23 @@ function useTypewriter(text: string, speed = 18) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function TutorialOverlay() {
-  const { isActive, currentStep, steps, isFreePlay, nextStep, endTutorial, isHidden, hideTutorial, unhideTutorial } =
+  const { isActive, currentStep, steps, isFreePlay, nextStep, previousStep, endTutorial, isHidden, hideTutorial, unhideTutorial, historyStack } =
     useTutorialStore();
+  const armTutorialFumbleOnTactical = useGameStore(s => s.armTutorialFumbleOnTactical);
 
   const step = steps[currentStep];
   const conditionMet = useConditionMet(step?.waitForCondition);
+
+  // When the tutorial reaches the fumble-explanation step, arm the forced fumble
+  // so the player is guaranteed to see a fumble on the next Execute Orders click.
+  // The fumble step is identified by its PHASE_EXECUTION condition + tactical highlight.
+  const isFumbleStep = step?.highlightId === 'officer-station-tactical' &&
+    step?.waitForCondition === 'PHASE_EXECUTION';
+  useEffect(() => {
+    if (isFumbleStep && isActive && !isHidden) {
+      armTutorialFumbleOnTactical();
+    }
+  }, [isFumbleStep, isActive, isHidden, armTutorialFumbleOnTactical]);
 
   useEffect(() => {
     // If the tutorial is temporarily hidden and the user satisfies the condition,
@@ -175,6 +196,7 @@ export default function TutorialOverlay() {
 
   const isLastStep = currentStep === steps.length - 1;
   const progress = Math.round(((currentStep + 1) / steps.length) * 100);
+  const canGoBack = historyStack.length > 0;
 
   return (
     <>
@@ -386,6 +408,18 @@ export default function TutorialOverlay() {
                 </div>
               </div>
 
+              {/* Back button — only shown when there is navigation history */}
+              {canGoBack && done && (
+                <button
+                  data-testid="tutorial-back-btn"
+                  className="btn"
+                  style={{ fontSize: '0.72rem', padding: '4px 12px', opacity: 0.7 }}
+                  onClick={previousStep}
+                >
+                  ← Back
+                </button>
+              )}
+
               {/* Skip tutorial */}
               <button
                 data-testid="tutorial-skip-btn"
@@ -395,6 +429,7 @@ export default function TutorialOverlay() {
               >
                 Skip Tutorial
               </button>
+
 
               {/* Next / Finish */}
               <button

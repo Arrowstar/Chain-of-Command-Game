@@ -37,7 +37,7 @@ export function buildTutorialGameConfig(): GameInitConfig {
           {
             officerId: 'vane',
             station: 'tactical',
-            currentStress: 0,
+            currentStress: 3, // Pre-loaded near max so player can SEE the cause-and-effect
             currentTier: 'veteran',
             isLocked: false,
             lockDuration: 0,

@@ -18,6 +18,9 @@ function resetStore() {
     isActive: false,
     currentStep: 0,
     isFreePlay: false,
+    isHidden: false,
+    historyStack: [],
+    tutorialForcedFumbleArmed: false,
   });
 }
 
@@ -60,10 +63,11 @@ describe('useTutorialStore — startTutorial', () => {
     expect(useTutorialStore.getState().currentStep).toBe(0);
   });
 
-  it('clears isFreePlay', () => {
-    useTutorialStore.setState({ isFreePlay: true });
+  it('clears isFreePlay and historyStack', () => {
+    useTutorialStore.setState({ isFreePlay: true, historyStack: [0, 1] });
     useTutorialStore.getState().startTutorial();
     expect(useTutorialStore.getState().isFreePlay).toBe(false);
+    expect(useTutorialStore.getState().historyStack).toEqual([]);
   });
 });
 
@@ -97,6 +101,48 @@ describe('useTutorialStore — nextStep', () => {
     useTutorialStore.getState().nextStep();
     // currentStep is set to steps.length (one past end), isFreePlay flips
     expect(useTutorialStore.getState().currentStep).toBe(steps.length);
+  });
+
+  it('adds currentStep to historyStack before advancing', () => {
+    useTutorialStore.getState().startTutorial(); // starts at 0
+    useTutorialStore.getState().nextStep(); // moves to 1
+    expect(useTutorialStore.getState().historyStack).toEqual([0]);
+    useTutorialStore.getState().nextStep(); // moves to 2
+    expect(useTutorialStore.getState().historyStack).toEqual([0, 1]);
+  });
+});
+
+describe('useTutorialStore — previousStep', () => {
+  beforeEach(resetStore);
+
+  it('does nothing if historyStack is empty', () => {
+    useTutorialStore.getState().startTutorial();
+    useTutorialStore.getState().previousStep();
+    expect(useTutorialStore.getState().currentStep).toBe(0);
+  });
+
+  it('does nothing if in freePlay mode', () => {
+    useTutorialStore.setState({ currentStep: 2, historyStack: [0, 1], isFreePlay: true });
+    useTutorialStore.getState().previousStep();
+    expect(useTutorialStore.getState().currentStep).toBe(2);
+  });
+
+  it('pops the last step from historyStack and sets currentStep', () => {
+    useTutorialStore.setState({ currentStep: 2, historyStack: [0, 1] });
+    useTutorialStore.getState().previousStep();
+    expect(useTutorialStore.getState().currentStep).toBe(1);
+    expect(useTutorialStore.getState().historyStack).toEqual([0]);
+  });
+});
+
+describe('useTutorialStore — armTutorialForcedFumble', () => {
+  beforeEach(resetStore);
+
+  it('arms and disarms properly', () => {
+    useTutorialStore.getState().armTutorialForcedFumble();
+    expect(useTutorialStore.getState().tutorialForcedFumbleArmed).toBe(true);
+    useTutorialStore.getState().disarmTutorialForcedFumble();
+    expect(useTutorialStore.getState().tutorialForcedFumbleArmed).toBe(false);
   });
 });
 
@@ -174,6 +220,8 @@ describe('useTutorialStore — script coverage', () => {
     expect(conditions).toContain('PHASE_EXECUTION');
     expect(conditions).toContain('TOKEN_ASSIGNED');
     expect(conditions).toContain('ROUND_2');
+    expect(conditions).toContain('SENSOR_LOCK_APPLIED');
+    expect(conditions).toContain('DAMAGE_CONTROL_USED');
   });
 
   it('has an admiral dialogue reference in the final step', () => {

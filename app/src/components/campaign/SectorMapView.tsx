@@ -14,6 +14,7 @@ import { getSubsystemById } from '../../data/subsystems';
 import { getChassisById } from '../../data/shipChassis';
 import { ASSET_MAP } from '../../engine/pixiGraphics';
 import { useBgm } from '../../utils/useBgm';
+import SectorMapTutorial from '../tutorial/SectorMapTutorial';
 
 // ── SVG Icon Paths (inline, no external deps) ────────────────────────────────
 
@@ -567,6 +568,8 @@ export default function SectorMapView() {
           <TooltipContent node={tooltip.node} campaign={campaign} />
         </div>
       )}
+
+      <SectorMapTutorial />
     </div>
   );
 }
