@@ -140,7 +140,7 @@ export default function ExecutionPanel() {
     : activeEnemy.length === 0 && enemyFighters.length === 0 && enemyTorpedoes.length === 0 && activeStations.length === 0;
 
   let noValidTargets = false;
-  if (targetingMode && (activeTargetingAction?.actionDefId || activeTargetingAction?.actionId) === 'fire-primary' && activeTargetingContext?.weaponId) {
+  if (targetingMode && activeTargetingAction && (activeTargetingAction.actionDefId || activeTargetingAction.actionId) === 'fire-primary' && activeTargetingContext?.weaponId) {
     const weapon = getWeaponById(activeTargetingContext.weaponId as string);
     const attackerShip = playerShips.find(s => s.id === activeTargetingAction.shipId);
     if (weapon && attackerShip) {
