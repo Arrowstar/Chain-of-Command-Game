@@ -169,9 +169,10 @@ export default function TutorialOverlay() {
 
   // When the tutorial reaches the fumble-explanation step, arm the forced fumble
   // so the player is guaranteed to see a fumble on the next Execute Orders click.
-  // The fumble step is identified by its PHASE_EXECUTION condition + tactical highlight.
+  // The fumble step is identified by its PHASE_EXECUTION condition + tactical highlight + 'FUMBLES' in dialogue.
   const isFumbleStep = step?.highlightId === 'officer-station-tactical' &&
-    step?.waitForCondition === 'PHASE_EXECUTION';
+    step?.waitForCondition === 'PHASE_EXECUTION' &&
+    step?.dialogue.includes('FUMBLES');
   useEffect(() => {
     if (isFumbleStep && isActive && !isHidden) {
       armTutorialFumbleOnTactical();
