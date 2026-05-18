@@ -48,4 +48,38 @@ describe('Selection Picker Store Logic', () => {
     expect(state?.action).toEqual(action);
     expect(state?.context).toEqual(context);
   });
+
+  // ─── Targeting actionDefId tests ──────────────────────────────────────────
+
+  it('should successfully store actionDefId when starting targeting', () => {
+    const action = { shipId: 'playerShip', actionId: 'act-1234', actionDefId: 'fire-primary' };
+    const context = { weaponId: 'plasma-battery', weaponIndex: 0 };
+
+    useUIStore.getState().startTargeting('ship', action, context);
+
+    const uiState = useUIStore.getState();
+    expect(uiState.targetingMode).toBe('ship');
+    expect(uiState.activeTargetingAction).toEqual(action);
+    expect(uiState.activeTargetingAction?.actionId).toBe('act-1234');
+    expect(uiState.activeTargetingAction?.actionDefId).toBe('fire-primary');
+    expect(uiState.activeTargetingContext).toEqual(context);
+  });
+
+  it('should support checking actionDefId with fallback to actionId for backward-compatibility', () => {
+    // Case A: starting targeting with both actionId and actionDefId
+    const actionA = { shipId: 'playerShip', actionId: 'act-1234', actionDefId: 'fire-primary' };
+    useUIStore.getState().startTargeting('ship', actionA);
+    
+    let activeAction = useUIStore.getState().activeTargetingAction;
+    let resolvedDefId = activeAction?.actionDefId || activeAction?.actionId;
+    expect(resolvedDefId).toBe('fire-primary');
+
+    // Case B: backward compatibility: starting targeting with only actionId (which doubles as definition ID in older tests)
+    const actionB = { shipId: 'playerShip', actionId: 'fire-primary' };
+    useUIStore.getState().startTargeting('ship', actionB);
+
+    activeAction = useUIStore.getState().activeTargetingAction;
+    resolvedDefId = activeAction?.actionDefId || activeAction?.actionId;
+    expect(resolvedDefId).toBe('fire-primary');
+  });
 });
