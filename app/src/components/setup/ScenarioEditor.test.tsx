@@ -24,6 +24,7 @@ vi.mock('pixi.js', () => {
       };
       addChild = vi.fn();
       removeChild = vi.fn();
+      getChildByName = vi.fn().mockReturnValue(null);
     },
     Graphics: class {
       position = { set: vi.fn() };
@@ -39,6 +40,7 @@ vi.mock('pixi.js', () => {
       removeChildren = vi.fn().mockReturnValue([]);
       addChild = vi.fn();
       destroy = vi.fn();
+      getChildByName = vi.fn().mockReturnValue(null);
     },
     TextStyle: class {},
     Text: class {
@@ -48,8 +50,27 @@ vi.mock('pixi.js', () => {
       y = 0;
       addChild = vi.fn();
     },
+    Sprite: {
+      from: vi.fn().mockImplementation(() => {
+        return {
+          name: '',
+          anchor: {
+            set: vi.fn(),
+          },
+          width: 0,
+          height: 0,
+          tint: 0,
+        };
+      }),
+    },
   };
 });
+
+import { generateSkirmishConfig } from '../../utils/skirmishGeneratorUtils';
+
+vi.mock('../../utils/skirmishGeneratorUtils', () => ({
+  generateSkirmishConfig: vi.fn(),
+}));
 
 // Mock getBoundingClientRect for containerRef
 const mockGetBoundingClientRect = () => {
@@ -275,7 +296,7 @@ describe('ScenarioEditor Mobile & Desktop Gestures', () => {
     }
   });
 
-  it('paints terrain on single touch drag in terrain brush mode', () => {
+  it('paints terrain on tap, but pans on drag in terrain brush mode', () => {
     render(<ScenarioEditor onConfirm={onConfirm} onCancel={onCancel} />);
     const viewport = screen.getByText('SCENARIO EDITOR').closest('div')?.nextSibling;
 
@@ -289,7 +310,7 @@ describe('ScenarioEditor Mobile & Desktop Gestures', () => {
         configurable: true,
       });
 
-      // Single touch down (terrain mode)
+      // 1. Assert Tap (under threshold) paints terrain
       fireEvent.pointerDown(viewport, {
         clientX: 100,
         clientY: 100,
@@ -297,18 +318,31 @@ describe('ScenarioEditor Mobile & Desktop Gestures', () => {
         pointerType: 'touch',
       });
 
-      // Single touch drag (terrain mode - continuous painting)
-      fireEvent.pointerMove(viewport, {
-        clientX: 105,
-        clientY: 105,
+      fireEvent.pointerUp(viewport, {
+        clientX: 102,
+        clientY: 102,
         pointerId: 1,
         pointerType: 'touch',
       });
 
-      // Touch up
+      // 2. Assert Drag (above threshold) pans and does NOT paint terrain
+      fireEvent.pointerDown(viewport, {
+        clientX: 100,
+        clientY: 100,
+        pointerId: 1,
+        pointerType: 'touch',
+      });
+
+      fireEvent.pointerMove(viewport, {
+        clientX: 150,
+        clientY: 150,
+        pointerId: 1,
+        pointerType: 'touch',
+      });
+
       fireEvent.pointerUp(viewport, {
-        clientX: 105,
-        clientY: 105,
+        clientX: 150,
+        clientY: 150,
         pointerId: 1,
         pointerType: 'touch',
       });
@@ -316,4 +350,51 @@ describe('ScenarioEditor Mobile & Desktop Gestures', () => {
       expect(viewport).toBeInTheDocument();
     }
   });
+
+  it('disables the Confirm button unless there is at least 1 player spawn and 1 enemy', () => {
+    // 1. Initial State: 0 player spawns, 0 enemies => Confirm button should be disabled
+    render(<ScenarioEditor onConfirm={onConfirm} onCancel={onCancel} />);
+    const confirmBtn = screen.getByRole('button', { name: /CONFIRM/i });
+    expect(confirmBtn).toBeDisabled();
+
+    // 2. Mock generateSkirmishConfig to return 1 player spawn and 0 enemies => disabled
+    vi.mocked(generateSkirmishConfig).mockReturnValueOnce({
+      terrain: [],
+      enemies: [],
+      allies: [],
+      playerSpawns: [
+        { id: 'spawn-0', coord: { q: 0, r: 6 }, facing: 0 }
+      ]
+    });
+    const generateBtn = screen.getByText('GENERATE MAP');
+    fireEvent.click(generateBtn);
+    expect(confirmBtn).toBeDisabled();
+
+    // 3. Mock generateSkirmishConfig to return 0 player spawns and 1 enemy => disabled
+    vi.mocked(generateSkirmishConfig).mockReturnValueOnce({
+      terrain: [],
+      enemies: [
+        { id: 'e1', coord: { q: 0, r: -4 }, facing: 3, adversaryId: 'hegemony-corvette' }
+      ],
+      allies: [],
+      playerSpawns: []
+    });
+    fireEvent.click(generateBtn);
+    expect(confirmBtn).toBeDisabled();
+
+    // 4. Mock generateSkirmishConfig to return 1 player spawn and 1 enemy => enabled!
+    vi.mocked(generateSkirmishConfig).mockReturnValueOnce({
+      terrain: [],
+      enemies: [
+        { id: 'e1', coord: { q: 0, r: -4 }, facing: 3, adversaryId: 'hegemony-corvette' }
+      ],
+      allies: [],
+      playerSpawns: [
+        { id: 'spawn-0', coord: { q: 0, r: 6 }, facing: 0 }
+      ]
+    });
+    fireEvent.click(generateBtn);
+    expect(confirmBtn).toBeEnabled();
+  });
 });
+

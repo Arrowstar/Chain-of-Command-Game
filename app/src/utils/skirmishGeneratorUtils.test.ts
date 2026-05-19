@@ -98,4 +98,33 @@ describe('generateSkirmishConfig', () => {
     expect(result.playerSpawns).toHaveLength(1);
     expect(result.playerSpawns?.[0].coord).toEqual({ q: 0, r: 5 });
   });
+
+  it('should guarantee at least one enemy ship even if procedural generator budget is spent on stations/turrets', () => {
+    // Arrange
+    const emptyConfig = {
+      terrain: [],
+      enemyShips: [],
+      deploymentBounds: { hexes: [{ q: 0, r: 6 }] }
+    };
+    const validConfig = {
+      terrain: [],
+      enemyShips: [
+        { kind: 'ship', faction: 'hegemony', id: 'e1', position: { q: -2, r: -2 }, facing: HexFacing.Aft, adversaryId: 'hegemony-corvette' }
+      ],
+      deploymentBounds: { hexes: [{ q: 0, r: 6 }] }
+    };
+
+    vi.mocked(scenarioGenerator.generateProceduralScenario)
+      .mockReturnValueOnce(emptyConfig as any)
+      .mockReturnValueOnce(validConfig as any);
+
+    // Act
+    const result = generateSkirmishConfig(1, 1);
+
+    // Assert
+    expect(scenarioGenerator.generateProceduralScenario).toHaveBeenCalledTimes(2);
+    expect(result.enemies).toHaveLength(1);
+    expect(result.enemies?.[0].adversaryId).toBe('hegemony-corvette');
+  });
 });
+

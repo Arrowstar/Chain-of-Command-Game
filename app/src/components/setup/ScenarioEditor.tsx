@@ -365,15 +365,14 @@ export default function ScenarioEditor({ onConfirm, onCancel }: ScenarioEditorPr
     const isTouch = e.pointerType === 'touch';
 
     if (activePointers.current.size === 1) {
-      // On touch devices, single-finger drag pans for non-terrain tools. For terrain tools, it paints immediately.
-      if (isPanningButton || (isTouch && brushMode !== 'terrain')) {
+      if (isPanningButton || isTouch) {
         setIsPanning(true);
         setLastMouse({ x: e.clientX, y: e.clientY });
         return;
       }
 
-      // Desktop/Mouse OR Touch Terrain Brush: apply brush immediately on down
-      if ((e.pointerType === 'mouse' && e.button === 0) || (isTouch && brushMode === 'terrain')) {
+      // Desktop/Mouse: apply brush immediately on down
+      if (e.pointerType === 'mouse' && e.button === 0) {
         applyBrushAt(e.clientX, e.clientY);
       }
     } else if (activePointers.current.size === 2) {
@@ -407,8 +406,8 @@ export default function ScenarioEditor({ onConfirm, onCancel }: ScenarioEditorPr
       setCameraX(x => x + (e.clientX - lastMouse.x));
       setCameraY(y => y + (e.clientY - lastMouse.y));
       setLastMouse({ x: e.clientX, y: e.clientY });
-    } else if ((e.buttons === 1 || e.pointerType === 'touch') && brushMode === 'terrain' && activePointers.current.size === 1) {
-      // Continuous terrain painting (mouse drag or single-finger touch drag)
+    } else if (e.buttons === 1 && brushMode === 'terrain' && e.pointerType === 'mouse') {
+      // Continuous terrain painting (desktop only)
       if (containerRef.current) {
         const bounds = containerRef.current.getBoundingClientRect();
         const worldX = ((e.clientX - bounds.left) - cameraX) / cameraZoom;
@@ -429,7 +428,7 @@ export default function ScenarioEditor({ onConfirm, onCancel }: ScenarioEditorPr
     // If one finger remains, resume panning
     if (activePointers.current.size === 1) {
       const remaining = Array.from(activePointers.current.values())[0];
-      if (e.pointerType === 'touch' && brushMode !== 'terrain') {
+      if (e.pointerType === 'touch') {
         setIsPanning(true);
         setLastMouse({ x: remaining.x, y: remaining.y });
       }
@@ -438,8 +437,8 @@ export default function ScenarioEditor({ onConfirm, onCancel }: ScenarioEditorPr
 
     setIsPanning(false);
 
-    // Tap detection for touch devices (trigger brush on touch-up if drag was minimal and NOT terrain mode)
-    if (pointerDownPos.current && brushMode !== 'terrain') {
+    // Tap detection for touch devices (trigger brush on touch-up if drag was minimal)
+    if (pointerDownPos.current) {
       const clickThreshold = e.pointerType === 'touch' ? 12 : 5;
       const dx = e.clientX - pointerDownPos.current.x;
       const dy = e.clientY - pointerDownPos.current.y;
@@ -675,7 +674,7 @@ export default function ScenarioEditor({ onConfirm, onCancel }: ScenarioEditorPr
 
         <div style={{ padding: 'var(--space-md)', borderTop: '1px solid var(--color-border)', display: 'flex', gap: 'var(--space-sm)' }}>
           <button className="btn" style={{ flex: 1, padding: 'var(--space-sm)' }} onClick={onCancel}>CANCEL</button>
-          <button className="btn btn--execute" style={{ flex: 1.5, padding: 'var(--space-sm)', whiteSpace: 'normal' }} onClick={handleConfirm} disabled={spawns.length === 0}>
+          <button className="btn btn--execute" style={{ flex: 1.5, padding: 'var(--space-sm)', whiteSpace: 'normal' }} onClick={handleConfirm} disabled={spawns.length === 0 || enemies.length === 0}>
             CONFIRM ({spawns.length})
           </button>
         </div>
