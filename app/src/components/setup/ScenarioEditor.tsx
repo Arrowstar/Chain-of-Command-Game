@@ -54,6 +54,11 @@ export default function ScenarioEditor({ onConfirm, onCancel }: ScenarioEditorPr
   const [isPanning, setIsPanning] = useState(false);
   const [lastMouse, setLastMouse] = useState({ x: 0, y: 0 });
 
+  // Multi-touch tracking for pinch-to-zoom & panning
+  const activePointers = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const lastPinchDistRef = useRef<number | null>(null);
+  const pointerDownPos = useRef<{ x: number; y: number } | null>(null);
+
   const appRef = useRef<PIXI.Application | null>(null);
   const worldRef = useRef<PIXI.Container | null>(null);
   const graphicsRef = useRef<{ terrain: PIXI.Graphics; entities: PIXI.Graphics; overlay: PIXI.Graphics } | null>(null);
@@ -263,18 +268,11 @@ export default function ScenarioEditor({ onConfirm, onCancel }: ScenarioEditorPr
     setCameraZoom(z => Math.max(0.2, Math.min(3, z + (e.deltaY > 0 ? -0.1 : 0.1))));
   }, []);
 
-  const handlePointerDown = (e: React.PointerEvent) => {
-    if (e.button === 1 || e.button === 2 || e.altKey) {
-      setIsPanning(true);
-      setLastMouse({ x: e.clientX, y: e.clientY });
-      return;
-    }
-    
-    // Left click handling
+  const applyBrushAt = (clientX: number, clientY: number) => {
     if (containerRef.current) {
       const bounds = containerRef.current.getBoundingClientRect();
-      const screenX = e.clientX - bounds.left;
-      const screenY = e.clientY - bounds.top;
+      const screenX = clientX - bounds.left;
+      const screenY = clientY - bounds.top;
       const worldX = (screenX - cameraX) / cameraZoom;
       const worldY = (screenY - cameraY) / cameraZoom;
       const clickedHex = pixelToHex(worldX, worldY);
@@ -349,30 +347,122 @@ export default function ScenarioEditor({ onConfirm, onCancel }: ScenarioEditorPr
       } else if (brushMode === 'station') {
         setStationSpawns(prev => [...prev.filter(s => s.hex !== key), { id: newId, hex: key, stationId: brushSelection, facing: HexFacing.Fore }]);
       } else if (brushMode === 'fighter') {
-        // Simple logic to set allegiance based on brush selection id or hardcode
         setFighterSpawns(prev => [...prev.filter(f => f.hex !== key), { id: newId, hex: key, classId: brushSelection, facing: HexFacing.Fore, allegiance: 'enemy' }]);
       }
     }
   };
 
+  const handlePointerDown = (e: React.PointerEvent) => {
+    // Record pointer
+    activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    // Track starting touch position for tap detection
+    if (activePointers.current.size === 1) {
+      pointerDownPos.current = { x: e.clientX, y: e.clientY };
+    }
+
+    const isPanningButton = e.button === 1 || e.button === 2 || e.altKey;
+    const isTouch = e.pointerType === 'touch';
+
+    if (activePointers.current.size === 1) {
+      // On touch devices, single-finger drag pans for non-terrain tools. For terrain tools, it paints immediately.
+      if (isPanningButton || (isTouch && brushMode !== 'terrain')) {
+        setIsPanning(true);
+        setLastMouse({ x: e.clientX, y: e.clientY });
+        return;
+      }
+
+      // Desktop/Mouse OR Touch Terrain Brush: apply brush immediately on down
+      if ((e.pointerType === 'mouse' && e.button === 0) || (isTouch && brushMode === 'terrain')) {
+        applyBrushAt(e.clientX, e.clientY);
+      }
+    } else if (activePointers.current.size === 2) {
+      // Second finger: begin pinch zoom
+      const pts = Array.from(activePointers.current.values());
+      lastPinchDistRef.current = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      setIsPanning(false);
+    }
+  };
+
   const handlePointerMove = (e: React.PointerEvent) => {
+    // Update pointer position
+    activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    // Pinch-to-zoom
+    if (activePointers.current.size >= 2) {
+      const pts = Array.from(activePointers.current.values());
+      const newDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      if (lastPinchDistRef.current !== null) {
+        const delta = (newDist - lastPinchDistRef.current) / 180;
+        if (Math.abs(delta) > 0.001) {
+          setCameraZoom(z => Math.max(0.2, Math.min(3, z + delta)));
+        }
+      }
+      lastPinchDistRef.current = newDist;
+      return;
+    }
+
+    // Panning
     if (isPanning) {
       setCameraX(x => x + (e.clientX - lastMouse.x));
       setCameraY(y => y + (e.clientY - lastMouse.y));
       setLastMouse({ x: e.clientX, y: e.clientY });
-    } else if (e.buttons === 1 && brushMode === 'terrain') {
-        // Continuous painting for terrain
-        if (containerRef.current) {
-            const bounds = containerRef.current.getBoundingClientRect();
-            const worldX = ((e.clientX - bounds.left) - cameraX) / cameraZoom;
-            const worldY = ((e.clientY - bounds.top) - cameraY) / cameraZoom;
-            const clickedHex = pixelToHex(worldX, worldY);
-            setTerrainMap(prev => ({ ...prev, [hexKey(clickedHex)]: brushSelection as TerrainType }));
-        }
+    } else if ((e.buttons === 1 || e.pointerType === 'touch') && brushMode === 'terrain' && activePointers.current.size === 1) {
+      // Continuous terrain painting (mouse drag or single-finger touch drag)
+      if (containerRef.current) {
+        const bounds = containerRef.current.getBoundingClientRect();
+        const worldX = ((e.clientX - bounds.left) - cameraX) / cameraZoom;
+        const worldY = ((e.clientY - bounds.top) - cameraY) / cameraZoom;
+        const clickedHex = pixelToHex(worldX, worldY);
+        setTerrainMap(prev => ({ ...prev, [hexKey(clickedHex)]: brushSelection as TerrainType }));
+      }
     }
   };
 
-  const handlePointerUp = () => setIsPanning(false);
+  const handlePointerUp = (e: React.PointerEvent) => {
+    activePointers.current.delete(e.pointerId);
+
+    if (activePointers.current.size < 2) {
+      lastPinchDistRef.current = null;
+    }
+
+    // If one finger remains, resume panning
+    if (activePointers.current.size === 1) {
+      const remaining = Array.from(activePointers.current.values())[0];
+      if (e.pointerType === 'touch' && brushMode !== 'terrain') {
+        setIsPanning(true);
+        setLastMouse({ x: remaining.x, y: remaining.y });
+      }
+      return;
+    }
+
+    setIsPanning(false);
+
+    // Tap detection for touch devices (trigger brush on touch-up if drag was minimal and NOT terrain mode)
+    if (pointerDownPos.current && brushMode !== 'terrain') {
+      const clickThreshold = e.pointerType === 'touch' ? 12 : 5;
+      const dx = e.clientX - pointerDownPos.current.x;
+      const dy = e.clientY - pointerDownPos.current.y;
+
+      if (Math.abs(dx) < clickThreshold && Math.abs(dy) < clickThreshold) {
+        if (e.pointerType === 'touch') {
+          applyBrushAt(e.clientX, e.clientY);
+        }
+      }
+      pointerDownPos.current = null;
+    }
+  };
+
+  const handlePointerLeave = (e: React.PointerEvent) => {
+    activePointers.current.delete(e.pointerId);
+    if (activePointers.current.size === 0) {
+      setIsPanning(false);
+      pointerDownPos.current = null;
+    }
+    if (activePointers.current.size < 2) {
+      lastPinchDistRef.current = null;
+    }
+  };
 
   const handleAutoGenerate = () => {
     const config = generateSkirmishConfig(autoGenThreatLevel, autoGenPlayerCount);
@@ -599,7 +689,7 @@ export default function ScenarioEditor({ onConfirm, onCancel }: ScenarioEditorPr
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        onPointerLeave={handlePointerUp}
+        onPointerLeave={handlePointerLeave}
       >
         <div className="scanline-overlay" style={{ pointerEvents: 'none' }} />
       </div>
