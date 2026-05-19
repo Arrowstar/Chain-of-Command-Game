@@ -121,11 +121,12 @@ export default function SettingsModal() {
           onClick={e => e.stopPropagation()}
           data-testid="settings-modal"
         >
-          <button className="settings-close-btn btn" onClick={closeSettings} aria-label="Close settings">×</button>
-
-          <h2 style={{ color: 'var(--color-holo-cyan)', textShadow: 'var(--glow-cyan-strong)', marginBottom: 'var(--space-md)' }}>
-            SYSTEM SETTINGS
-          </h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-lg)' }}>
+            <h2 style={{ color: 'var(--color-holo-cyan)', textShadow: 'var(--glow-cyan-strong)', margin: 0 }}>
+              SYSTEM SETTINGS
+            </h2>
+            <button className="settings-close-btn btn" onClick={closeSettings} aria-label="Close settings">×</button>
+          </div>
 
           <div className="settings-tab-bar" style={{ display: 'flex', gap: '8px', marginBottom: 'var(--space-lg)' }}>
             <button className="btn btn--primary" style={{ flex: 1, pointerEvents: 'none' }}>AUDIO</button>

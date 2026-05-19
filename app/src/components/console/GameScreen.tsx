@@ -257,21 +257,49 @@ export default function GameScreen() {
                   <button
                     className="btn"
                     style={{ pointerEvents: 'auto', padding: '8px 10px', minHeight: '40px', fontSize: '0.75rem', borderColor: 'rgba(0, 204, 255, 0.35)', background: 'rgba(12, 18, 28, 0.92)', color: 'var(--color-holo-cyan)' }}
-                    onClick={() => setShowRoE(open => !open)}
+                    onClick={() => {
+                      setShowRoE(open => {
+                        const next = !open;
+                        if (next) {
+                          setShowScenarioTracker(false);
+                          setShowEnemyTactic(false);
+                        }
+                        return next;
+                      });
+                    }}
                   >
                     {showRoE ? 'HIDE ROE' : 'ROE'}
                   </button>
                   <button
                     className="btn"
                     style={{ pointerEvents: 'auto', padding: '8px 10px', minHeight: '40px', fontSize: '0.75rem', borderColor: 'rgba(230, 160, 0, 0.35)', background: 'rgba(12, 18, 28, 0.92)', color: 'var(--color-alert-amber)' }}
-                    onClick={() => setShowScenarioTracker(open => !open)}
+                    onClick={() => {
+                      setShowScenarioTracker(open => {
+                        const next = !open;
+                        if (next) {
+                          setShowRoE(false);
+                          setShowEnemyTactic(false);
+                        }
+                        return next;
+                      });
+                    }}
                   >
                     {showScenarioTracker ? 'HIDE OBJ' : 'OBJ'}
                   </button>
                   <button
                     className="btn"
                     style={{ pointerEvents: 'auto', padding: '8px 10px', minHeight: '40px', fontSize: '0.75rem', borderColor: 'rgba(210, 72, 72, 0.35)', background: 'rgba(12, 18, 28, 0.92)', color: 'var(--color-hostile-red)' }}
-                    onClick={() => { setShowEnemyTactic(open => { const next = !open; if (next) setHasUnreadEnemyTactic(false); return next; }); }}
+                    onClick={() => {
+                      setShowEnemyTactic(open => {
+                        const next = !open;
+                        if (next) {
+                          setShowRoE(false);
+                          setShowScenarioTracker(false);
+                          setHasUnreadEnemyTactic(false);
+                        }
+                        return next;
+                      });
+                    }}
                   >
                     {hasUnreadEnemyTactic && (
                       <span
@@ -509,7 +537,16 @@ export default function GameScreen() {
                   background: 'rgba(12, 18, 28, 0.92)',
                   color: 'var(--color-holo-cyan)',
                 }}
-                onClick={() => setShowRoE(open => !open)}
+                onClick={() => {
+                  setShowRoE(open => {
+                    const next = !open;
+                    if (next && isTablet) {
+                      setShowScenarioTracker(false);
+                      setShowEnemyTactic(false);
+                    }
+                    return next;
+                  });
+                }}
               >
                 {showRoE ? 'HIDE ROE' : 'SHOW ROE'}
               </button>
@@ -524,7 +561,16 @@ export default function GameScreen() {
                   background: 'rgba(12, 18, 28, 0.92)',
                   color: 'var(--color-alert-amber)',
                 }}
-                onClick={() => setShowScenarioTracker(open => !open)}
+                onClick={() => {
+                  setShowScenarioTracker(open => {
+                    const next = !open;
+                    if (next && isTablet) {
+                      setShowRoE(false);
+                      setShowEnemyTactic(false);
+                    }
+                    return next;
+                  });
+                }}
               >
                 {showScenarioTracker ? 'HIDE OBJECTIVES' : 'SHOW OBJECTIVES'}
               </button>
@@ -544,6 +590,10 @@ export default function GameScreen() {
                     const nextOpen = !open;
                     if (nextOpen) {
                       setHasUnreadEnemyTactic(false);
+                      if (isTablet) {
+                        setShowRoE(false);
+                        setShowScenarioTracker(false);
+                      }
                     }
                     return nextOpen;
                   });
