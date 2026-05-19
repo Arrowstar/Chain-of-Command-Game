@@ -161,8 +161,8 @@ const TUTORIAL_STEPS: TutorialStep[] = [
       '**TACTICAL STATION — WEAPONS**\n\n' +
       'The **Tactical Station** handles your weapons:\n' +
       '• **Fire Primary** (1 CT, 1 Stress) — select a weapon and roll its dice against a target.\n\n' +
-      'The ISS Perseverance carries a **Plasma Lance** (medium energy beam) and a ' +
-      '**Rail Barrage** (broad-arc kinetic volley). Both have firing arc restrictions — ' +
+      'The ISS Perseverance carries a **Mark IV Plasma Battery** (flexible forward battery) and ' +
+      '**Broadside Macrocannons** (highly destructive side batteries). Both have firing arc restrictions — ' +
       'your facing on the map determines which arcs are available.\n\n' +
       'When you\'re done planning, click **EXECUTE ORDERS** at the bottom of your console.',
     highlightId: 'officer-station-tactical',
