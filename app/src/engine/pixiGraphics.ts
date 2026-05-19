@@ -22,7 +22,7 @@ export function getTerrainColor(type: TerrainType): { fill: number; fillAlpha: n
     case 'ionNebula':   return { fill: 0xD6BCFA, fillAlpha: 0.3, stroke: 0x9F7AEA, strokeAlpha: 0.5 };
     case 'debrisField': return { fill: 0xA0AEC0, fillAlpha: 0.4, stroke: 0x2C7A7B, strokeAlpha: 0.3 };
     case 'gravityWell': return { fill: 0x000000, fillAlpha: 0.8, stroke: 0xE53E3E, strokeAlpha: 0.7 };
-    default:            return { fill: 0x1A202C, fillAlpha: 0.5, stroke: 0x2C7A7B, strokeAlpha: 0.3 };
+    default:            return { fill: 0x1A202C, fillAlpha: 0.02, stroke: 0x2C7A7B, strokeAlpha: 0.3 };
   }
 }
 

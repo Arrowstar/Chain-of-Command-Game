@@ -47,6 +47,9 @@ export default function HexMap() {
     animations: PIXI.Container | null;
   }>({ terrain: null, entities: null, overlays: null, animations: null });
 
+  const bgStarsFarRef = useRef<PIXI.Container | null>(null);
+  const bgStarsNearRef = useRef<PIXI.Container | null>(null);
+
   const entitiesRef = useRef<{
     ships: Map<string, TrackedEntity>;
     enemies: Map<string, TrackedEntity>;
@@ -111,15 +114,68 @@ export default function HexMap() {
     const app = new PIXI.Application({
       width: w,
       height: h,
-      backgroundAlpha: 0,
+      backgroundColor: 0x0B0E14,
+      backgroundAlpha: 1,
       antialias: true,
       resizeTo: containerRef.current,
     });
     containerRef.current.appendChild(app.view as HTMLCanvasElement);
     
-    const world = new PIXI.Container();
-    app.stage.addChild(world);
+    app.stage.sortableChildren = true;
+
+    // Background parallax layers (stars) - added with explicit negative zIndex
+    const bgStarsFar = new PIXI.Container();
+    const bgStarsNear = new PIXI.Container();
     
+    bgStarsFar.zIndex = -10;
+    bgStarsNear.zIndex = -5;
+
+    app.stage.addChild(bgStarsFar);
+    app.stage.addChild(bgStarsNear);
+
+    bgStarsFarRef.current = bgStarsFar;
+    bgStarsNearRef.current = bgStarsNear;
+
+    // Draw Far Starfield (dense and ambient)
+    const farStarsGfx = new PIXI.Graphics();
+    bgStarsFar.addChild(farStarsGfx);
+    for (let i = 0; i < 6000; i++) {
+      const x = (Math.random() - 0.5) * 8000;
+      const y = (Math.random() - 0.5) * 8000;
+      const r = 0.8 + Math.random() * 0.6;
+      const alpha = 0.35 + Math.random() * 0.35;
+      const color = Math.random() > 0.5 ? 0x7CFFB2 : 0x88CCFF; // Soft cyan/blue
+      farStarsGfx.beginFill(color, alpha);
+      farStarsGfx.drawCircle(x, y, r);
+      farStarsGfx.endFill();
+    }
+
+    // Draw Near Starfield (with rare spikes)
+    const nearStarsGfx = new PIXI.Graphics();
+    bgStarsNear.addChild(nearStarsGfx);
+    for (let i = 0; i < 1200; i++) {
+      const x = (Math.random() - 0.5) * 8000;
+      const y = (Math.random() - 0.5) * 8000;
+      const r = 1.5 + Math.random() * 0.9;
+      const alpha = 0.55 + Math.random() * 0.35;
+      const color = Math.random() > 0.4 ? 0xFFFFFF : 0x00CCFF; // White/Holo-cyan
+      nearStarsGfx.beginFill(color, alpha);
+      nearStarsGfx.drawCircle(x, y, r);
+      nearStarsGfx.endFill();
+
+      if (Math.random() > 0.85) {
+        nearStarsGfx.lineStyle(1, color, alpha * 0.5);
+        nearStarsGfx.moveTo(x - 8, y);
+        nearStarsGfx.lineTo(x + 8, y);
+        nearStarsGfx.moveTo(x, y - 8);
+        nearStarsGfx.lineTo(x, y + 8);
+      }
+    }
+
+    const world = new PIXI.Container();
+    world.zIndex = 10;
+    app.stage.addChild(world);
+
     layersRef.current.terrain = new PIXI.Container();
     layersRef.current.entities = new PIXI.Container();
     layersRef.current.overlays = new PIXI.Container();
@@ -162,6 +218,8 @@ export default function HexMap() {
       animateMap(entitiesRef.current.torpedoes, true);
       animateMap(entitiesRef.current.fighters, true);
       animateMap(entitiesRef.current.stations, false);
+
+
 
       // ─── Drive weapon fire animations ────────────────────────────────────
       // delta is in ticker units (~1 per frame at 60fps); *16.7 ≈ ms
@@ -217,6 +275,8 @@ export default function HexMap() {
       app.destroy(true, { children: true });
       appRef.current = null;
       worldRef.current = null;
+      bgStarsFarRef.current = null;
+      bgStarsNearRef.current = null;
       layersRef.current = { terrain: null, entities: null, overlays: null, animations: null };
       entitiesRef.current = { ships: new Map(), enemies: new Map(), fighters: new Map(), torpedoes: new Map(), stations: new Map() };
       activeAnimationsRef.current.clear();
@@ -1230,24 +1290,49 @@ export default function HexMap() {
 
   }, [terrainMap, playerShips, enemyShips, fighterTokens, torpedoTokens, stations, objectiveMarkers, tacticHazards, objectiveType, scenarioId, deploymentMode, selectedShipId, targetingMode, activeTargetingAction, activeTargetingContext, hoveredHex, currentTactic, players, cameraX, cameraY, cameraZoom]);
 
-  // ─── Update camera ──────────────────────────────────
+  // ─── Update camera & background parallax ────────────
   useEffect(() => {
     const world = worldRef.current;
     if (!world) return;
     world.position.set(cameraX, cameraY);
     world.scale.set(cameraZoom, cameraZoom);
+
+    // Apply parallax translation and depth scaling based on camera
+    if (bgStarsFarRef.current) {
+      bgStarsFarRef.current.position.set(cameraX * 0.12, cameraY * 0.12);
+      bgStarsFarRef.current.scale.set(1 + (cameraZoom - 1) * 0.12);
+    }
+    if (bgStarsNearRef.current) {
+      bgStarsNearRef.current.position.set(cameraX * 0.32, cameraY * 0.32);
+      bgStarsNearRef.current.scale.set(1 + (cameraZoom - 1) * 0.32);
+    }
   }, [cameraX, cameraY, cameraZoom]);
 
   // ─── Mouse handlers ─────────────────────────────────
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
+    
+    // Check if likely a trackpad vs physical mouse wheel
+    // 1. e.ctrlKey is true -> pinch-to-zoom on trackpad
+    // 2. e.deltaX is non-zero -> horizontal panning (trackpad/special mouse)
+    // 3. e.deltaY is fractional -> smooth trackpad scrolling
+    // 4. e.deltaMode is 1 (lines) -> Firefox line scroll (definitely mouse wheel)
+    const isTrackpad = !e.ctrlKey && (
+      e.deltaX !== 0 ||
+      (e.deltaY % 1 !== 0) ||
+      (e.deltaMode === 0 && Math.abs(e.deltaY) < 40)
+    );
+
     if (e.ctrlKey) {
       // Trackpad pinch-to-zoom (ctrlKey is true)
       // deltaY is the pinch amount
       zoomCamera(e.deltaY > 0 ? -0.1 : 0.1);
-    } else {
-      // Normal wheel or 2-finger swipe on trackpad -> Pan the map
+    } else if (isTrackpad) {
+      // Trackpad 2-finger pan
       panCamera(-e.deltaX, -e.deltaY);
+    } else {
+      // Physical mouse wheel scroll -> zoom the map
+      zoomCamera(e.deltaY > 0 ? -0.1 : 0.1);
     }
   }, [zoomCamera, panCamera]);
 
