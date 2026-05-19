@@ -183,8 +183,8 @@ function App() {
         onStartTutorial={() => {
           resetGame();
           endTutorial();
-          initializeGame(buildTutorialGameConfig());
           startTutorial();
+          initializeGame(buildTutorialGameConfig());
           setAppMode('tutorial');
         }}
       />
