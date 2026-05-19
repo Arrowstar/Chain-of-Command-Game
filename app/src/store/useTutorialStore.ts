@@ -27,7 +27,9 @@ export type TutorialCondition =
   | 'PHASE_CLEANUP'      // Wait until game phase reaches 'cleanup'
   | 'ROUND_2'            // Wait until round 2 begins
   | 'TOKEN_ASSIGNED'     // Wait until at least one token is assigned
+  | 'FIRE_PRIMARY_ASSIGNED' // Wait until at least one fire-primary action is queued
   | 'EXECUTE_CLICKED'    // Wait until "EXECUTE ORDERS" is clicked (phase flips to execution)
+  | 'FUMBLE_CLEARED'     // Wait until the fumble modal has been dismissed
   | 'SENSOR_LOCK_APPLIED'  // Wait until at least one target lock is on an enemy ship
   | 'DAMAGE_CONTROL_USED'; // Wait until Damage Control has been used this round
 
@@ -43,6 +45,11 @@ export interface TutorialStep {
   waitForCondition?: TutorialCondition;
   /** Hint text shown below "Next" when waiting for a condition. */
   conditionHint?: string;
+  /**
+   * If set during the active tutorial, only action slots whose action.id
+   * is in this array will be enabled/clickable. All others will be disabled (greyed out).
+   */
+  allowedActionIds?: string[];
 }
 
 export interface TutorialStore {
@@ -100,6 +107,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     highlightId: 'briefing-overlay',
     waitForCondition: 'PHASE_COMMAND',
     conditionHint: 'Click "Proceed to Command Phase" on the Briefing screen to continue.',
+    allowedActionIds: [],
   },
 
   // ── Tactical Map ──────────────────────────────────────────
@@ -114,6 +122,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
       'Hover any ship to see its detailed stats. The terrain — those grey clusters — ' +
       'are **Asteroid Fields**. Moving through them without a roll risks hull damage.',
     highlightId: 'hex-map-container',
+    allowedActionIds: [],
   },
 
   // ── Command Tokens ────────────────────────────────────────
@@ -129,6 +138,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     highlightId: 'captain-hand',
     waitForCondition: 'TOKEN_ASSIGNED',
     conditionHint: 'Drag a Command Token onto an Action Slot to continue.',
+    allowedActionIds: ['adjust-speed', 'rotate'],
   },
 
   // ── Helm Station ──────────────────────────────────────────
@@ -142,6 +152,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
       'Now queue a **Tactical action** — drag another token onto the Tactical Station ' +
       'and choose "Fire Primary." You\'ll pick a target when the round executes.',
     highlightId: 'officer-station-helm',
+    allowedActionIds: ['fire-primary'],
   },
 
   // ── Tactical Station ──────────────────────────────────────
@@ -157,6 +168,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     highlightId: 'officer-station-tactical',
     waitForCondition: 'PHASE_EXECUTION',
     conditionHint: 'Click "EXECUTE ORDERS" to proceed to the Execution Phase.',
+    allowedActionIds: ['fire-primary'],
   },
 
   // ── Execution Phase ───────────────────────────────────────
@@ -175,6 +187,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     highlightId: 'execution-panel',
     waitForCondition: 'ROUND_2',
     conditionHint: 'Complete the Execution Phase to advance to Round 2.',
+    allowedActionIds: [],
   },
 
   // ── Round 2 Introduction ──────────────────────────────────
@@ -190,49 +203,14 @@ const TUTORIAL_STEPS: TutorialStep[] = [
       'You\'re going to see that happen today. Read the Briefing, then let\'s proceed.',
     waitForCondition: 'PHASE_COMMAND',
     conditionHint: 'Click "Proceed to Command Phase" on the Briefing screen.',
-  },
-
-  // ── Stress Bar ────────────────────────────────────────────
-  {
-    dialogue:
-      '**STRESS — THE OFFICER RESOURCE**\n\n' +
-      'The colored pip bar under each officer\'s portrait is their **Stress Meter**.\n\n' +
-      '• Each action that costs Stress fills this bar.\n' +
-      '• When Stress **exceeds** the officer\'s maximum, they **Fumble** — ' +
-      'a Fumble Card is drawn immediately when you click Execute.\n' +
-      '• Stress recovers partially at the end of each round during Cleanup.\n\n' +
-      'Your Tactical Officer (Vane) is sitting at high stress right now. ' +
-      'I want you to queue **Fire Primary** for Vane again this round.\n\n' +
-      'Watch that stress bar. Watch what happens when you click Execute.',
-    highlightId: 'officer-station-tactical',
-    waitForCondition: 'TOKEN_ASSIGNED',
-    conditionHint: 'Queue a Fire Primary action on the Tactical Station to continue.',
-  },
-
-  // ── Fumbles ───────────────────────────────────────────────
-  {
-    dialogue:
-      '**FUMBLES — WHEN OFFICERS CRACK UNDER PRESSURE**\n\n' +
-      'Click **EXECUTE ORDERS** — Vane is going to Fumble. Watch what happens.\n\n' +
-      'A Fumble Card is drawn when an officer\'s Stress exceeds their limit. Fumbles can:\n' +
-      '• Cancel the action and refund the CT.\n' +
-      '• Lock the station for 1–2 rounds.\n' +
-      '• Cause collateral damage — Fleet Favor loss, random drift, shields stripped.\n\n' +
-      'You can recover:\n' +
-      '• **Steady Nerves** (Engineering) — reduce an officer\'s stress by 1.\n' +
-      '• **Morale / Discipline** (Fleet Assets) — unlock a locked station.\n\n' +
-      'Prevention beats recovery. Manage your stress bars.',
-    highlightId: 'officer-station-tactical',
-    waitForCondition: 'PHASE_EXECUTION',
-    conditionHint: 'Click "EXECUTE ORDERS" to trigger the fumble and see the result.',
+    allowedActionIds: [],
   },
 
   // ── Sensors & Target Lock ─────────────────────────────────
   {
     dialogue:
       '**SENSORS STATION — TARGET LOCK**\n\n' +
-      'After resolving the fumble, let\'s recover and go on offense.\n\n' +
-      'The **Sensors Station** gives you the tactical edge:\n' +
+      'Let\'s bring our other stations online. The **Sensors Station** gives you the tactical edge:\n' +
       '• **Target Lock** (1 CT, no stress) — lower the TN on a specific enemy by 1 for this round. ' +
       'The officer\'s skill die may improve it further.\n' +
       '• **Cyber-Warfare** (2 CT, 2 Stress) — collapse an enemy shield sector to 0.\n\n' +
@@ -241,6 +219,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     highlightId: 'officer-station-sensors',
     waitForCondition: 'SENSOR_LOCK_APPLIED',
     conditionHint: 'Queue a Target Lock action on the Sensors Station, then pick the enemy ship.',
+    allowedActionIds: ['target-lock'],
   },
 
   // ── Engineering Station ───────────────────────────────────
@@ -257,6 +236,44 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     highlightId: 'officer-station-engineering',
     waitForCondition: 'DAMAGE_CONTROL_USED',
     conditionHint: 'Queue a Damage Control action on the Engineering Station to continue.',
+    allowedActionIds: ['damage-control'],
+  },
+
+  // ── Stress Bar ────────────────────────────────────────────
+  {
+    dialogue:
+      '**STRESS — THE OFFICER RESOURCE**\n\n' +
+      'The colored bar under each officer\'s portrait is their **Stress Meter**.\n\n' +
+      '• Each action that costs Stress fills this bar.\n' +
+      '• When Stress **exceeds** the officer\'s maximum, they **Fumble** — ' +
+      'a Fumble Card is drawn immediately when you click Execute.\n' +
+      '• Stress recovers partially at the end of each round during Cleanup.\n\n' +
+      'Your Tactical Officer (Vane) is sitting at high stress right now. ' +
+      'I want you to queue **Fire Primary** for Vane again this round.\n\n' +
+      'Watch that stress bar. Watch what happens when you click Execute.',
+    highlightId: 'officer-station-tactical',
+    waitForCondition: 'FIRE_PRIMARY_ASSIGNED',
+    conditionHint: 'Queue a Fire Primary action on the Tactical Station to continue.',
+    allowedActionIds: ['fire-primary'],
+  },
+
+  // ── Fumbles ───────────────────────────────────────────────
+  {
+    dialogue:
+      '**FUMBLES — WHEN OFFICERS CRACK UNDER PRESSURE**\n\n' +
+      'Click **EXECUTE ORDERS** — Vane is going to Fumble. Watch what happens.\n\n' +
+      'A Fumble Card is drawn when an officer\'s Stress exceeds their limit. Fumbles can:\n' +
+      '• Cancel the action and refund the CT.\n' +
+      '• Lock the station for 1–2 rounds.\n' +
+      '• Cause collateral damage — Fleet Favor loss, random drift, shields stripped.\n\n' +
+      'You can recover:\n' +
+      '• **Steady Nerves** (Engineering) — reduce an officer\'s stress by 1.\n' +
+      '• **Morale / Discipline** (Fleet Assets) — unlock a locked station.\n\n' +
+      'Prevention beats recovery. Manage your stress bars.',
+    highlightId: 'officer-station-tactical',
+    waitForCondition: 'FUMBLE_CLEARED',
+    conditionHint: 'Click "EXECUTE ORDERS" to trigger the fumble, then acknowledge the card.',
+    allowedActionIds: [],
   },
 
   // ── Critical Damage ───────────────────────────────────────
@@ -269,6 +286,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
       '• Use **Damage Control** to attempt a repair — roll 4+ on D6.\n\n' +
       'Enemy ships take crits too. A crit on their fire control makes their attacks less accurate. ' +
       'Keep hammering.',
+    allowedActionIds: [],
   },
 
   // ── Fleet Assets ──────────────────────────────────────────
@@ -284,6 +302,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
       '• **Escort Support Call** — call in off-board assistance.\n\n' +
       'These are powerful and limited. Save them for when they\'re decisive.',
     highlightId: 'fleet-assets-panel',
+    allowedActionIds: [],
   },
 
   // ── Game Log ──────────────────────────────────────────────
@@ -296,6 +315,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
       '• Entries color-coded: combat hits in red, system events in grey, phase transitions in amber.\n\n' +
       'When you\'re unsure what just happened — the log has the answer.',
     highlightId: 'game-log-tab',
+    allowedActionIds: [],
   },
 
   // ── Free Play Sign-Off ────────────────────────────────────
@@ -308,6 +328,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
       'Destroy that ship and the exercise is complete.\n\n' +
       'Good hunting. Don\'t embarrass the fleet.\n\n' +
       '— Admiral Reyes',
+    allowedActionIds: [],
   },
 ];
 

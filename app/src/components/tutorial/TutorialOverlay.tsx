@@ -13,6 +13,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTutorialStore } from '../../store/useTutorialStore';
 import { useGameStore } from '../../store/useGameStore';
+import { useUIStore } from '../../store/useUIStore';
 import admiralPortrait from '../../assets/tutorial/admiral.png';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -57,6 +58,7 @@ function useConditionMet(condition?: string): boolean {
   const players = useGameStore(s => s.players);
   const playerShips = useGameStore(s => s.playerShips);
   const damageControlUsed = useGameStore(s => s.damageControlUsedThisRound);
+  const activeModal = useUIStore(s => s.activeModal);
 
   if (!condition || condition === 'NONE') return true;
 
@@ -71,8 +73,12 @@ function useConditionMet(condition?: string): boolean {
       return round >= 2;
     case 'TOKEN_ASSIGNED':
       return players.some(p => p.assignedActions.length > 0);
+    case 'FIRE_PRIMARY_ASSIGNED':
+      return players.some(p => p.assignedActions.some(a => a.actionId === 'fire-primary'));
     case 'EXECUTE_CLICKED':
       return phase === 'execution';
+    case 'FUMBLE_CLEARED':
+      return phase === 'execution' && activeModal !== 'fumble';
     case 'SENSOR_LOCK_APPLIED':
       // True when any player ship has at least one active target lock queued
       return players.some(p =>
@@ -171,7 +177,7 @@ export default function TutorialOverlay() {
   // so the player is guaranteed to see a fumble on the next Execute Orders click.
   // The fumble step is identified by its PHASE_EXECUTION condition + tactical highlight + 'FUMBLES' in dialogue.
   const isFumbleStep = step?.highlightId === 'officer-station-tactical' &&
-    step?.waitForCondition === 'PHASE_EXECUTION' &&
+    step?.waitForCondition === 'FUMBLE_CLEARED' &&
     step?.dialogue.includes('FUMBLES');
   useEffect(() => {
     if (isFumbleStep && isActive && !isHidden) {

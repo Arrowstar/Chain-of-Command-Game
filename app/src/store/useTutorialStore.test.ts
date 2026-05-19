@@ -283,3 +283,19 @@ describe('useTutorialStore — full run simulation', () => {
     expect(useTutorialStore.getState().isActive).toBe(false);
   });
 });
+
+describe('useTutorialStore — allowedActionIds', () => {
+  it('defines allowedActionIds on Helm station intro step', () => {
+    const { steps } = useTutorialStore.getState();
+    // Step 3 (index 3) is Helm intro
+    const step3 = steps[3];
+    expect(step3.allowedActionIds).toEqual(['adjust-speed', 'rotate']);
+  });
+
+  it('defines allowedActionIds on Tactical station / Stress step', () => {
+    const { steps } = useTutorialStore.getState();
+    // Step 10 (index 10) is Tactical/Stress
+    const step10 = steps[10];
+    expect(step10.allowedActionIds).toEqual(['fire-primary']);
+  });
+});

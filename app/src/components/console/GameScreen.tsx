@@ -99,9 +99,13 @@ export default function GameScreen() {
       }
     }
 
-    if ((isPhone || isTablet) && highlightId.startsWith('officer-station-')) {
-      const station = highlightId.replace('officer-station-', '') as OfficerStation;
-      setActiveTabletStation(station);
+    if (isPhone || isTablet) {
+      if (highlightId.startsWith('officer-station-')) {
+        const station = highlightId.replace('officer-station-', '') as OfficerStation;
+        setActiveTabletStation(station);
+      } else if (highlightId === 'captain-hand') {
+        setActiveTabletStation('helm');
+      }
     }
   }, [isPhone, isTablet, tutorialActive, tutorialIsHidden, tutorialCurrentStep, tutorialSteps]);
 

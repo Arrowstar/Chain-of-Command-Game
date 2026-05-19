@@ -15,6 +15,7 @@ import { getScarImpactLegendText, getScarStatusMeta, getScarTooltip, getStationS
 import { useTokenSelectionStore } from '../../store/useTokenSelectionStore';
 import { useViewport } from '../../utils/useViewport';
 import { fireCombatToast } from '../board/CombatToastContainer';
+import { useTutorialStore } from '../../store/useTutorialStore';
 
 interface OfficerStationPanelProps {
   officerState: OfficerState;
@@ -41,6 +42,13 @@ export default function OfficerStationPanel({ officerState, playerId }: OfficerS
   const clearTokenSelection = useTokenSelectionStore(s => s.clearSelection);
   const { isCoarsePointer } = useViewport();
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+
+  const tutorialActive = useTutorialStore(s => s.isActive);
+  const isFreePlay = useTutorialStore(s => s.isFreePlay);
+  const currentStep = useTutorialStore(s => s.currentStep);
+  const steps = useTutorialStore(s => s.steps);
+  const currentStepObj = steps[currentStep];
+  const tutorialAllowedActionIds = currentStepObj?.allowedActionIds;
 
   const nameRef = useRef<HTMLHeadingElement>(null);
   const traitRef = useRef<HTMLDivElement>(null);
@@ -420,7 +428,8 @@ export default function OfficerStationPanel({ officerState, playerId }: OfficerS
 
           const displayAction = { ...action, ctCost: displayCtCost, stressCost: displayStressCost };
 
-          const isSlotDisabled = officerState.isLocked || tacticLockout || (action.id === 'reroute-power' && assignments.length > 0);
+          const isTutorialLockout = tutorialActive && !isFreePlay && tutorialAllowedActionIds !== undefined && !tutorialAllowedActionIds.includes(action.id);
+          const isSlotDisabled = officerState.isLocked || tacticLockout || (action.id === 'reroute-power' && assignments.length > 0) || isTutorialLockout;
 
           const handleTapAssign = () => {
             if (!player) return;
@@ -428,7 +437,8 @@ export default function OfficerStationPanel({ officerState, playerId }: OfficerS
             if (isSlotDisabled) {
               if (isCoarsePointer) {
                 let msg = 'Station is locked.';
-                if (tacticLockout) msg = `Station jammed by ${currentTactic?.name || 'Tactic'}.`;
+                if (isTutorialLockout) msg = 'This action is disabled during this tutorial step.';
+                else if (tacticLockout) msg = `Station jammed by ${currentTactic?.name || 'Tactic'}.`;
                 else if (action.id === 'reroute-power' && assignments.length > 0) msg = 'Reroute Power can only be assigned once.';
                 fireCombatToast({ type: 'warning', message: msg });
               }

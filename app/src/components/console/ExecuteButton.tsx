@@ -16,7 +16,8 @@ export default function ExecuteButton() {
 
   const isCommandPhase = phase === 'command';
   const currentStepObj = steps[currentStep];
-  const canExecute = isCommandPhase && (!tutorialActive || isFreePlay || currentStepObj?.waitForCondition === 'PHASE_EXECUTION');
+  const executeConditions = ['PHASE_EXECUTION', 'FUMBLE_CLEARED', 'EXECUTE_CLICKED'];
+  const canExecute = isCommandPhase && (!tutorialActive || isFreePlay || executeConditions.includes(currentStepObj?.waitForCondition ?? ''));
   
   const playersWithUnspent = players.filter(p => p.commandTokens > 0);
 

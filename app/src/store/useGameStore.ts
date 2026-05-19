@@ -20,6 +20,7 @@ import { applyGravityWellPull } from '../engine/gravityWell';
 import { getChassisById } from '../data/shipChassis';
 import { getWeaponById } from '../data/weapons';
 import { useUIStore } from './useUIStore';
+import { useTutorialStore } from './useTutorialStore';
 import { getAdversaryById, ADVERSARIES } from '../data/adversaries';
 import { getStationById } from '../data/stations';
 import { getFighterClassById } from '../data/fighters';
@@ -816,7 +817,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
       torpedoTokens: [],
       stations: initialStations,
       terrainMap,
-      tacticDeck: createShuffledTacticDeck(initialEnemyShips),
+      tacticDeck: (() => {
+        const deck = createShuffledTacticDeck(initialEnemyShips);
+        if (useTutorialStore.getState().isActive) {
+          // Force safe tactics to the top of the deck during tutorial to prevent jamming stations
+          const safeIds = ['overwhelming-firepower', 'target-the-bridge', 'kill-confirmation'];
+          const riggedCards = safeIds.map(id => deck.find(c => c.id === id)!).filter(Boolean);
+          const remaining = deck.filter(c => !safeIds.includes(c.id));
+          return [...riggedCards, ...remaining];
+        }
+        return deck;
+      })(),
       fumbleDeck: createShuffledFumbleDeck(),
       playerCritDeck: createShuffledPlayerCritDeck(),
       enemyCritDeck: createShuffledEnemyCritDeck(),
