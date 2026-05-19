@@ -214,7 +214,7 @@ export const ASSET_MAP: Record<string, string> = {
   // All currently share HegInterceptorWing art (red-tinted via allegiance).
   // Swap each entry individually once dedicated art is placed in:
   //   art/ships/hegemony/fighters/
-  'enemy-fighter-strike':    hegInterceptorWingImg, // 📁 replace: heg_strike.png
+  'enemy-fighter-strike':    hegInterceptorWingImg, // ✅ Uses HegInterceptorWing.png directly
   'enemy-fighter-bomber':    hegBomberImg,
   'enemy-fighter-ew':        hegEwFighterImg,
   'enemy-fighter-interceptor': hegInterceptorImg,

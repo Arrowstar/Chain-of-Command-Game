@@ -15,7 +15,7 @@ import type { FighterClassData } from '../types/game';
 //   'fighter-gunship'        → art/ships/player/fighters/armored_gunship.png
 //
 // KEY REFERENCE (Enemy / Hegemony):
-//   'enemy-fighter-strike'   → art/ships/hegemony/fighters/heg_strike.png
+//   'enemy-fighter-strike'   → art/ships/hegemony/HegInterceptorWing.png (DONE)
 //   'enemy-fighter-bomber'   → art/ships/hegemony/fighters/heg_bomber.png
 //   'enemy-fighter-ew'       → art/ships/hegemony/fighters/heg_ew.png
 //   'enemy-fighter-intercept'→ art/ships/hegemony/fighters/heg_intercept.png
@@ -111,7 +111,7 @@ export const ENEMY_FIGHTER_CLASSES: Record<string, FighterClassData> = {
     weaponRangeMax: 1,
     volleyPool: ['d4', 'd4', 'd4'],
     behavior: 'attack',
-    imageKey: 'enemy-fighter-strike', // 📁 art/ships/hegemony/fighters/heg_strike.png (uses HegInterceptorWing.png as fallback)
+    imageKey: 'enemy-fighter-strike', // ✅ Uses HegInterceptorWing.png directly
   },
   'enemy-heavy-bomber': {
     id: 'enemy-heavy-bomber',
