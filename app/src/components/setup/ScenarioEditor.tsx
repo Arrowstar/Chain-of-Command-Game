@@ -533,7 +533,7 @@ export default function ScenarioEditor({ onConfirm, onCancel }: ScenarioEditorPr
     <div style={{ display: 'flex', width: '100vw', height: '100vh', background: 'var(--color-bg-deep)' }}>
       {/* TOOLBAR */}
       <div className="panel" style={{ width: '300px', height: '100%', borderRadius: 0, borderRight: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ padding: 'var(--space-md)', borderBottom: '1px solid var(--color-border)' }}>
+        <div style={{ padding: 'var(--space-md)', paddingLeft: '60px', borderBottom: '1px solid var(--color-border)' }}>
           <h2 style={{ color: 'var(--color-holo-cyan)', margin: 0 }}>SCENARIO EDITOR</h2>
         </div>
 
