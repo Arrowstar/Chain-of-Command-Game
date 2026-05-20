@@ -132,4 +132,48 @@ describe('generateSectorMap - 15-tier structure', () => {
     const types2 = map2.nodes.map(n => n.type).join(',');
     expect(types1).not.toBe(types2);
   });
+
+  it('elites do not appear two nodes in a row', () => {
+    for (const seed of [1, 42, 1234, 5678, 9999]) {
+      const map = generateSectorMap(seed, 15);
+      
+      for (const node of map.nodes) {
+        if (node.type === NodeType.Elite) {
+          const children = map.nodes.filter(n => node.paths.includes(n.id));
+          for (const child of children) {
+            expect(child.type, `Seed ${seed}: Elite node ${node.id} connects to another Elite ${child.id}`).not.toBe(NodeType.Elite);
+          }
+        }
+      }
+    }
+  });
+
+  it('nodes from the same parent have different types', () => {
+    for (const seed of [1, 42, 1234, 5678, 9999]) {
+      const map = generateSectorMap(seed, 15);
+      
+      for (const parent of map.nodes) {
+        if (parent.paths.length > 1) {
+          const children = map.nodes.filter(n => parent.paths.includes(n.id));
+          const types = children.map(c => c.type);
+          const uniqueTypes = new Set(types);
+          
+          // They should be unique, UNLESS it's a fallback to Combat.
+          // If there are duplicates, the duplicate MUST be Combat.
+          if (uniqueTypes.size !== types.length) {
+            const counts = types.reduce((acc, t) => {
+              acc[t] = (acc[t] || 0) + 1;
+              return acc;
+            }, {} as Record<string, number>);
+            
+            for (const [type, count] of Object.entries(counts)) {
+              if (count > 1) {
+                expect(type, `Seed ${seed}: Parent ${parent.id} has duplicate child type ${type}`).toBe(NodeType.Combat);
+              }
+            }
+          }
+        }
+      }
+    }
+  });
 });
