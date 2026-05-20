@@ -2440,3 +2440,15 @@ body.is-phone .recovery-banner-actions {
 body.is-phone .recovery-banner-btn {
   width: 100%;
 }
+
+/* ─── Shared utility keyframes ───────────────────────────────────── */
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes slideInUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}

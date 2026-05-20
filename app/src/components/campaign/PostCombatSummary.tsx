@@ -5,6 +5,7 @@ import { getScarImpactLegendText, getScarStatusMeta } from '../console/scarStatu
 import FleetFavorConversionPanel from './FleetFavorConversionPanel';
 import { NodeType } from '../../engine/mapGenerator';
 import ScoreLedgerModal from './ScoreLedgerModal';
+import { useViewport } from '../../utils/useViewport';
 
 export default function PostCombatSummary() {
   const [result, setResult] = useState<PostCombatResult | null>(null);
@@ -15,6 +16,8 @@ export default function PostCombatSummary() {
   const completeBossNode = useCampaignStore(s => s.completeBossNode);
   const campaign = useCampaignStore(s => s.campaign);
   const sectorMap = useCampaignStore(s => s.sectorMap);
+  const { isPhone, isTablet } = useViewport();
+  const isMobile = isPhone || isTablet;
 
   const scoreAtCombatStart = campaign?.scoreAtCombatStart ?? 0;
   const currentScore = campaign?.currentScore ?? 0;
@@ -43,12 +46,12 @@ export default function PostCombatSummary() {
 
   return (
     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflowY: 'auto', padding: 'var(--space-xl) 0' }}>
-      <div className="panel panel--glow" style={{ margin: '0 auto', width: '700px', maxWidth: '90vw', padding: 'var(--space-lg)' }}>
+      <div className="panel panel--glow" style={{ margin: '0 auto', width: '700px', maxWidth: '90vw', padding: isMobile ? 'var(--space-md)' : 'var(--space-lg)' }}>
         <h2 style={{ 
           color: (result.victory && !isBossDefeat) ? 'var(--color-holo-cyan)' : 'var(--color-hostile-red)', 
           textAlign: 'center', 
           marginTop: 0, 
-          fontSize: '2rem',
+          fontSize: isMobile ? '1.5rem' : '2rem',
           textShadow: (result.victory && !isBossDefeat) ? 'var(--glow-cyan)' : '0 0 15px var(--color-hostile-red)'
         }}>
           {isBossDefeat ? 'SECTOR COMMAND LOST' : (result.victory ? 'MISSION SUCCESS' : 'TACTICAL WITHDRAWAL')}
@@ -57,30 +60,41 @@ export default function PostCombatSummary() {
           {result.reason}
         </div>
         
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-md)', margin: 'var(--space-lg) 0' }}>
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', 
+          gap: 'var(--space-md)', 
+          margin: 'var(--space-lg) 0' 
+        }}>
           <div className="panel panel--raised" style={{ padding: 'var(--space-md)', textAlign: 'center' }}>
             <div className="label" style={{ color: 'var(--color-hostile-red)' }}>FLEET FAVOR ON HAND</div>
-            <div className="mono" style={{ fontSize: '2.5rem', color: 'var(--color-hostile-red)' }}>{campaign.fleetFavor}</div>
+            <div className="mono" style={{ fontSize: isMobile ? '2rem' : '2.5rem', color: 'var(--color-hostile-red)' }}>{campaign.fleetFavor}</div>
           </div>
           <div className="panel panel--raised" style={{ padding: 'var(--space-md)', textAlign: 'center' }}>
             <div className="label" style={{ color: 'var(--color-alert-amber)' }}>CURRENT RP</div>
-            <div className="mono" style={{ fontSize: '2.5rem', color: 'var(--color-alert-amber)' }}>{campaign.requisitionPoints}</div>
+            <div className="mono" style={{ fontSize: isMobile ? '2rem' : '2.5rem', color: 'var(--color-alert-amber)' }}>{campaign.requisitionPoints}</div>
           </div>
         </div>
 
         {/* Score Delta */}
         <div className="panel panel--raised" style={{ padding: 'var(--space-md)', marginBottom: 'var(--space-lg)', textAlign: 'center', border: '1px solid rgba(251,191,36,0.25)', background: 'rgba(251,191,36,0.05)' }}>
           <div className="label" style={{ color: '#fbbf2488', fontSize: '0.65rem', letterSpacing: '2px', marginBottom: '6px' }}>FLEET COMMENDATION — COMBAT PHASE</div>
-          <div style={{ display: 'flex', gap: 'var(--space-lg)', justifyContent: 'center', alignItems: 'baseline' }}>
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: isMobile ? 'column' : 'row',
+            gap: isMobile ? 'var(--space-sm)' : 'var(--space-lg)', 
+            justifyContent: 'center', 
+            alignItems: 'baseline' 
+          }}>
             <div>
-              <div className="mono" style={{ fontSize: '1.8rem', fontWeight: 'bold', color: scoreDelta >= 0 ? 'var(--color-holo-green)' : 'var(--color-hostile-red)' }}>
+              <div className="mono" style={{ fontSize: isMobile ? '1.5rem' : '1.8rem', fontWeight: 'bold', color: scoreDelta >= 0 ? 'var(--color-holo-green)' : 'var(--color-hostile-red)' }}>
                 {scoreDelta >= 0 ? `+${scoreDelta.toLocaleString()}` : scoreDelta.toLocaleString()}
               </div>
               <div className="label" style={{ color: 'var(--color-text-dim)', fontSize: '0.6rem' }}>THIS ENGAGEMENT</div>
             </div>
-            <div style={{ color: 'var(--color-text-dim)' }}>=</div>
+            <div style={{ color: 'var(--color-text-dim)', transform: isMobile ? 'rotate(90deg)' : 'none', margin: isMobile ? '0 auto' : 0 }}>=</div>
             <div>
-              <div className="mono" style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#fbbf24' }}>
+              <div className="mono" style={{ fontSize: isMobile ? '1.5rem' : '1.8rem', fontWeight: 'bold', color: '#fbbf24' }}>
                 {currentScore.toLocaleString()}
               </div>
               <div className="label" style={{ color: 'var(--color-text-dim)', fontSize: '0.6rem' }}>TOTAL SCORE</div>
@@ -96,7 +110,7 @@ export default function PostCombatSummary() {
         </div>
 
         <div style={{ marginBottom: 'var(--space-lg)' }}>
-          <FleetFavorConversionPanel title="IMMEDIATE FF TO RP CONVERSION" />
+          <FleetFavorConversionPanel title="IMMEDIATE FF TO RP CONVERSION" compact={isMobile} />
         </div>
 
         {/* Trauma Report */}

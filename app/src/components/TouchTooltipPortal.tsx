@@ -31,33 +31,47 @@ export default function TouchTooltipPortal({
   const tooltipRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
-    if (!show || !anchorRef.current || !tooltipRef.current) {
-      if (!show) setCoords(null);
-      return;
+    const updatePosition = () => {
+      if (!show || !anchorRef.current || !tooltipRef.current) {
+        if (!show) setCoords(null);
+        return;
+      }
+
+      const rect = anchorRef.current.getBoundingClientRect();
+      const tipRect = tooltipRef.current.getBoundingClientRect();
+      
+      const anchorCenter = rect.left + rect.width / 2;
+      let left = anchorCenter;
+      const padding = 8;
+      
+      // Clamp to screen edges
+      if (left - tipRect.width / 2 < padding) {
+        left = tipRect.width / 2 + padding;
+      } else if (left + tipRect.width / 2 > window.innerWidth - padding) {
+        left = window.innerWidth - tipRect.width / 2 - padding;
+      }
+
+      const caretOffset = anchorCenter - left;
+
+      // Position fully above the anchor
+      setCoords({
+        top: rect.top - tipRect.height - 12,
+        left,
+        caretOffset,
+      });
+    };
+
+    updatePosition();
+
+    if (show) {
+      window.addEventListener('scroll', updatePosition, true);
+      window.addEventListener('resize', updatePosition);
     }
 
-    const rect = anchorRef.current.getBoundingClientRect();
-    const tipRect = tooltipRef.current.getBoundingClientRect();
-    
-    const anchorCenter = rect.left + rect.width / 2;
-    let left = anchorCenter;
-    const padding = 8;
-    
-    // Clamp to screen edges
-    if (left - tipRect.width / 2 < padding) {
-      left = tipRect.width / 2 + padding;
-    } else if (left + tipRect.width / 2 > window.innerWidth - padding) {
-      left = window.innerWidth - tipRect.width / 2 - padding;
-    }
-
-    const caretOffset = anchorCenter - left;
-
-    // Position fully above the anchor
-    setCoords({
-      top: rect.top - tipRect.height - 12,
-      left,
-      caretOffset,
-    });
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('resize', updatePosition);
+    };
   }, [show, anchorRef]);
 
   if (!show) return null;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useCampaignStore } from '../../store/useCampaignStore';
 import { useViewport } from '../../utils/useViewport';
 import { getHullPatchCost, PSYCH_EVAL_COST, DEEP_REPAIR_COST, OFFICER_TRAINING_COSTS } from '../../data/drydock';
@@ -10,6 +10,7 @@ import { getOfficerById } from '../../data/officers';
 import { getScarTooltip } from '../console/scarStatus';
 import ArmoryItemCard from './ArmoryItemCard';
 import TraumaIcon from '../console/TraumaIcon';
+import ScarIcon from '../console/ScarIcon';
 import type { CampaignState } from '../../types/campaignTypes';
 import type { WeaponModule, Subsystem, PlayerState, OfficerState } from '../../types/game';
 
@@ -162,8 +163,18 @@ export default function DrydockView() {
 
   const [activeTab, setActiveTab] = useState<Tab>('ships');
   const [selectedItem, setSelectedItem] = useState<SelectedItem>(null);
+  const [loadoutDrawerOpen, setLoadoutDrawerOpen] = useState(false);
 
-  const { isTablet } = useViewport();
+  useEffect(() => {
+    if (selectedItem) setLoadoutDrawerOpen(true);
+  }, [selectedItem]);
+
+  const viewport = useViewport();
+  const { isTablet, isPhone, isCoarsePointer } = viewport;
+  const isPortrait = viewport.height > viewport.width;
+  const showRotatePrompt = isPhone && isPortrait;
+
+  // The orientation is now handled centrally in App.tsx using Capacitor.
 
   if (!campaign) return null;
 
@@ -208,38 +219,171 @@ export default function DrydockView() {
     );
   };
 
+  // Short labels for the mobile icon strip
+  const TAB_SHORT: Record<Tab, string> = {
+    ships: 'HULL',
+    officers: 'CREW',
+    shipyard: 'YARD',
+    armory: 'ARMS',
+  };
+
   return (
     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', background: '#080a0f' }}>
-      
-      {/* ── SIDEBAR ─────────────────────────────────────────────────── */}
-      <div style={{ width: isTablet ? '220px' : '280px', borderRight: '1px solid var(--color-border)', background: 'rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', padding: 'var(--space-md)' }}>
-        <h2 style={{ color: 'var(--color-holo-green)', margin: '0 0 var(--space-xl) 0', fontSize: '1.5rem', lineHeight: 1.2 }}>
-          WAR COUNCIL<br/>
-          <span style={{ fontSize: '1rem', color: 'var(--color-text-secondary)' }}>DRYDOCK COMMAND</span>
-        </h2>
-        
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)', flex: 1 }}>
+
+      {/* ── ROTATE DEVICE OVERLAY ───────────────────────────────────── */}
+      {showRotatePrompt && (
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 100,
+          background: '#080a0f',
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          gap: '20px',
+          padding: '32px',
+        }}>
+          <div style={{ fontSize: '4rem', animation: 'spin 2s linear infinite' }}>📱</div>
+          <div style={{ color: 'var(--color-holo-cyan)', fontSize: '1.1rem', fontWeight: 'bold', textAlign: 'center', letterSpacing: '2px' }}>
+            ROTATE DEVICE
+          </div>
+          <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem', textAlign: 'center', lineHeight: 1.5 }}>
+            The Drydock requires landscape orientation for the best experience.
+          </div>
+        </div>
+      )}
+
+      {/* ── SIDEBAR — full text on desktop, icon strip on phone/tablet ── */}
+      {isPhone ? (
+        // ── NARROW ICON STRIP ───────────────────────────────────────
+        <div style={{
+          width: '60px',
+          borderRight: '1px solid var(--color-border)',
+          background: 'rgba(0,0,0,0.6)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          padding: '8px 0',
+          gap: '4px',
+          flexShrink: 0,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+        }}>
           {TABS.map(t => (
             <button
               key={t.id}
-              className={`btn drydock-tab-btn ${activeTab === t.id ? '' : 'btn--outline'}`}
+              title={t.label}
               onClick={() => { setActiveTab(t.id); setSelectedItem(null); }}
-              style={{ padding: 'var(--space-md) var(--space-sm)', fontSize: '0.9rem', textAlign: 'left', display: 'flex', justifyContent: 'flex-start', alignItems: 'center', gap: 'var(--space-sm)' }}
+              style={{
+                width: '48px',
+                height: '52px',
+                borderRadius: '8px',
+                border: activeTab === t.id ? '1px solid var(--color-holo-cyan)' : '1px solid transparent',
+                background: activeTab === t.id ? 'rgba(0,204,255,0.15)' : 'transparent',
+                cursor: 'pointer',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '2px',
+                padding: 0,
+              }}
             >
-              <span>{t.icon}</span>
-              {t.label}
+              <span style={{ fontSize: '1.4rem', lineHeight: 1 }}>{t.icon}</span>
+              <span style={{
+                fontSize: '0.45rem',
+                letterSpacing: '0.5px',
+                color: activeTab === t.id ? 'var(--color-holo-cyan)' : 'var(--color-text-dim)',
+                fontWeight: 'bold',
+              }}>
+                {TAB_SHORT[t.id]}
+              </span>
             </button>
           ))}
-        </div>
 
-        <button
-          className="btn drydock-tab-btn"
-          style={{ width: '100%', padding: 'var(--space-md)', fontSize: '1.1rem', marginTop: 'var(--space-lg)' }}
-          onClick={completeDrydock}
-        >
-          CONCLUDE
-        </button>
-      </div>
+          <button
+            title="Campaign Log"
+            onClick={() => window.dispatchEvent(new Event('toggleCampaignLog'))}
+            style={{
+              width: '48px',
+              height: '52px',
+              borderRadius: '8px',
+              border: '1px solid transparent',
+              background: 'transparent',
+              cursor: 'pointer',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '2px',
+              padding: 0,
+              flexShrink: 0,
+              marginTop: '4px',
+            }}
+          >
+            <span style={{ fontSize: '1.4rem', lineHeight: 1, color: 'var(--color-text-primary)' }}>☰</span>
+            <span style={{
+              fontSize: '0.45rem',
+              letterSpacing: '0.5px',
+              color: 'var(--color-text-dim)',
+              fontWeight: 'bold',
+            }}>
+              LOG
+            </span>
+          </button>
+
+          <div style={{ flex: 1 }} />
+
+          <button
+            title="Conclude Drydock"
+            className="btn drydock-tab-btn"
+            style={{
+              width: '48px',
+              height: '48px',
+              fontSize: '0.55rem',
+              padding: '4px',
+              marginBottom: '8px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '2px',
+              lineHeight: 1,
+            }}
+            onClick={completeDrydock}
+          >
+            <span style={{ fontSize: '1.1rem' }}>✓</span>
+            <span style={{ fontSize: '0.45rem', letterSpacing: '0.5px' }}>DONE</span>
+          </button>
+        </div>
+      ) : (
+        // ── FULL DESKTOP SIDEBAR ─────────────────────────────────────
+        <div style={{ width: isTablet ? '220px' : '280px', borderRight: '1px solid var(--color-border)', background: 'rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', padding: 'var(--space-md)' }}>
+          <h2 style={{ color: 'var(--color-holo-green)', margin: '0 0 var(--space-xl) 0', fontSize: '1.5rem', lineHeight: 1.2 }}>
+            WAR COUNCIL<br/>
+            <span style={{ fontSize: '1rem', color: 'var(--color-text-secondary)' }}>DRYDOCK COMMAND</span>
+          </h2>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)', flex: 1 }}>
+            {TABS.map(t => (
+              <button
+                key={t.id}
+                className={`btn drydock-tab-btn ${activeTab === t.id ? '' : 'btn--outline'}`}
+                onClick={() => { setActiveTab(t.id); setSelectedItem(null); }}
+                style={{ padding: 'var(--space-md) var(--space-sm)', fontSize: '0.9rem', textAlign: 'left', display: 'flex', justifyContent: 'flex-start', alignItems: 'center', gap: 'var(--space-sm)' }}
+              >
+                <span>{t.icon}</span>
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          <button
+            className="btn drydock-tab-btn"
+            style={{ width: '100%', padding: 'var(--space-md)', fontSize: '1.1rem', marginTop: 'var(--space-lg)' }}
+            onClick={completeDrydock}
+          >
+            CONCLUDE
+          </button>
+        </div>
+      )}
 
       {/* ── MAIN CONTENT ────────────────────────────────────────────── */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -263,10 +407,14 @@ export default function DrydockView() {
             )}
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div className="label" style={{ color: 'var(--color-text-secondary)', fontSize: '0.7rem' }}>AVAILABLE FUNDS</div>
-            <div className="mono" style={{ fontSize: '2.5rem', color: 'var(--color-alert-amber)', textShadow: '0 0 10px rgba(230,160,0,0.3)', lineHeight: 1 }}>
-              {campaign.requisitionPoints} <span style={{ fontSize: '1.2rem' }}>RP</span>
-            </div>
+            {!(isPhone || isTablet) && (
+              <>
+                <div className="label" style={{ color: 'var(--color-text-secondary)', fontSize: '0.7rem' }}>AVAILABLE FUNDS</div>
+                <div className="mono" style={{ fontSize: '2.5rem', color: 'var(--color-alert-amber)', textShadow: '0 0 10px rgba(230,160,0,0.3)', lineHeight: 1 }}>
+                  {campaign.requisitionPoints} <span style={{ fontSize: '1.2rem' }}>RP</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -311,12 +459,18 @@ export default function DrydockView() {
                       {/* Scars */}
                       {ship.scars.length > 0 ? ship.scars.map(scar => (
                         <div key={scar.id} className="panel" title={getScarTooltip(scar)} style={{ flex: '1 1 240px', ...panelStyle, borderLeft: '4px solid var(--color-alert-amber)', borderRadius: '0 4px 4px 0' }}>
-                          <div style={{ fontWeight: 'bold', color: 'var(--color-alert-amber)' }}>{scar.name}</div>
-                          <div style={dimText}>{scar.effect}</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <ScarIcon scar={scar} size={32} />
+                            <div>
+                              <div style={{ fontWeight: 'bold', color: 'var(--color-alert-amber)' }}>{scar.name}</div>
+                              <div style={dimText}>{scar.effect}</div>
+                            </div>
+                          </div>
                           <button
                             className="btn"
                             disabled={!hasFreeRepair && campaign.requisitionPoints < DEEP_REPAIR_COST}
                             onClick={() => purchaseDeepRepair(ship.id, scar.id)}
+                            style={{ marginTop: 'auto' }}
                           >
                             {hasFreeRepair ? 'USE FREE REPAIR' : campaign.requisitionPoints < DEEP_REPAIR_COST ? `INSUFFICIENT RP (${DEEP_REPAIR_COST})` : `DEEP REPAIR (${DEEP_REPAIR_COST} RP)`}
                           </button>
@@ -437,9 +591,14 @@ export default function DrydockView() {
             <div style={{ display: 'flex', gap: 'var(--space-xl)', height: '100%' }}>
               
               {/* Left Pane: Inventory (Market + Stash) */}
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 'var(--space-md)', overflowY: 'auto', paddingRight: 'var(--space-sm)' }}>
-                <h3 style={{ margin: 0, color: 'var(--color-holo-cyan)', position: 'sticky', top: 0, background: '#080a0f', zIndex: 1, paddingBottom: 'var(--space-sm)', borderBottom: '1px solid var(--color-border)' }}>
-                  MARKET & STASH
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 'var(--space-md)', overflowY: 'auto', paddingRight: isPhone ? 0 : 'var(--space-sm)' }}>
+                <h3 style={{ margin: 0, color: 'var(--color-holo-cyan)', position: 'sticky', top: 0, background: '#080a0f', zIndex: 1, paddingBottom: 'var(--space-sm)', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>MARKET & STASH</span>
+                  {isPhone && (
+                    <button className="btn btn--outline" style={{ fontSize: '0.7rem', padding: '4px 8px' }} onClick={() => setLoadoutDrawerOpen(true)}>
+                      LOADOUTS ▸
+                    </button>
+                  )}
                 </h3>
                 
                 <div className="label" style={{ marginTop: 'var(--space-sm)' }}>MARKET</div>
@@ -522,25 +681,45 @@ export default function DrydockView() {
                 )}
               </div>
 
-              {/* Right Pane: Active Loadout */}
-              <div style={{ width: '400px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 'var(--space-md)', overflowY: 'auto', borderLeft: '1px solid var(--color-border)', paddingLeft: 'var(--space-lg)' }}>
-                <h3 style={{ margin: 0, color: 'var(--color-text-primary)', position: 'sticky', top: 0, background: '#080a0f', zIndex: 1, paddingBottom: 'var(--space-sm)', borderBottom: '1px solid var(--color-border)' }}>
-                  ACTIVE LOADOUTS
-                </h3>
+              {/* Right Pane / Drawer: Active Loadout */}
+              <div style={{
+                ...(isPhone ? {
+                  position: 'absolute', right: 0, top: 0, bottom: 0, width: '350px',
+                  background: '#080a0f', zIndex: 50,
+                  boxShadow: '-4px 0 20px rgba(0,0,0,0.8)',
+                  borderLeft: '1px solid var(--color-holo-cyan)',
+                  transform: loadoutDrawerOpen ? 'translateX(0)' : 'translateX(100%)',
+                  transition: 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)',
+                } : {
+                  width: '400px', flexShrink: 0, borderLeft: '1px solid var(--color-border)', paddingLeft: 'var(--space-lg)'
+                }),
+                display: 'flex', flexDirection: 'column', overflowY: 'auto'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, background: '#080a0f', zIndex: 1, padding: isPhone ? 'var(--space-md)' : '0 0 var(--space-sm) 0', borderBottom: '1px solid var(--color-border)' }}>
+                  <h3 style={{ margin: 0, color: 'var(--color-text-primary)' }}>
+                    ACTIVE LOADOUTS
+                  </h3>
+                  {isPhone && (
+                    <button className="btn btn--outline" style={{ padding: '2px 8px', fontSize: '0.7rem' }} onClick={() => setLoadoutDrawerOpen(false)}>
+                      CLOSE
+                    </button>
+                  )}
+                </div>
                 
-                {selectedItem ? (
-                  <div style={{ padding: 'var(--space-sm)', background: 'rgba(0,204,255,0.1)', border: '1px solid var(--color-holo-cyan)', borderRadius: '4px', fontSize: '0.85rem', color: 'var(--color-holo-cyan)' }}>
-                    Click an empty or filled slot below to equip the selected item.
-                  </div>
-                ) : (
-                  <div style={{ padding: 'var(--space-sm)', color: 'var(--color-text-dim)', fontSize: '0.85rem' }}>
-                    Select an item from the Market or Stash to equip it, or click a filled slot below to unequip it.
-                  </div>
-                )}
+                <div style={{ padding: isPhone ? 'var(--space-md)' : 'var(--space-md) 0', display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+                  {selectedItem ? (
+                    <div style={{ padding: 'var(--space-sm)', background: 'rgba(0,204,255,0.1)', border: '1px solid var(--color-holo-cyan)', borderRadius: '4px', fontSize: '0.85rem', color: 'var(--color-holo-cyan)' }}>
+                      Click an empty or filled slot below to equip the selected item.
+                    </div>
+                  ) : (
+                    <div style={{ padding: 'var(--space-sm)', color: 'var(--color-text-dim)', fontSize: '0.85rem' }}>
+                      Select an item from the Market or Stash to equip it, or click a filled slot below to unequip it.
+                    </div>
+                  )}
 
-                {persistedShips.map(ship => {
-                  const chassis = SHIP_CHASSIS.find(c => c.id === ship.chassisId);
-                  if (!chassis) return null;
+                  {persistedShips.map(ship => {
+                    const chassis = SHIP_CHASSIS.find(c => c.id === ship.chassisId);
+                    if (!chassis) return null;
 
                   return (
                     <div key={ship.id} className="panel panel--raised" style={{ padding: 'var(--space-md)' }}>
@@ -656,6 +835,7 @@ export default function DrydockView() {
                     </div>
                   );
                 })}
+                </div> {/* Close inner padded container */}
               </div>
             </div>
           )}

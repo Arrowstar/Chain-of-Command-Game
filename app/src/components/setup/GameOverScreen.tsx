@@ -2,6 +2,7 @@ import React from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useCampaignStore } from '../../store/useCampaignStore';
 import { motion } from 'framer-motion';
+import { useViewport } from '../../utils/useViewport';
 
 interface GameOverScreenProps {
   onReturn?: () => void;
@@ -15,6 +16,9 @@ export default function GameOverScreen({ onReturn }: GameOverScreenProps) {
   const gameOverReason = useGameStore(s => s.gameOverReason);
   const log = useGameStore(s => s.log);
   
+  const { isPhone, isTablet } = useViewport();
+  const isMobile = isPhone || isTablet;
+  
   const earnedFF = fleetFavor - startingFleetFavor;
 
   return (
@@ -23,7 +27,9 @@ export default function GameOverScreen({ onReturn }: GameOverScreenProps) {
       background: 'var(--color-bg-deep)',
       display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
-      gap: 'var(--space-lg)'
+      gap: 'var(--space-lg)',
+      overflowY: 'auto',
+      padding: isMobile ? 'var(--space-md) 0' : 0
     }}>
       <motion.div
         initial={{ scale: 0, opacity: 0 }}
@@ -41,7 +47,7 @@ export default function GameOverScreen({ onReturn }: GameOverScreenProps) {
         data-testid="game-over-screen"
       >
         <h1 style={{
-          fontSize: '3rem',
+          fontSize: isMobile ? '2rem' : '3rem',
           color: victory ? 'var(--color-holo-cyan)' : 'var(--color-hostile-red)',
           textShadow: victory ? 'var(--glow-cyan)' : '0 0 20px var(--color-hostile-red)',
           marginBottom: 'var(--space-sm)'
@@ -59,15 +65,20 @@ export default function GameOverScreen({ onReturn }: GameOverScreenProps) {
             : 'The enemy has overwhelmed your ship. All hands lost.')}
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-md)', marginBottom: 'var(--space-lg)' }}>
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', 
+          gap: 'var(--space-md)', 
+          marginBottom: 'var(--space-lg)' 
+        }}>
           <div className="panel panel--raised" style={{ padding: 'var(--space-md)' }}>
             <div className="label">Rounds Survived</div>
-            <div className="mono" style={{ fontSize: '2rem', color: 'var(--color-holo-cyan)' }}>{round}</div>
+            <div className="mono" style={{ fontSize: isMobile ? '1.5rem' : '2rem', color: 'var(--color-holo-cyan)' }}>{round}</div>
           </div>
           <div className="panel panel--raised" style={{ padding: 'var(--space-md)' }}>
             <div className="label">Fleet Favor</div>
             <div className="mono" style={{
-              fontSize: '2rem',
+              fontSize: isMobile ? '1.5rem' : '2rem',
               color: earnedFF >= 0 ? 'var(--color-holo-green)' : 'var(--color-hostile-red)'
             }}>
               {earnedFF >= 0 ? '+' : ''}{earnedFF}

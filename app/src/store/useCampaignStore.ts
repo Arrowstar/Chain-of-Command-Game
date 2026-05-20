@@ -42,6 +42,7 @@ import { getWeaponById } from '../data/weapons';
 import { getSubsystemById } from '../data/subsystems';
 import { useGameStore } from './useGameStore';
 import { TRAUMA_POOL } from '../data/traumaTraits';
+import { SCAR_TEMPLATES } from '../data/scarTemplates';
 
 // ══════════════════════════════════════════════════════════════════
 // Campaign Store (Zustand)
@@ -147,6 +148,7 @@ interface CampaignStore {
 
   // ── Debug Cheats ─────────────────────────────────────────────
   debugAddTrauma: (officerId: string, traumaId: string) => void;
+  debugAddScar: (shipId: string, criticalId: string) => void;
 }
 
 // ─── Initial campaign state factory ──────────────────────────────
@@ -322,6 +324,37 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
       type: 'system',
       message: `⚡ [DEBUG] Added Trauma: ${trauma.name} to officer ${officerId}`,
       outcome: `Cheat function applied: Added ${trauma.name} to officer ${officerId}.`,
+    });
+  },
+
+  debugAddScar: (shipId, criticalId) => {
+    const template = SCAR_TEMPLATES[criticalId];
+    if (!template) {
+      console.warn(`[DEBUG] Scar template not found for critical ID: ${criticalId}`);
+      return;
+    }
+    set(state => {
+      const updatedShips = state.persistedShips.map(s => {
+        if (s.id !== shipId) return s;
+        // Avoid duplicates
+        if (s.scars.some(sc => sc.fromCriticalId === criticalId)) return s;
+        const newScar = {
+          id: `scar-${criticalId}-${Date.now()}`,
+          name: template.name,
+          effect: template.effect,
+          fromCriticalId: criticalId,
+        };
+        return {
+          ...s,
+          scars: [...s.scars, newScar],
+        };
+      });
+      return { persistedShips: updatedShips };
+    });
+    get().pushCampaignLog({
+      type: 'system',
+      message: `⚡ [DEBUG] Applied Ship Scar: ${template.name}`,
+      outcome: `Debug command added ${template.name} to ship ${shipId}.`,
     });
   },
 

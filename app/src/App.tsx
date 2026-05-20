@@ -34,6 +34,7 @@ function App() {
   const setReturnToMenuCallback = useSettingsStore(s => s.setReturnToMenuCallback);
   const isSettingsOpen = useSettingsStore(s => s.isSettingsOpen);
   const endTutorial = useTutorialStore(s => s.endTutorial);
+  const campaignPhase = useCampaignStore(s => s.campaign?.campaignPhase);
   
   // App-level routing state
   const [appMode, setAppMode] = useState<AppMode>('menu');
@@ -119,7 +120,8 @@ function App() {
     // Lock to landscape for all gameplay modes (skirmish, combat, etc.)
     const applyOrientation = async () => {
       try {
-        if (isSettingsOpen || appMode === 'menu' || appMode === 'skirmish-builder' || appMode === 'campaign-builder' || appMode === 'campaign') {
+        const isCampaignMap = appMode === 'campaign' && campaignPhase !== 'drydock';
+        if (gameOver || isSettingsOpen || appMode === 'menu' || appMode === 'skirmish-builder' || appMode === 'campaign-builder' || isCampaignMap) {
           await ScreenOrientation.lock({ orientation: 'portrait' });
         } else {
           await ScreenOrientation.lock({ orientation: 'landscape' });
@@ -130,7 +132,7 @@ function App() {
       }
     };
     applyOrientation();
-  }, [appMode, isSettingsOpen]);
+  }, [appMode, isSettingsOpen, gameOver, campaignPhase]);
 
   const menuModes = ['menu', 'editor', 'skirmish-builder', 'campaign-builder'];
   const isMenuMode = menuModes.includes(appMode);

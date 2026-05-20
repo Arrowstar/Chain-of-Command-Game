@@ -3,6 +3,7 @@ import { describeScarImpact } from '../board/ShipInfoPanel';
 import { useCampaignStore } from '../../store/useCampaignStore';
 import { getEventById } from '../../data/eventNodes';
 import { getTechById } from '../../data/experimentalTech';
+import { useViewport } from '../../utils/useViewport';
 import type { CampaignLogEntry, EventEffect, EventEffectTarget } from '../../types/campaignTypes';
 
 const TYPE_CONFIG: Record<CampaignLogEntry['type'], { icon: string; color: string; label: string }> = {
@@ -508,6 +509,9 @@ export default function CampaignLog() {
   const log = useCampaignStore(s => s.campaignLog);
   const persistedShips = useCampaignStore(s => s.persistedShips);
   const persistedPlayers = useCampaignStore(s => s.persistedPlayers);
+  const { isPhone } = useViewport();
+
+  const isDrydock = campaign?.campaignPhase === 'drydock';
 
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(0);
@@ -535,6 +539,12 @@ export default function CampaignLog() {
     }
   }, [open]);
 
+  useEffect(() => {
+    const handleToggle = () => setOpen(current => !current);
+    window.addEventListener('toggleCampaignLog', handleToggle);
+    return () => window.removeEventListener('toggleCampaignLog', handleToggle);
+  }, []);
+
   if (!campaign) return null;
 
   const grouped = groupBySector(log);
@@ -551,20 +561,22 @@ export default function CampaignLog() {
 
   return (
     <>
-      <div
-        className={`game-log-tab campaign-log-tab ${unread > 0 ? 'has-unread' : ''}`}
-        onClick={() => setOpen(current => !current)}
-        role="button"
-        title="Toggle Campaign Log"
-        aria-label={`Campaign log ${unread > 0 ? `with ${unread} new entries` : ''}`}
-      >
-        {unread > 0 && <span className="game-log-badge">{unread > 99 ? '99+' : unread}</span>}
-        <span className="game-log-tab-icon">{open ? '◂' : '▸'}</span>
-        <span className="game-log-tab-label">Campaign Log</span>
-        <span className="game-log-tab-icon" style={{ fontSize: '0.75rem', opacity: 0.6 }}>
-          {log.length}
-        </span>
-      </div>
+      {!(isPhone && isDrydock) && (
+        <div
+          className={`game-log-tab campaign-log-tab ${unread > 0 ? 'has-unread' : ''}`}
+          onClick={() => setOpen(current => !current)}
+          role="button"
+          title="Toggle Campaign Log"
+          aria-label={`Campaign log ${unread > 0 ? `with ${unread} new entries` : ''}`}
+        >
+          {unread > 0 && <span className="game-log-badge">{unread > 99 ? '99+' : unread}</span>}
+          <span className="game-log-tab-icon">{open ? '◂' : '▸'}</span>
+          <span className="game-log-tab-label">Campaign Log</span>
+          <span className="game-log-tab-icon" style={{ fontSize: '0.75rem', opacity: 0.6 }}>
+            {log.length}
+          </span>
+        </div>
+      )}
 
       <div className={`game-log-panel campaign-log-panel ${open ? 'open' : ''}`} aria-hidden={!open}>
         <div className="game-log-scanline" />

@@ -36,6 +36,7 @@ import { resolveFighterMovement, resolveFighterAttack, buildCarrierFighters } fr
 import { getScenarioById } from '../data/scenarios';
 import { getFleetAssetDefinition } from '../data/fleetAssets';
 import { TRAUMA_POOL } from '../data/traumaTraits';
+import { SCAR_TEMPLATES } from '../data/scarTemplates';
 import type { CombatModifiers, ExperimentalTech } from '../types/campaignTypes';
 import {
   applyHardLightPlating,
@@ -219,6 +220,7 @@ interface GameStore {
   /** DEV ONLY: Instantly destroy all player ships and trigger defeat. */
   debugAutoLose: () => void;
   debugAddTrauma: (officerId: string, traumaId: string) => void;
+  debugAddScar: (shipId: string, criticalId: string) => void;
   selectDeploymentShip: (shipId: string) => void;
   setDeploymentShipPosition: (shipId: string, position: HexCoord) => boolean;
   rotateDeploymentShip: (shipId: string, delta?: 1 | -1) => void;
@@ -5925,6 +5927,33 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return { players: updatedPlayers };
     });
     get().addLog('system', `⚡ [DEBUG] Added Trauma: ${trauma.name} to officer ${officerId}`);
+  },
+
+  debugAddScar: (shipId, criticalId) => {
+    const template = SCAR_TEMPLATES[criticalId];
+    if (!template) {
+      console.warn(`[DEBUG] Scar template not found for critical ID: ${criticalId}`);
+      return;
+    }
+    set(state => {
+      const updatedShips = state.playerShips.map(s => {
+        if (s.id !== shipId) return s;
+        // Avoid duplicates
+        if (s.scars.some(sc => sc.fromCriticalId === criticalId)) return s;
+        const newScar = {
+          id: `scar-${criticalId}-${Date.now()}`,
+          name: template.name,
+          effect: template.effect,
+          fromCriticalId: criticalId,
+        };
+        return {
+          ...s,
+          scars: [...s.scars, newScar],
+        };
+      });
+      return { playerShips: updatedShips };
+    });
+    get().addLog('system', `⚡ [DEBUG] Applied Ship Scar: ${template.name} to ship ${shipId}`);
   },
 
   selectDeploymentShip: (shipId) => {

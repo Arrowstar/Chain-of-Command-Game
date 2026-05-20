@@ -17,6 +17,7 @@ import { useViewport } from '../../utils/useViewport';
 import { fireCombatToast } from '../board/CombatToastContainer';
 import { useTutorialStore } from '../../store/useTutorialStore';
 import TraumaIcon from './TraumaIcon';
+import ScarIcon from './ScarIcon';
 
 interface OfficerStationPanelProps {
   officerState: OfficerState;
@@ -303,7 +304,10 @@ export default function OfficerStationPanel({ officerState, playerId }: OfficerS
                   setActiveTooltip(activeTooltip === tooltipId ? null : tooltipId);
                 }}
               >
-                <span style={{ color: 'var(--color-text-bright)', fontSize: '0.82rem', cursor: 'help' }}>{scar.name}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <ScarIcon scar={scar} size={32} />
+                  <span style={{ color: 'var(--color-text-bright)', fontSize: '0.82rem', cursor: 'help' }}>{scar.name}</span>
+                </div>
                 <span
                   className="mono"
                   style={{

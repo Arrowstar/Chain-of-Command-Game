@@ -6,6 +6,7 @@ import { getCurrentCtDisplayState } from '../../engine/commandTokens';
 import { useViewport } from '../../utils/useViewport';
 import { useState, useRef } from 'react';
 import TouchTooltipPortal from '../TouchTooltipPortal';
+import ScarIcon from './ScarIcon';
 
 export default function CaptainHand({ playerId }: { playerId?: string }) {
   const players = useGameStore(s => s.players);
@@ -189,8 +190,12 @@ export default function CaptainHand({ playerId }: { playerId?: string }) {
                     padding: '3px 8px',
                     cursor: 'help',
                     position: 'relative',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
                   }}
                 >
+                  <ScarIcon scar={scar} size={20} />
                   {meta.shortImpact}
                   {isCoarsePointer && (
                     <TouchTooltipPortal show={isSelected} anchorRef={{ current: scarRefs.current[scar.id] }}>

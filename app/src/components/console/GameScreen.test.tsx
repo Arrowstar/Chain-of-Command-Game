@@ -6,6 +6,8 @@ import { useGameStore } from '../../store/useGameStore';
 import { useUIStore } from '../../store/useUIStore';
 import * as useViewportModule from '../../utils/useViewport';
 
+import { useTutorialStore } from '../../store/useTutorialStore';
+
 const useViewportSpy = vi.spyOn(useViewportModule, 'useViewport');
 
 vi.mock('../board/HexMap', () => ({
@@ -22,6 +24,8 @@ vi.mock('./ExecutionPanel', () => ({
 
 describe('GameScreen', () => {
   beforeEach(() => {
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
+    useTutorialStore.setState({ isActive: false, currentStep: 0, steps: [] });
     useViewportSpy.mockReturnValue({ isTablet: false, isCoarsePointer: false } as any);
     useUIStore.getState().resetUI();
     useGameStore.setState({
@@ -271,4 +275,32 @@ describe('GameScreen', () => {
     // Should switch to map
     expect(mapTab.className).toContain('active');
   });
+
+  it('opens and closes the dev menu on mobile via 5-finger tap', () => {
+    render(<GameScreen />);
+
+    // DEV menu should not be visible initially
+    expect(screen.queryByTitle(/toggle debug tools/i)).not.toBeInTheDocument();
+
+    // Trigger a touchstart event with 5 touch points
+    act(() => {
+      const touchEvent = new Event('touchstart') as any;
+      touchEvent.touches = [{}, {}, {}, {}, {}];
+      window.dispatchEvent(touchEvent);
+    });
+
+    // Dev menu trigger button should now be visible
+    expect(screen.getByTitle(/toggle debug tools/i)).toBeInTheDocument();
+
+    // Trigger it again to hide it
+    act(() => {
+      const touchEvent = new Event('touchstart') as any;
+      touchEvent.touches = [{}, {}, {}, {}, {}];
+      window.dispatchEvent(touchEvent);
+    });
+
+    // Should be hidden again
+    expect(screen.queryByTitle(/toggle debug tools/i)).not.toBeInTheDocument();
+  });
 });
+

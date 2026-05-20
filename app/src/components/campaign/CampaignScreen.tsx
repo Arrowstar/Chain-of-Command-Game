@@ -14,6 +14,7 @@ import { useViewport } from '../../utils/useViewport';
 import { motion } from 'framer-motion';
 import { getOfficerById } from '../../data/officers';
 import { TRAUMA_POOL } from '../../data/traumaTraits';
+import { SCAR_TEMPLATES } from '../../data/scarTemplates';
 
 interface Props {
   onStartCombat: () => void;
@@ -197,10 +198,14 @@ function CampaignDebugMenu() {
   const [open, setOpen] = React.useState(false);
 
   const persistedPlayers = useCampaignStore(s => s.persistedPlayers);
+  const persistedShips = useCampaignStore(s => s.persistedShips);
   const debugAddTrauma = useCampaignStore(s => s.debugAddTrauma);
+  const debugAddScar = useCampaignStore(s => s.debugAddScar);
 
   const [selectedOfficerId, setSelectedOfficerId] = React.useState('');
   const [selectedTraumaId, setSelectedTraumaId] = React.useState(TRAUMA_POOL[0]?.id || '');
+  const [selectedShipId, setSelectedShipId] = React.useState('');
+  const [selectedScarId, setSelectedScarId] = React.useState(Object.keys(SCAR_TEMPLATES)[0] || '');
 
   // Flatten officers from all players
   const allOfficers = persistedPlayers.flatMap(p => p.officers.map(o => {
@@ -218,8 +223,18 @@ function CampaignDebugMenu() {
         setVisible(v => !v);
       }
     };
+    // 5-finger tap to open dev menu on touch devices (no keyboard available)
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length >= 5) {
+        setVisible(v => !v);
+      }
+    };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('touchstart', handleTouchStart);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('touchstart', handleTouchStart);
+    };
   }, []);
 
   // Initialize selected officer when loaded
@@ -228,6 +243,13 @@ function CampaignDebugMenu() {
       setSelectedOfficerId(allOfficers[0].officerId);
     }
   }, [allOfficers, selectedOfficerId]);
+
+  // Initialize selected ship when loaded
+  React.useEffect(() => {
+    if (persistedShips.length > 0 && !selectedShipId) {
+      setSelectedShipId(persistedShips[0].id);
+    }
+  }, [persistedShips, selectedShipId]);
 
   if (!visible) return null;
 
@@ -269,6 +291,8 @@ function CampaignDebugMenu() {
           flexDirection: 'column',
           gap: '6px',
           minWidth: '180px',
+          maxHeight: 'calc(100vh - 50px)',
+          overflowY: 'auto',
         }}>
           <div style={{ fontSize: '0.6rem', color: 'rgba(255,200,0,0.5)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>
             DEBUG TOOLS
@@ -285,6 +309,17 @@ function CampaignDebugMenu() {
           >
             Auto-Win Campaign
           </button>
+
+          <div style={{ borderTop: '1px solid rgba(255,200,0,0.2)', marginTop: 4, marginBottom: 4 }} />
+          <div style={{ fontSize: '0.6rem', color: 'rgba(255,200,0,0.5)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>
+            RESOURCES
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+            <button className="btn" style={{ fontSize: '0.65rem', padding: '4px' }} onClick={() => useCampaignStore.setState(s => ({ campaign: s.campaign ? { ...s.campaign, requisitionPoints: Math.max(0, s.campaign.requisitionPoints + 50) } : null }))}>+50 RP</button>
+            <button className="btn" style={{ fontSize: '0.65rem', padding: '4px' }} onClick={() => useCampaignStore.setState(s => ({ campaign: s.campaign ? { ...s.campaign, requisitionPoints: Math.max(0, s.campaign.requisitionPoints - 50) } : null }))}>-50 RP</button>
+            <button className="btn" style={{ fontSize: '0.65rem', padding: '4px' }} onClick={() => useCampaignStore.setState(s => ({ campaign: s.campaign ? { ...s.campaign, fleetFavor: Math.max(0, s.campaign.fleetFavor + 5) } : null }))}>+5 FF</button>
+            <button className="btn" style={{ fontSize: '0.65rem', padding: '4px' }} onClick={() => useCampaignStore.setState(s => ({ campaign: s.campaign ? { ...s.campaign, fleetFavor: Math.max(0, s.campaign.fleetFavor - 5) } : null }))}>-5 FF</button>
+          </div>
 
           <div style={{ borderTop: '1px solid rgba(255,200,0,0.2)', marginTop: 4, marginBottom: 4 }} />
           <div style={{ fontSize: '0.6rem', color: 'rgba(255,200,0,0.5)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>
@@ -328,6 +363,50 @@ function CampaignDebugMenu() {
             </>
           ) : (
             <div style={{ fontSize: '0.65rem', color: 'var(--color-text-secondary)' }}>No officers found.</div>
+          )}
+
+          <div style={{ borderTop: '1px solid rgba(255,200,0,0.2)', marginTop: 4, marginBottom: 4 }} />
+          <div style={{ fontSize: '0.6rem', color: 'rgba(255,200,0,0.5)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>
+            ADD SHIP SCAR
+          </div>
+          {persistedShips.length > 0 ? (
+            <>
+              <select
+                value={selectedShipId}
+                onChange={e => setSelectedShipId(e.target.value)}
+                style={{ fontSize: '0.7rem', padding: '4px', background: 'var(--color-bg-deep)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border)' }}
+              >
+                {persistedShips.map(s => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={selectedScarId}
+                onChange={e => setSelectedScarId(e.target.value)}
+                style={{ fontSize: '0.7rem', padding: '4px', background: 'var(--color-bg-deep)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border)' }}
+              >
+                {Object.entries(SCAR_TEMPLATES).map(([id, t]) => (
+                  <option key={id} value={id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                className="btn btn--danger"
+                style={{ fontSize: '0.72rem', padding: '4px 10px', marginTop: '2px' }}
+                onClick={() => {
+                  if (selectedShipId && selectedScarId) {
+                    debugAddScar(selectedShipId, selectedScarId);
+                  }
+                }}
+              >
+                Apply Scar
+              </button>
+            </>
+          ) : (
+            <div style={{ fontSize: '0.65rem', color: 'var(--color-text-secondary)' }}>No ships found.</div>
           )}
         </div>
       )}
