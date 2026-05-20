@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { CampaignSaveManager } from '../utils/CampaignSaveManager';
 import type { SaveSlotMeta } from '../utils/CampaignSaveManager';
 import { MAX_SAVE_SLOTS } from '../utils/CampaignSaveManager';
+import { SmartTooltip } from './TouchTooltipPortal';
 
 // ─── Types ────────────────────────────────────────────────────────
 
@@ -76,7 +77,9 @@ function SlotRow({
       data-testid={`save-slot-item-${meta.id}`}
     >
       <div className="save-slot-item-main">
-        <div className="save-slot-item-name" title={meta.name}>{meta.name}</div>
+        <SmartTooltip content={meta.name} as="div" className="save-slot-item-name">
+          {meta.name}
+        </SmartTooltip>
         <div className="save-slot-item-meta">
           <span className="save-slot-badge">Sector {meta.sector}</span>
           <span className="save-slot-badge save-slot-badge--difficulty">{difficultyLabel(meta.difficulty)}</span>
@@ -111,31 +114,34 @@ function SlotRow({
         ) : (
           <>
             {mode === 'save' && (
-              <button
-                className="btn save-slot-btn save-slot-btn--overwrite"
-                onClick={onOverwrite}
-                data-testid={`overwrite-slot-${meta.id}`}
-                title="Overwrite this save"
-              >
-                OVERWRITE
-              </button>
+              <SmartTooltip content="Overwrite this save" as="button">
+                <button
+                  className="btn save-slot-btn save-slot-btn--overwrite"
+                  onClick={onOverwrite}
+                  data-testid={`overwrite-slot-${meta.id}`}
+                >
+                  OVERWRITE
+                </button>
+              </SmartTooltip>
             )}
-            <button
-              className="btn save-slot-btn save-slot-btn--export"
-              onClick={onExport}
-              data-testid={`export-slot-${meta.id}`}
-              title="Export to disk"
-            >
-              ↓
-            </button>
-            <button
-              className="btn save-slot-btn save-slot-btn--danger"
-              onClick={onDeleteRequest}
-              data-testid={`delete-slot-${meta.id}`}
-              title="Delete this save"
-            >
-              ✕
-            </button>
+            <SmartTooltip content="Export to disk" as="button">
+              <button
+                className="btn save-slot-btn save-slot-btn--export"
+                onClick={onExport}
+                data-testid={`export-slot-${meta.id}`}
+              >
+                ↓
+              </button>
+            </SmartTooltip>
+            <SmartTooltip content="Delete this save" as="button">
+              <button
+                className="btn save-slot-btn save-slot-btn--danger"
+                onClick={onDeleteRequest}
+                data-testid={`delete-slot-${meta.id}`}
+              >
+                ✕
+              </button>
+            </SmartTooltip>
           </>
         )}
       </div>

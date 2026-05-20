@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useCampaignStore } from '../../store/useCampaignStore';
 import { useViewport } from '../../utils/useViewport';
 import { getHullPatchCost, PSYCH_EVAL_COST, DEEP_REPAIR_COST, OFFICER_TRAINING_COSTS } from '../../data/drydock';
@@ -11,6 +11,7 @@ import { getScarTooltip } from '../console/scarStatus';
 import ArmoryItemCard from './ArmoryItemCard';
 import TraumaIcon from '../console/TraumaIcon';
 import ScarIcon from '../console/ScarIcon';
+import TouchTooltipPortal from '../TouchTooltipPortal';
 import type { CampaignState } from '../../types/campaignTypes';
 import type { WeaponModule, Subsystem, PlayerState, OfficerState } from '../../types/game';
 
@@ -21,6 +22,47 @@ interface OfficerDrydockCardProps {
   hasFreeRepair: boolean;
   purchasePsychEval: (officerId: string, shipId: string, traumaId: string) => void;
   purchaseOfficerTraining: (officerId: string, shipId: string) => void;
+  activeTooltip: string | null;
+  setActiveTooltip: (id: string | null) => void;
+  isCoarsePointer: boolean;
+}
+
+function DrydockTooltip({ 
+  content, 
+  children, 
+  id, 
+  activeTooltip, 
+  setActiveTooltip, 
+  isCoarse,
+  as: Component = 'span',
+  ...props
+}: any) {
+  const isSelected = activeTooltip === id;
+  const ref = useRef<HTMLElement>(null);
+  return (
+    <>
+      <Component
+        ref={ref}
+        title={isCoarse ? undefined : content}
+        onClick={(e: React.MouseEvent) => {
+          if (isCoarse) {
+            e.stopPropagation();
+            setActiveTooltip(isSelected ? null : id);
+          }
+          if (props.onClick) props.onClick(e);
+        }}
+        {...props}
+        style={{ cursor: isCoarse ? 'pointer' : (props.style?.cursor || 'help'), ...props.style }}
+      >
+        {children}
+      </Component>
+      {isCoarse && (
+        <TouchTooltipPortal show={isSelected} anchorRef={ref}>
+          {content}
+        </TouchTooltipPortal>
+      )}
+    </>
+  );
 }
 
 function OfficerDrydockCard({
@@ -29,7 +71,10 @@ function OfficerDrydockCard({
   campaign,
   hasFreeRepair,
   purchasePsychEval,
-  purchaseOfficerTraining
+  purchaseOfficerTraining,
+  activeTooltip,
+  setActiveTooltip,
+  isCoarsePointer
 }: OfficerDrydockCardProps) {
   const [activeTraumaIdx, setActiveTraumaIdx] = useState(0);
 
@@ -60,7 +105,16 @@ function OfficerDrydockCard({
               const currentIndex = tiers.indexOf(officerState.currentTier);
               const isFilled = i <= currentIndex;
               return (
-                <div key={tier} title={tier.toUpperCase()} style={{ width: '12px', height: '12px', borderRadius: '50%', background: isFilled ? 'var(--color-holo-cyan)' : 'var(--color-bg-raised)', border: `1px solid ${isFilled ? 'var(--color-holo-cyan)' : 'var(--color-border)'}` }} />
+                <DrydockTooltip
+                  key={tier}
+                  as="div"
+                  id={`tier-${officerState.officerId}-${tier}`}
+                  content={tier.toUpperCase()}
+                  activeTooltip={activeTooltip}
+                  setActiveTooltip={setActiveTooltip}
+                  isCoarse={isCoarsePointer}
+                  style={{ width: '12px', height: '12px', borderRadius: '50%', background: isFilled ? 'var(--color-holo-cyan)' : 'var(--color-bg-raised)', border: `1px solid ${isFilled ? 'var(--color-holo-cyan)' : 'var(--color-border)'}` }}
+                />
               );
             })}
           </div>
@@ -164,6 +218,7 @@ export default function DrydockView() {
   const [activeTab, setActiveTab] = useState<Tab>('ships');
   const [selectedItem, setSelectedItem] = useState<SelectedItem>(null);
   const [loadoutDrawerOpen, setLoadoutDrawerOpen] = useState(false);
+  const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
 
   useEffect(() => {
     if (selectedItem) setLoadoutDrawerOpen(true);
@@ -228,7 +283,10 @@ export default function DrydockView() {
   };
 
   return (
-    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', background: '#080a0f' }}>
+    <div 
+      style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', background: '#080a0f' }}
+      onClick={() => isCoarsePointer && setActiveTooltip(null)}
+    >
 
       {/* ── ROTATE DEVICE OVERLAY ───────────────────────────────────── */}
       {showRotatePrompt && (
@@ -267,9 +325,14 @@ export default function DrydockView() {
           overflowX: 'hidden',
         }}>
           {TABS.map(t => (
-            <button
+            <DrydockTooltip
               key={t.id}
-              title={t.label}
+              as="button"
+              id={`tab-${t.id}`}
+              content={t.label}
+              activeTooltip={activeTooltip}
+              setActiveTooltip={setActiveTooltip}
+              isCoarse={isCoarsePointer}
               onClick={() => { setActiveTab(t.id); setSelectedItem(null); }}
               style={{
                 width: '48px',
@@ -295,11 +358,16 @@ export default function DrydockView() {
               }}>
                 {TAB_SHORT[t.id]}
               </span>
-            </button>
+            </DrydockTooltip>
           ))}
 
-          <button
-            title="Campaign Log"
+          <DrydockTooltip
+            as="button"
+            id="tab-log"
+            content="Campaign Log"
+            activeTooltip={activeTooltip}
+            setActiveTooltip={setActiveTooltip}
+            isCoarse={isCoarsePointer}
             onClick={() => window.dispatchEvent(new Event('toggleCampaignLog'))}
             style={{
               width: '48px',
@@ -327,12 +395,17 @@ export default function DrydockView() {
             }}>
               LOG
             </span>
-          </button>
+          </DrydockTooltip>
 
           <div style={{ flex: 1 }} />
 
-          <button
-            title="Conclude Drydock"
+          <DrydockTooltip
+            as="button"
+            id="tab-conclude"
+            content="Conclude Drydock"
+            activeTooltip={activeTooltip}
+            setActiveTooltip={setActiveTooltip}
+            isCoarse={isCoarsePointer}
             className="btn drydock-tab-btn"
             style={{
               width: '48px',
@@ -351,7 +424,7 @@ export default function DrydockView() {
           >
             <span style={{ fontSize: '1.1rem' }}>✓</span>
             <span style={{ fontSize: '0.45rem', letterSpacing: '0.5px' }}>DONE</span>
-          </button>
+          </DrydockTooltip>
         </div>
       ) : (
         // ── FULL DESKTOP SIDEBAR ─────────────────────────────────────
@@ -458,7 +531,17 @@ export default function DrydockView() {
 
                       {/* Scars */}
                       {ship.scars.length > 0 ? ship.scars.map(scar => (
-                        <div key={scar.id} className="panel" title={getScarTooltip(scar)} style={{ flex: '1 1 240px', ...panelStyle, borderLeft: '4px solid var(--color-alert-amber)', borderRadius: '0 4px 4px 0' }}>
+                        <DrydockTooltip
+                          key={scar.id}
+                          as="div"
+                          id={`scar-${scar.id}`}
+                          content={getScarTooltip(scar)}
+                          activeTooltip={activeTooltip}
+                          setActiveTooltip={setActiveTooltip}
+                          isCoarse={isCoarsePointer}
+                          className="panel" 
+                          style={{ flex: '1 1 240px', ...panelStyle, borderLeft: '4px solid var(--color-alert-amber)', borderRadius: '0 4px 4px 0', cursor: isCoarsePointer ? 'pointer' : 'default' }}
+                        >
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <ScarIcon scar={scar} size={32} />
                             <div>
@@ -474,7 +557,7 @@ export default function DrydockView() {
                           >
                             {hasFreeRepair ? 'USE FREE REPAIR' : campaign.requisitionPoints < DEEP_REPAIR_COST ? `INSUFFICIENT RP (${DEEP_REPAIR_COST})` : `DEEP REPAIR (${DEEP_REPAIR_COST} RP)`}
                           </button>
-                        </div>
+                        </DrydockTooltip>
                       )) : (
                         <div className="panel" style={{ flex: '1 1 240px', padding: 'var(--space-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-dim)' }}>
                           No Ship Scars
@@ -507,6 +590,9 @@ export default function DrydockView() {
                           hasFreeRepair={hasFreeRepair}
                           purchasePsychEval={purchasePsychEval}
                           purchaseOfficerTraining={purchaseOfficerTraining}
+                          activeTooltip={activeTooltip}
+                          setActiveTooltip={setActiveTooltip}
+                          isCoarsePointer={isCoarsePointer}
                         />
                       ))}
                     </div>
@@ -530,12 +616,12 @@ export default function DrydockView() {
                         <h3 style={{ margin: '0 0 var(--space-xs) 0', color: 'var(--color-text-primary)' }}>{ship.name}</h3>
                         <div style={{ ...dimText }}>
                           Current: <strong style={{ color: 'var(--color-holo-cyan)' }}>{currentChassis?.className ?? ship.chassisId}</strong>
-                          <br/><span title="Total damage the ship can take before being destroyed." style={{ cursor: 'help' }}>Hull {currentChassis?.baseHull}</span> · <span title="Damage absorbed per sector before Hull is damaged." style={{ cursor: 'help' }}>Shields {currentChassis?.shieldsPerSector}/sector</span>
-                          <br/><span title="Maximum hexes this ship can move in a single turn." style={{ cursor: 'help' }}>Speed {currentChassis?.maxSpeed}</span> · <span title="Base Target Number (TN) that enemies must roll to hit this ship." style={{ cursor: 'help' }}>Evasion {currentChassis?.baseEvasion}</span> · <span title="Armor Die rolled to mitigate hull damage." style={{ cursor: 'help' }}>Armor {currentChassis?.armorDie?.toUpperCase()}</span>
+                          <br/><DrydockTooltip id={`hull-${ship.id}`} content="Total damage the ship can take before being destroyed." activeTooltip={activeTooltip} setActiveTooltip={setActiveTooltip} isCoarse={isCoarsePointer} style={{ cursor: 'help' }}>Hull {currentChassis?.baseHull}</DrydockTooltip> · <DrydockTooltip id={`shld-${ship.id}`} content="Damage absorbed per sector before Hull is damaged." activeTooltip={activeTooltip} setActiveTooltip={setActiveTooltip} isCoarse={isCoarsePointer} style={{ cursor: 'help' }}>Shields {currentChassis?.shieldsPerSector}/sector</DrydockTooltip>
+                          <br/><DrydockTooltip id={`spd-${ship.id}`} content="Maximum hexes this ship can move in a single turn." activeTooltip={activeTooltip} setActiveTooltip={setActiveTooltip} isCoarse={isCoarsePointer} style={{ cursor: 'help' }}>Speed {currentChassis?.maxSpeed}</DrydockTooltip> · <DrydockTooltip id={`eva-${ship.id}`} content="Base Target Number (TN) that enemies must roll to hit this ship." activeTooltip={activeTooltip} setActiveTooltip={setActiveTooltip} isCoarse={isCoarsePointer} style={{ cursor: 'help' }}>Evasion {currentChassis?.baseEvasion}</DrydockTooltip> · <DrydockTooltip id={`arm-${ship.id}`} content="Armor Die rolled to mitigate hull damage." activeTooltip={activeTooltip} setActiveTooltip={setActiveTooltip} isCoarse={isCoarsePointer} style={{ cursor: 'help' }}>Armor {currentChassis?.armorDie?.toUpperCase()}</DrydockTooltip>
                           <br/>{currentChassis?.weaponSlots}W / {currentChassis?.internalSlots}I slots
                           {currentChassis && (
                             <div>
-                              Trait: <strong title={currentChassis.uniqueTraitEffect} style={{ color: 'var(--color-holo-cyan)', cursor: 'help', borderBottom: '1px dotted var(--color-holo-cyan)' }}>{currentChassis.uniqueTraitName}</strong>
+                              Trait: <DrydockTooltip as="strong" id={`trait-${ship.id}`} content={currentChassis.uniqueTraitEffect} activeTooltip={activeTooltip} setActiveTooltip={setActiveTooltip} isCoarse={isCoarsePointer} style={{ color: 'var(--color-holo-cyan)', cursor: 'help', borderBottom: '1px dotted var(--color-holo-cyan)' }}>{currentChassis.uniqueTraitName}</DrydockTooltip>
                             </div>
                           )}
                         </div>
@@ -555,13 +641,13 @@ export default function DrydockView() {
                             <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                               <div style={{ fontWeight: 'bold', color: 'var(--color-text-primary)', fontSize: '0.9rem' }}>{chassis.className}</div>
                               <div style={{ ...dimText, fontSize: '0.75rem' }}>
-                                <span title="Total damage the ship can take before being destroyed." style={{ cursor: 'help' }}>Hull {chassis.baseHull}</span> · <span title="Damage absorbed per sector before Hull is damaged." style={{ cursor: 'help' }}>Shld {chassis.shieldsPerSector}</span> · <span title="Maximum hexes this ship can move in a single turn." style={{ cursor: 'help' }}>Spd {chassis.maxSpeed}</span> · <span title="Base Target Number (TN) that enemies must roll to hit this ship." style={{ cursor: 'help' }}>Eva {chassis.baseEvasion}</span> · <span title="Armor Die rolled to mitigate hull damage." style={{ cursor: 'help' }}>Arm {chassis.armorDie?.toUpperCase()}</span>
+                                <DrydockTooltip id={`c-hull-${chassis.id}`} content="Total damage the ship can take before being destroyed." activeTooltip={activeTooltip} setActiveTooltip={setActiveTooltip} isCoarse={isCoarsePointer} style={{ cursor: 'help' }}>Hull {chassis.baseHull}</DrydockTooltip> · <DrydockTooltip id={`c-shld-${chassis.id}`} content="Damage absorbed per sector before Hull is damaged." activeTooltip={activeTooltip} setActiveTooltip={setActiveTooltip} isCoarse={isCoarsePointer} style={{ cursor: 'help' }}>Shld {chassis.shieldsPerSector}</DrydockTooltip> · <DrydockTooltip id={`c-spd-${chassis.id}`} content="Maximum hexes this ship can move in a single turn." activeTooltip={activeTooltip} setActiveTooltip={setActiveTooltip} isCoarse={isCoarsePointer} style={{ cursor: 'help' }}>Spd {chassis.maxSpeed}</DrydockTooltip> · <DrydockTooltip id={`c-eva-${chassis.id}`} content="Base Target Number (TN) that enemies must roll to hit this ship." activeTooltip={activeTooltip} setActiveTooltip={setActiveTooltip} isCoarse={isCoarsePointer} style={{ cursor: 'help' }}>Eva {chassis.baseEvasion}</DrydockTooltip> · <DrydockTooltip id={`c-arm-${chassis.id}`} content="Armor Die rolled to mitigate hull damage." activeTooltip={activeTooltip} setActiveTooltip={setActiveTooltip} isCoarse={isCoarsePointer} style={{ cursor: 'help' }}>Arm {chassis.armorDie?.toUpperCase()}</DrydockTooltip>
                                 <br />
                                 {chassis.weaponSlots}W / {chassis.internalSlots}I slots
                               </div>
-                              <div title={chassis.uniqueTraitEffect} style={{ fontSize: '0.7rem', color: 'var(--color-holo-cyan)', fontStyle: 'italic', marginTop: '4px', flex: 1, cursor: 'help' }}>
+                              <DrydockTooltip as="div" id={`c-trait-${chassis.id}`} content={chassis.uniqueTraitEffect} activeTooltip={activeTooltip} setActiveTooltip={setActiveTooltip} isCoarse={isCoarsePointer} style={{ fontSize: '0.7rem', color: 'var(--color-holo-cyan)', fontStyle: 'italic', marginTop: '4px', flex: 1, cursor: 'help' }}>
                                 ✦ {chassis.uniqueTraitName}
-                              </div>
+                              </DrydockTooltip>
                               {hasExcess && (
                                 <div style={{ fontSize: '0.7rem', color: 'var(--color-alert-amber)', marginTop: '4px' }}>
                                   ⚠ {excessW + excessS} item(s) will stash

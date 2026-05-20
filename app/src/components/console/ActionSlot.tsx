@@ -3,7 +3,7 @@ import { useDroppable } from '@dnd-kit/core';
 import type { ActionDefinition } from '../../types/game';
 import { useTokenSelectionStore } from '../../store/useTokenSelectionStore';
 import { useViewport } from '../../utils/useViewport';
-import TouchTooltipPortal from '../TouchTooltipPortal';
+import { SmartTooltip } from '../TouchTooltipPortal';
 
 interface ActionSlotProps {
   action: ActionDefinition;
@@ -39,10 +39,6 @@ export default function ActionSlot({
   const selectedTokenId = useTokenSelectionStore(s => s.selectedTokenId);
   const clearSelection = useTokenSelectionStore(s => s.clearSelection);
   const { isCoarsePointer } = useViewport();
-  const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
-  
-  const costRef = React.useRef<HTMLDivElement>(null);
-  const unassignRefs = React.useRef<(HTMLButtonElement | null)[]>([]);
 
   const isActive = isOver && !disabled;
   // On touch, the slot is always tap-ready unless disabled. On desktop, requires a selected token.
@@ -72,7 +68,6 @@ export default function ActionSlot({
       ref={setNodeRef}
       onClick={(e) => {
         if (isTapReady) handleDropZoneClick();
-        if (isCoarsePointer) setActiveTooltip(null);
       }}
       style={{
         opacity: disabled ? 0.5 : 1,
@@ -104,24 +99,13 @@ export default function ActionSlot({
           <div>{action.ctCost} CT</div>
           <div>{action.stressCost} STRESS</div>
           {costNote ? (
-            <div
-              ref={costRef}
-              title={isCoarsePointer ? undefined : costNote}
-              onClick={(e) => {
-                if (isCoarsePointer) {
-                  e.stopPropagation();
-                  setActiveTooltip(activeTooltip === 'cost' ? null : 'cost');
-                }
-              }}
-              style={{ color: 'var(--color-holo-cyan)', fontSize: '0.62rem', marginTop: '2px', cursor: 'help', position: 'relative' }}
-            >
-              {costNote}
-              {isCoarsePointer && (
-                <TouchTooltipPortal show={activeTooltip === 'cost'} anchorRef={costRef}>
-                  {costNote}
-                </TouchTooltipPortal>
-              )}
-            </div>
+            <SmartTooltip content={costNote} as="div">
+              <div
+                style={{ color: 'var(--color-holo-cyan)', fontSize: '0.62rem', marginTop: '2px', cursor: 'help', position: 'relative' }}
+              >
+                {costNote}
+              </div>
+            </SmartTooltip>
           ) : null}
         </div>
       </div>
@@ -160,78 +144,65 @@ export default function ActionSlot({
                 {/* Stacked token visuals for this assignment */}
                 <div style={{ position: 'relative', width: `${32 + (action.ctCost - 1) * 6}px`, height: '32px' }}>
                   {Array.from({ length: action.ctCost }).map((_, ctIdx) => (
-                    <div
-                      key={ctIdx}
-                      title={`Assignment ${assignmentIdx + 1}: ${action.stressCost + assignmentIdx} stress`}
-                      style={{
-                        position: 'absolute',
-                        left: `${ctIdx * 6}px`,
-                        top: 0,
-                        width: '32px',
-                        height: '32px',
-                        borderRadius: '50%',
-                        background: 'var(--color-bg-deep)',
-                        border: '2px solid var(--color-alert-amber)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 0 4px var(--color-alert-amber)',
-                        zIndex: ctIdx,
-                      }}
-                    >
-                      <div style={{
-                        width: '14px',
-                        height: '14px',
-                        borderRadius: '50%',
-                        background: 'var(--color-alert-amber)',
-                      }} />
-                    </div>
+                    <SmartTooltip key={ctIdx} content={`Assignment ${assignmentIdx + 1}: ${action.stressCost + assignmentIdx} stress`} as="div">
+                      <div
+                        style={{
+                          position: 'absolute',
+                          left: `${ctIdx * 6}px`,
+                          top: 0,
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '50%',
+                          background: 'var(--color-bg-deep)',
+                          border: '2px solid var(--color-alert-amber)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: '0 0 4px var(--color-alert-amber)',
+                          zIndex: ctIdx,
+                        }}
+                      >
+                        <div style={{
+                          width: '14px',
+                          height: '14px',
+                          borderRadius: '50%',
+                          background: 'var(--color-alert-amber)',
+                        }} />
+                      </div>
+                    </SmartTooltip>
                   ))}
                 </div>
 
                 {/* Unassign button for this specific assignment */}
-                <button
-                  ref={(el) => { unassignRefs.current[assignmentIdx] = el; }}
-                  className="action-slot-unassign-btn"
-                  onClick={(e) => {
-                    if (isCoarsePointer) {
-                      e.stopPropagation();
-                      if (activeTooltip === `unassign-${assignmentIdx}`) {
-                        onUnassign(tokenId);
-                        setActiveTooltip(null);
-                      } else {
-                        setActiveTooltip(`unassign-${assignmentIdx}`);
-                      }
-                    } else {
+                <SmartTooltip content="Remove this assignment" as="button">
+                  <button
+                    className="action-slot-unassign-btn"
+                    onClick={(e) => {
                       e.stopPropagation(); 
                       onUnassign(tokenId);
-                    }
-                  }}
-                  style={{
-                    position: 'absolute',
-                    top: isCoarsePointer ? '-12px' : '-6px',
-                    right: isCoarsePointer ? '-16px' : '-10px',
-                    width: isCoarsePointer ? '32px' : '16px',
-                    height: isCoarsePointer ? '32px' : '16px',
-                    borderRadius: '50%',
-                    background: 'var(--color-hostile-red)',
-                    color: 'white',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontSize: isCoarsePointer ? '20px' : '10px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 10,
-                  }}
-                  title={isCoarsePointer ? undefined : "Remove this assignment"}
-                  data-testid={`unassign-btn-${action.id}-${assignmentIdx}`}
-                >
-                  ×
-                  <TouchTooltipPortal show={isCoarsePointer && activeTooltip === `unassign-${assignmentIdx}`} anchorRef={{ current: unassignRefs.current[assignmentIdx] }}>
-                    Tap again to confirm removal
-                  </TouchTooltipPortal>
-                </button>
+                    }}
+                    style={{
+                      position: 'absolute',
+                      top: isCoarsePointer ? '-12px' : '-6px',
+                      right: isCoarsePointer ? '-16px' : '-10px',
+                      width: isCoarsePointer ? '32px' : '16px',
+                      height: isCoarsePointer ? '32px' : '16px',
+                      borderRadius: '50%',
+                      background: 'var(--color-hostile-red)',
+                      color: 'white',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: isCoarsePointer ? '20px' : '10px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      zIndex: 10,
+                    }}
+                    data-testid={`unassign-btn-${action.id}-${assignmentIdx}`}
+                  >
+                    ×
+                  </button>
+                </SmartTooltip>
               </div>
             ))}
 

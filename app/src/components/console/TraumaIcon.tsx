@@ -1,6 +1,7 @@
 import React from 'react';
 import type { TraumaEffect } from '../../types/game';
 import { TRAUMA_POOL } from '../../data/traumaTraits';
+import { SmartTooltip } from '../TouchTooltipPortal';
 
 interface TraumaIconProps {
   trauma: TraumaEffect;
@@ -37,20 +38,21 @@ export default function TraumaIcon({ trauma, size = 64, className = '', style = 
   const bgPosY = (authoritativeTrauma.spritePos.row / 3) * 100;
 
   return (
-    <div
-      className={className}
-      title={trauma.name}
-      style={{
-        width: `${width}px`,
-        height: `${height}px`,
-        backgroundImage: "url('/images/trauma/trauma_traits.png')",
-        backgroundSize: '500% 400%',
-        backgroundPosition: `${bgPosX}% ${bgPosY}%`,
-        backgroundRepeat: 'no-repeat',
-        display: 'inline-block',
-        flexShrink: 0,
-        ...style
-      }}
-    />
+    <SmartTooltip content={trauma.name} as="div">
+      <div
+        className={className}
+        style={{
+          width: `${width}px`,
+          height: `${height}px`,
+          backgroundImage: "url('/images/trauma/trauma_traits.png')",
+          backgroundSize: '500% 400%',
+          backgroundPosition: `${bgPosX}% ${bgPosY}%`,
+          backgroundRepeat: 'no-repeat',
+          display: 'inline-block',
+          flexShrink: 0,
+          ...style
+        }}
+      />
+    </SmartTooltip>
   );
 }

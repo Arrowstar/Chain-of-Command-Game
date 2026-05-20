@@ -26,6 +26,7 @@ import type { QueuedAction, OfficerStation } from '../../types/game';
 import { useViewport } from '../../utils/useViewport';
 import { useBgm } from '../../utils/useBgm';
 import SettingsButton from '../SettingsButton';
+import { SmartTooltip } from '../TouchTooltipPortal';
 import { getStimInjectorBonus } from '../../engine/techEffects';
 import { TRAUMA_POOL } from '../../data/traumaTraits';
 import { SCAR_TEMPLATES } from '../../data/scarTemplates';
@@ -304,25 +305,27 @@ export default function GameScreen() {
                     }}
                   >
                     {hasUnreadEnemyTactic && (
-                      <span
-                        data-testid="enemy-tactic-unread-indicator"
-                        aria-label="New enemy tactic"
-                        title="New enemy tactic"
-                        style={{ display: 'inline-flex', width: '8px', height: '8px', borderRadius: '999px', background: 'var(--color-hostile-red)', boxShadow: '0 0 10px rgba(210, 72, 72, 0.75)', marginRight: '6px', flexShrink: 0 }}
-                      />
+                      <SmartTooltip content="New enemy tactic" as="span">
+                        <span
+                          data-testid="enemy-tactic-unread-indicator"
+                          aria-label="New enemy tactic"
+                          style={{ display: 'inline-flex', width: '8px', height: '8px', borderRadius: '999px', background: 'var(--color-hostile-red)', boxShadow: '0 0 10px rgba(210, 72, 72, 0.75)', marginRight: '6px', flexShrink: 0 }}
+                        />
+                      </SmartTooltip>
                     )}
                     {showEnemyTactic ? 'HIDE TACTIC' : 'TACTIC'}
                   </button>
                   {/* Score counter — campaign only */}
                   {isCampaign && (
-                    <button
-                      className="btn"
-                      style={{ pointerEvents: 'auto', padding: '8px 10px', minHeight: '40px', fontSize: '0.75rem', borderColor: 'rgba(251,191,36,0.4)', background: 'rgba(12, 18, 28, 0.92)', color: '#fbbf24', fontFamily: 'var(--font-mono)' }}
-                      onClick={() => setShowScoreLedger(true)}
-                      title="Fleet Commendation Score — tap to view ledger"
-                    >
-                      ★ {campaignScore.toLocaleString()}
-                    </button>
+                    <SmartTooltip content="Fleet Commendation Score — tap to view ledger" as="button">
+                      <button
+                        className="btn"
+                        style={{ pointerEvents: 'auto', padding: '8px 10px', minHeight: '40px', fontSize: '0.75rem', borderColor: 'rgba(251,191,36,0.4)', background: 'rgba(12, 18, 28, 0.92)', color: '#fbbf24', fontFamily: 'var(--font-mono)' }}
+                        onClick={() => setShowScoreLedger(true)}
+                      >
+                        ★ {campaignScore.toLocaleString()}
+                      </button>
+                    </SmartTooltip>
                   )}
                 </div>
                 <div style={{ display: 'grid', gap: '8px' }}>
@@ -602,43 +605,45 @@ export default function GameScreen() {
                 }}
               >
                 {hasUnreadEnemyTactic && (
-                  <span
-                    data-testid="enemy-tactic-unread-indicator"
-                    aria-label="New enemy tactic"
-                    title="New enemy tactic"
-                    style={{
-                      display: 'inline-flex',
-                      width: '8px',
-                      height: '8px',
-                      borderRadius: '999px',
-                      background: 'var(--color-hostile-red)',
-                      boxShadow: '0 0 10px rgba(210, 72, 72, 0.75)',
-                      marginRight: '8px',
-                      flexShrink: 0,
-                    }}
-                  />
+                  <SmartTooltip content="New enemy tactic" as="span">
+                    <span
+                      data-testid="enemy-tactic-unread-indicator"
+                      aria-label="New enemy tactic"
+                      style={{
+                        display: 'inline-flex',
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '999px',
+                        background: 'var(--color-hostile-red)',
+                        boxShadow: '0 0 10px rgba(210, 72, 72, 0.75)',
+                        marginRight: '8px',
+                        flexShrink: 0,
+                      }}
+                    />
+                  </SmartTooltip>
                 )}
                 {showEnemyTactic ? 'HIDE ENEMY TACTIC' : 'SHOW ENEMY TACTIC'}
               </button>
               {/* Score counter — campaign only */}
               {isCampaign && (
-                <button
-                  className="btn"
-                  style={{
-                    pointerEvents: 'auto',
-                    padding: isCoarsePointer ? '10px 16px' : '6px 14px',
-                    minHeight: isCoarsePointer ? '44px' : undefined,
-                    fontSize: isCoarsePointer ? '0.82rem' : '0.75rem',
-                    borderColor: 'rgba(251,191,36,0.4)',
-                    background: 'rgba(12, 18, 28, 0.92)',
-                    color: '#fbbf24',
-                    fontFamily: 'var(--font-mono)',
-                  }}
-                  onClick={() => setShowScoreLedger(true)}
-                  title="Fleet Commendation Score — click to view ledger"
-                >
-                  ★ {campaignScore.toLocaleString()}
-                </button>
+                <SmartTooltip content="Fleet Commendation Score — click to view ledger" as="button">
+                  <button
+                    className="btn"
+                    style={{
+                      pointerEvents: 'auto',
+                      padding: isCoarsePointer ? '10px 16px' : '6px 14px',
+                      minHeight: isCoarsePointer ? '44px' : undefined,
+                      fontSize: isCoarsePointer ? '0.82rem' : '0.75rem',
+                      borderColor: 'rgba(251,191,36,0.4)',
+                      background: 'rgba(12, 18, 28, 0.92)',
+                      color: '#fbbf24',
+                      fontFamily: 'var(--font-mono)',
+                    }}
+                    onClick={() => setShowScoreLedger(true)}
+                  >
+                    ★ {campaignScore.toLocaleString()}
+                  </button>
+                </SmartTooltip>
               )}
             </div>
 
@@ -1090,23 +1095,24 @@ function DebugMenu({ onAutoWin, onAutoLose }: { onAutoWin: () => void; onAutoLos
       alignItems: 'flex-end',
       gap: '4px',
     }}>
-      <button
-        onClick={() => setOpen(o => !o)}
-        style={{
-          background: 'rgba(20,20,30,0.85)',
-          border: '1px solid rgba(255,200,0,0.4)',
-          color: 'rgba(255,200,0,0.7)',
-          borderRadius: '4px',
-          padding: '2px 8px',
-          fontSize: '0.65rem',
-          fontFamily: 'var(--font-mono)',
-          cursor: 'pointer',
-          letterSpacing: '0.08em',
-        }}
-        title="Toggle debug tools"
-      >
-        {open ? 'DEV ^' : 'DEV'}
-      </button>
+      <SmartTooltip content="Toggle debug tools" as="button">
+        <button
+          onClick={() => setOpen(o => !o)}
+          style={{
+            background: 'rgba(20,20,30,0.85)',
+            border: '1px solid rgba(255,200,0,0.4)',
+            color: 'rgba(255,200,0,0.7)',
+            borderRadius: '4px',
+            padding: '2px 8px',
+            fontSize: '0.65rem',
+            fontFamily: 'var(--font-mono)',
+            cursor: 'pointer',
+            letterSpacing: '0.08em',
+          }}
+        >
+          {open ? 'DEV ^' : 'DEV'}
+        </button>
+      </SmartTooltip>
       {open && (
         <div style={{
           background: 'rgba(10,10,20,0.95)',

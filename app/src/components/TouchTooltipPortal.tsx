@@ -121,3 +121,85 @@ export default function TouchTooltipPortal({
     document.body,
   );
 }
+
+// ─── SmartTooltip ────────────────────────────────────────────────────────────
+//
+// A self-contained tooltip wrapper that:
+//  - On desktop (fine pointer / mouse): renders a standard HTML `title` attribute.
+//  - On touch devices (coarse pointer): intercepts taps to toggle a
+//    TouchTooltipPortal, and dismisses it when the user taps anywhere else.
+//
+// Usage:
+//   <SmartTooltip content="Tooltip text">
+//     <span style={{ cursor: 'help' }}>Hover or tap me</span>
+//   </SmartTooltip>
+//
+//   // Wrapping a button:
+//   <SmartTooltip content="Delete save" as="button" onClick={handleDelete}>✕</SmartTooltip>
+
+interface SmartTooltipProps {
+  /** The tooltip content to display. */
+  content: React.ReactNode;
+  /** The element to wrap. Defaults to 'span'. */
+  as?: React.ElementType;
+  children?: React.ReactNode;
+  /** Any additional props forwarded to the wrapper element. */
+  [key: string]: any;
+}
+
+export function SmartTooltip({
+  content,
+  as: Component = 'span',
+  children,
+  ...rest
+}: SmartTooltipProps) {
+  const [open, setOpen] = useState(false);
+  const anchorRef = useRef<HTMLElement>(null);
+  const isCoarse = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
+
+  // Close when the user taps anywhere outside.
+  // Must be before any early returns so hooks always run in the same order.
+  React.useEffect(() => {
+    if (!isCoarse || !open || !content) return;
+    const close = () => setOpen(false);
+    document.addEventListener('click', close, { capture: true, once: true });
+    return () => document.removeEventListener('click', close, true);
+  }, [isCoarse, open, content]);
+
+  if (!content) {
+    const { onClick, ...forwardedProps } = rest;
+    return (
+      <Component ref={anchorRef} onClick={onClick} {...forwardedProps}>
+        {children}
+      </Component>
+    );
+  }
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (isCoarse) {
+      e.stopPropagation();
+      setOpen(prev => !prev);
+    }
+    if (rest.onClick) rest.onClick(e);
+  };
+
+  const { onClick: _onClick, ...forwardedProps } = rest;
+
+  return (
+    <>
+      <Component
+        ref={anchorRef}
+        {...forwardedProps}
+        title={isCoarse ? undefined : (typeof content === 'string' ? content : undefined)}
+        onClick={handleClick}
+      >
+        {children}
+      </Component>
+      {isCoarse && (
+        <TouchTooltipPortal show={open} anchorRef={anchorRef}>
+          {content}
+        </TouchTooltipPortal>
+      )}
+    </>
+  );
+}

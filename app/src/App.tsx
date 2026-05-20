@@ -9,8 +9,9 @@ import MainMenu from './components/setup/MainMenu';
 import ScenarioEditor from './components/setup/ScenarioEditor';
 import type { CustomScenarioConfig } from './components/setup/ScenarioEditor';
 import FleetBuilder from './components/setup/FleetBuilder';
-import GameOverScreen from './components/setup/GameOverScreen';
 import ModalOverlay from './components/ModalOverlay';
+import GameOverScreen from './components/setup/GameOverScreen';
+import HowToPlayModal from './components/HowToPlayModal';
 import CampaignScreen from './components/campaign/CampaignScreen';
 import { useCampaignStore } from './store/useCampaignStore';
 import ToastContainer from './components/campaign/ToastContainer';
@@ -31,6 +32,7 @@ function App() {
   const gameOver = useGameStore(s => s.gameOver);
   const fleetFavor = useGameStore(s => s.fleetFavor);
   const isRedAlert = useUIStore(s => s.isRedAlert);
+  const isHowToPlayOpen = useUIStore(s => s.isHowToPlayOpen);
   const setReturnToMenuCallback = useSettingsStore(s => s.setReturnToMenuCallback);
   const isSettingsOpen = useSettingsStore(s => s.isSettingsOpen);
   const endTutorial = useTutorialStore(s => s.endTutorial);
@@ -121,7 +123,10 @@ function App() {
     const applyOrientation = async () => {
       try {
         const isCampaignMap = appMode === 'campaign' && campaignPhase !== 'drydock';
-        if (gameOver || isSettingsOpen || appMode === 'menu' || appMode === 'skirmish-builder' || appMode === 'campaign-builder' || isCampaignMap) {
+        // Rules Reference always forces landscape regardless of current app mode
+        if (isHowToPlayOpen) {
+          await ScreenOrientation.lock({ orientation: 'landscape' });
+        } else if (gameOver || isSettingsOpen || appMode === 'menu' || appMode === 'skirmish-builder' || appMode === 'campaign-builder' || isCampaignMap) {
           await ScreenOrientation.lock({ orientation: 'portrait' });
         } else {
           await ScreenOrientation.lock({ orientation: 'landscape' });
@@ -132,7 +137,7 @@ function App() {
       }
     };
     applyOrientation();
-  }, [appMode, isSettingsOpen, gameOver, campaignPhase]);
+  }, [appMode, isSettingsOpen, gameOver, campaignPhase, isHowToPlayOpen]);
 
   const menuModes = ['menu', 'editor', 'skirmish-builder', 'campaign-builder'];
   const isMenuMode = menuModes.includes(appMode);
@@ -165,6 +170,7 @@ function App() {
     };
 
     return (
+      <>
       <MainMenu
         recoveryBanner={
           recoveryMeta ? (
@@ -190,6 +196,8 @@ function App() {
           setAppMode('tutorial');
         }}
       />
+      <HowToPlayModal />
+      </>
     );
   }
 
@@ -239,6 +247,7 @@ function App() {
       <div className={`app-root ${isRedAlert ? 'red-alert' : ''}`}>
         <GameScreen />
         <ModalOverlay />
+        <HowToPlayModal />
       </div>
     );
   }
@@ -271,6 +280,7 @@ function App() {
         <div className={`app-root ${isRedAlert ? 'red-alert' : ''}`}>
           <GameScreen />
           <ModalOverlay />
+          <HowToPlayModal />
         </div>
         <ToastContainer />
       </>
@@ -287,6 +297,7 @@ function App() {
     <div className={`app-root ${isRedAlert ? 'red-alert' : ''}`}>
       <GameScreen />
       <ModalOverlay />
+      <HowToPlayModal />
     </div>
   );
 }

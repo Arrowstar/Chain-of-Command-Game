@@ -2,6 +2,7 @@ import React from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { useTokenSelectionStore } from '../../store/useTokenSelectionStore';
 import { useViewport } from '../../utils/useViewport';
+import { SmartTooltip } from '../TouchTooltipPortal';
 
 interface CommandTokenProps {
   id: string;
@@ -68,32 +69,36 @@ export default function CommandToken({ id, isAssigned = false }: CommandTokenPro
   };
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...listeners}
-      {...attributes}
-      onClick={handleClick}
-      data-testid={`command-token-${id}`}
-      title={
+    <SmartTooltip
+      content={
         isAssigned
           ? 'Token spent'
           : isSelected
           ? 'Tap an action slot to assign'
           : 'Drag to assign action (or tap on touch screens)'
       }
+      as="div"
     >
-      <div style={{
-        width: isCoarsePointer ? '20px' : '16px',
-        height: isCoarsePointer ? '20px' : '16px',
-        borderRadius: '50%',
-        background: isAssigned
-          ? 'var(--color-text-dim)'
-          : isSelected
-          ? 'var(--color-crit-gold)'
-          : 'var(--color-holo-cyan)',
-        opacity: isAssigned ? 0.4 : 0.8,
-      }} />
-    </div>
+      <div
+        ref={setNodeRef}
+        style={style}
+        {...listeners}
+        {...attributes}
+        onClick={handleClick}
+        data-testid={`command-token-${id}`}
+      >
+        <div style={{
+          width: isCoarsePointer ? '20px' : '16px',
+          height: isCoarsePointer ? '20px' : '16px',
+          borderRadius: '50%',
+          background: isAssigned
+            ? 'var(--color-text-dim)'
+            : isSelected
+            ? 'var(--color-crit-gold)'
+            : 'var(--color-holo-cyan)',
+          opacity: isAssigned ? 0.4 : 0.8,
+        }} />
+      </div>
+    </SmartTooltip>
   );
 }

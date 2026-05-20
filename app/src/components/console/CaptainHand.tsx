@@ -5,7 +5,7 @@ import { getScarImpactLegendText, getScarStatusMeta, getScarTooltip } from './sc
 import { getCurrentCtDisplayState } from '../../engine/commandTokens';
 import { useViewport } from '../../utils/useViewport';
 import { useState, useRef } from 'react';
-import TouchTooltipPortal from '../TouchTooltipPortal';
+import TouchTooltipPortal, { SmartTooltip } from '../TouchTooltipPortal';
 import ScarIcon from './ScarIcon';
 
 export default function CaptainHand({ playerId }: { playerId?: string }) {
@@ -16,11 +16,6 @@ export default function CaptainHand({ playerId }: { playerId?: string }) {
   const combatModifiers = useGameStore(s => s.combatModifiers);
   const player = playerId ? players.find(p => p.id === playerId) : players[0];
   const { isCoarsePointer } = useViewport();
-  const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
-
-  const summaryRef = useRef<HTMLDivElement>(null);
-  const modRefs = useRef<Record<string, HTMLSpanElement | null>>({});
-  const scarRefs = useRef<Record<string, HTMLSpanElement | null>>({});
 
   if (!player) return null;
   const ship = playerShips.find(entry => entry.id === player.shipId);
@@ -46,7 +41,6 @@ export default function CaptainHand({ playerId }: { playerId?: string }) {
     <div 
       className="panel panel--glow" 
       style={{ padding: 'var(--space-md)' }}
-      onClick={() => isCoarsePointer && setActiveTooltip(null)}
     >
       <div className="label" style={{ marginBottom: 'var(--space-sm)', color: 'var(--color-holo-cyan)', display: 'flex', justifyContent: 'space-between' }}>
         <span>Command Token Pool</span>
@@ -54,69 +48,46 @@ export default function CaptainHand({ playerId }: { playerId?: string }) {
           {player.commandTokens}/{ctDisplay.maxVisualSlots}
         </span>
       </div>
-      <div
-        ref={summaryRef}
-        className="mono"
-        title={isCoarsePointer ? undefined : ctSummaryTooltip}
-        onClick={(e) => {
-          if (isCoarsePointer) {
-            e.stopPropagation();
-            setActiveTooltip(activeTooltip === 'ct-summary' ? null : 'ct-summary');
-          }
-        }}
-        style={{
-          marginBottom: 'var(--space-sm)',
-          fontSize: '0.68rem',
-          color: 'var(--color-text-secondary)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          gap: '8px',
-          flexWrap: 'wrap',
-          cursor: isCoarsePointer ? 'pointer' : 'help',
-          position: 'relative',
-        }}
-      >
-        <span>Base {ctDisplay.baseCt} CT</span>
-        <span>Round Start {ctDisplay.roundStartCt}</span>
-        <span>Live Pool {ctDisplay.totalTokensThisRound}</span>
-        {isCoarsePointer && (
-          <TouchTooltipPortal show={activeTooltip === 'ct-summary'} anchorRef={summaryRef}>
-            {ctSummaryTooltip.split('\n').map((line, i) => <div key={i}>{line}</div>)}
-          </TouchTooltipPortal>
-        )}
-      </div>
+      <SmartTooltip content={ctSummaryTooltip.split('\n').map((line, i) => <div key={i}>{line}</div>)} as="div">
+        <div
+          className="mono"
+          style={{
+            marginBottom: 'var(--space-sm)',
+            fontSize: '0.68rem',
+            color: 'var(--color-text-secondary)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            gap: '8px',
+            flexWrap: 'wrap',
+            cursor: isCoarsePointer ? 'pointer' : 'help',
+            position: 'relative',
+          }}
+        >
+          <span>Base {ctDisplay.baseCt} CT</span>
+          <span>Round Start {ctDisplay.roundStartCt}</span>
+          <span>Live Pool {ctDisplay.totalTokensThisRound}</span>
+        </div>
+      </SmartTooltip>
       {ctDisplay.modifiers.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: 'var(--space-sm)' }}>
           {ctDisplay.modifiers.map(modifier => (
-            <span
-              key={modifier.id}
-              ref={el => { modRefs.current[modifier.id] = el; }}
-              className="mono"
-              title={isCoarsePointer ? undefined : modifier.description}
-              onClick={(e) => {
-                if (isCoarsePointer) {
-                  e.stopPropagation();
-                  setActiveTooltip(activeTooltip === `mod-${modifier.id}` ? null : `mod-${modifier.id}`);
-                }
-              }}
-              style={{
-                fontSize: '0.66rem',
-                color: modifier.amount >= 0 ? 'var(--color-holo-cyan)' : 'var(--color-alert-amber)',
-                border: `1px solid ${modifier.amount >= 0 ? 'rgba(0, 204, 255, 0.35)' : 'rgba(255, 170, 0, 0.3)'}`,
-                background: modifier.amount >= 0 ? 'rgba(0, 204, 255, 0.08)' : 'rgba(255, 170, 0, 0.08)',
-                borderRadius: '999px',
-                padding: '3px 8px',
-                cursor: 'help',
-                position: 'relative',
-              }}
-            >
-              {modifier.label}
-              {isCoarsePointer && (
-                <TouchTooltipPortal show={activeTooltip === `mod-${modifier.id}`} anchorRef={{ current: modRefs.current[modifier.id] }}>
-                  {modifier.description}
-                </TouchTooltipPortal>
-              )}
-            </span>
+            <SmartTooltip key={modifier.id} content={modifier.description}>
+              <span
+                className="mono"
+                style={{
+                  fontSize: '0.66rem',
+                  color: modifier.amount >= 0 ? 'var(--color-holo-cyan)' : 'var(--color-alert-amber)',
+                  border: `1px solid ${modifier.amount >= 0 ? 'rgba(0, 204, 255, 0.35)' : 'rgba(255, 170, 0, 0.3)'}`,
+                  background: modifier.amount >= 0 ? 'rgba(0, 204, 255, 0.08)' : 'rgba(255, 170, 0, 0.08)',
+                  borderRadius: '999px',
+                  padding: '3px 8px',
+                  cursor: 'help',
+                  position: 'relative',
+                }}
+              >
+                {modifier.label}
+              </span>
+            </SmartTooltip>
           ))}
         </div>
       )}
@@ -148,61 +119,49 @@ export default function CaptainHand({ playerId }: { playerId?: string }) {
             <span className="label" style={{ color: 'var(--color-alert-amber)' }}>
               Persistent Damage
             </span>
-            <span
-              className="mono"
-              title={getScarImpactLegendText()}
-              style={{
-                fontSize: '0.68rem',
-                color: 'var(--color-alert-amber)',
-                border: '1px solid rgba(255, 170, 0, 0.3)',
-                background: 'rgba(255, 170, 0, 0.08)',
-                borderRadius: '999px',
-                padding: '2px 7px',
-                cursor: 'help',
-                lineHeight: 1,
-              }}
-            >
-              ?
-            </span>
+            <SmartTooltip content={getScarImpactLegendText()}>
+              <span
+                className="mono"
+                style={{
+                  fontSize: '0.68rem',
+                  color: 'var(--color-alert-amber)',
+                  border: '1px solid rgba(255, 170, 0, 0.3)',
+                  background: 'rgba(255, 170, 0, 0.08)',
+                  borderRadius: '999px',
+                  padding: '2px 7px',
+                  cursor: 'help',
+                  lineHeight: 1,
+                }}
+              >
+                ?
+              </span>
+            </SmartTooltip>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
             {ship.scars.map(scar => {
               const meta = getScarStatusMeta(scar.fromCriticalId);
-              const isSelected = activeTooltip === `scar-${scar.id}`;
               return (
-                <span
-                  key={scar.id}
-                  ref={el => { scarRefs.current[scar.id] = el; }}
-                  title={isCoarsePointer ? undefined : getScarTooltip(scar)}
-                  onClick={(e) => {
-                    if (isCoarsePointer) {
-                      e.stopPropagation();
-                      setActiveTooltip(isSelected ? null : `scar-${scar.id}`);
-                    }
-                  }}
-                  className="mono"
-                  style={{
-                    fontSize: '0.68rem',
-                    color: 'var(--color-alert-amber)',
-                    border: '1px solid rgba(255, 170, 0, 0.3)',
-                    background: 'rgba(255, 170, 0, 0.08)',
-                    borderRadius: '999px',
-                    padding: '3px 8px',
-                    cursor: 'help',
-                    position: 'relative',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                  }}
-                >
-                  <ScarIcon scar={scar} size={20} />
-                  {meta.shortImpact}
-                  {isCoarsePointer && (
-                    <TouchTooltipPortal show={isSelected} anchorRef={{ current: scarRefs.current[scar.id] }}>
-                      {getScarTooltip(scar)}
-                    </TouchTooltipPortal>
-                  )}
-                </span>
+                <SmartTooltip key={scar.id} content={getScarTooltip(scar)}>
+                  <span
+                    className="mono"
+                    style={{
+                      fontSize: '0.68rem',
+                      color: 'var(--color-alert-amber)',
+                      border: '1px solid rgba(255, 170, 0, 0.3)',
+                      background: 'rgba(255, 170, 0, 0.08)',
+                      borderRadius: '999px',
+                      padding: '3px 8px',
+                      cursor: 'help',
+                      position: 'relative',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                    }}
+                  >
+                    <ScarIcon scar={scar} size={20} />
+                    {meta.shortImpact}
+                  </span>
+                </SmartTooltip>
               );
             })}
           </div>

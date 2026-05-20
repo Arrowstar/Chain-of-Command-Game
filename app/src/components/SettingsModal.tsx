@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useCampaignStore } from '../store/useCampaignStore';
 import { useGameStore } from '../store/useGameStore';
+import { useUIStore } from '../store/useUIStore';
 import { CampaignSaveManager } from '../utils/CampaignSaveManager';
 import SaveSlotModal from './SaveSlotModal';
 
@@ -130,6 +131,13 @@ export default function SettingsModal() {
 
           <div className="settings-tab-bar" style={{ display: 'flex', gap: '8px', marginBottom: 'var(--space-lg)' }}>
             <button className="btn btn--primary" style={{ flex: 1, pointerEvents: 'none' }}>AUDIO</button>
+            <button 
+              className="btn btn--secondary" 
+              style={{ flex: 1 }}
+              onClick={() => useUIStore.getState().toggleHowToPlay()}
+            >
+              RULES REFERENCE
+            </button>
           </div>
 
           <div className="settings-content" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xl)' }}>

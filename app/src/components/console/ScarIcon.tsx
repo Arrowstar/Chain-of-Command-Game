@@ -1,6 +1,7 @@
 import React from 'react';
 import type { ScarEffect } from '../../types/game';
 import { SCAR_TEMPLATES } from '../../data/scarTemplates';
+import { SmartTooltip } from '../TouchTooltipPortal';
 
 interface ScarIconProps {
   scar: ScarEffect;
@@ -36,20 +37,21 @@ export default function ScarIcon({ scar, size = 48, className = '', style = {} }
   const bgPosY = (template.spritePos.row / 2) * 100;
 
   return (
-    <div
-      className={className}
-      title={`${template.name}: ${template.effect}`}
-      style={{
-        width: `${size}px`,
-        height: `${size}px`,
-        backgroundImage: "url('/images/scars/ship_scars.png')",
-        backgroundSize: '400% 300%',
-        backgroundPosition: `${bgPosX}% ${bgPosY}%`,
-        backgroundRepeat: 'no-repeat',
-        display: 'inline-block',
-        flexShrink: 0,
-        ...style,
-      }}
-    />
+    <SmartTooltip content={`${template.name}: ${template.effect}`} as="div">
+      <div
+        className={className}
+        style={{
+          width: `${size}px`,
+          height: `${size}px`,
+          backgroundImage: "url('/images/scars/ship_scars.png')",
+          backgroundSize: '400% 300%',
+          backgroundPosition: `${bgPosX}% ${bgPosY}%`,
+          backgroundRepeat: 'no-repeat',
+          display: 'inline-block',
+          flexShrink: 0,
+          ...style,
+        }}
+      />
+    </SmartTooltip>
   );
 }

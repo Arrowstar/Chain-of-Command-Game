@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { CampaignSaveManager } from '../../utils/CampaignSaveManager';
 import SaveSlotModal from '../SaveSlotModal';
 import HighScoresScreen from './HighScoresScreen';
+import { useUIStore } from '../../store/useUIStore';
 
 interface MainMenuProps {
   onStart?: () => void;
@@ -215,6 +216,18 @@ export default function MainMenu({ onStart, onStartCampaign, onContinueCampaign,
               data-testid="high-scores-btn"
             >
               HIGH SCORES
+            </button>
+
+            <button
+              className="btn main-menu-btn"
+              style={{
+                borderColor: 'rgba(0, 150, 255, 0.55)',
+                background: 'rgba(0, 150, 255, 0.06)',
+                color: 'var(--color-text-bright)',
+              }}
+              onClick={() => useUIStore.getState().toggleHowToPlay()}
+            >
+              RULES REFERENCE
             </button>
 
           </div>

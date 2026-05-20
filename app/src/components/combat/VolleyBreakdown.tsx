@@ -5,7 +5,7 @@ import type { VolleyResult } from '../../types/game';
 import type { DamageResult } from '../../engine/combat';
 import { useGameStore } from '../../store/useGameStore';
 import { useViewport } from '../../utils/useViewport';
-import TouchTooltipPortal from '../TouchTooltipPortal';
+import { SmartTooltip } from '../TouchTooltipPortal';
 
 export interface VolleyResultItem {
   damageResult: DamageResult;
@@ -32,48 +32,23 @@ interface VolleyBreakdownProps {
 
 
 function BreakdownRow({
-  id,
-  activeTooltip,
-  setActiveTooltip,
-  isCoarsePointer,
   tooltipText,
   label,
   valueNode,
   containerStyle
 }: {
-  id: string;
-  activeTooltip: string | null;
-  setActiveTooltip: (id: string | null) => void;
-  isCoarsePointer: boolean;
   tooltipText: string;
   label: React.ReactNode;
   valueNode: React.ReactNode;
   containerStyle?: React.CSSProperties;
 }) {
-  const ref = React.useRef<HTMLDivElement>(null);
-  const isSelected = activeTooltip === id;
-
   return (
-    <div
-      ref={ref}
-      className="flex-between"
-      style={{ fontSize: '0.75rem', position: 'relative', ...containerStyle }}
-      title={isCoarsePointer ? undefined : tooltipText}
-      onClick={(e) => {
-        if (isCoarsePointer) {
-          e.stopPropagation();
-          setActiveTooltip(isSelected ? null : id);
-        }
-      }}
-    >
-      {label}
-      {valueNode}
-      {isCoarsePointer && (
-        <TouchTooltipPortal show={isSelected} anchorRef={ref}>
-          {tooltipText}
-        </TouchTooltipPortal>
-      )}
-    </div>
+    <SmartTooltip content={tooltipText} as="div">
+      <div className="flex-between" style={{ fontSize: '0.75rem', position: 'relative', ...containerStyle }}>
+        {label}
+        {valueNode}
+      </div>
+    </SmartTooltip>
   );
 }
 
@@ -82,7 +57,6 @@ export default function VolleyBreakdown({ results, damageResult, outOfArc, weapo
   const [activeTabIndex, setActiveTabIndex] = useState(0);
   const { playerShips, enemyShips, stations, fighterTokens, getShipName } = useGameStore();
   const { isCoarsePointer } = useViewport();
-  const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
 
   const getAllegianceColor = (id: string) => {
     if (playerShips.some(s => s.id === id)) return 'var(--color-holo-cyan)';
@@ -129,7 +103,6 @@ export default function VolleyBreakdown({ results, damageResult, outOfArc, weapo
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9 }}
         className="panel panel--glow"
-        onClick={() => isCoarsePointer && setActiveTooltip(null)}
         style={{
           width: '500px',
           maxWidth: 'calc(100vw - 24px)',
@@ -419,10 +392,6 @@ export default function VolleyBreakdown({ results, damageResult, outOfArc, weapo
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', textAlign: 'left', marginTop: '6px' }}>
                             {ionNebulaActive ? (
                                 <BreakdownRow
-                                    id="ion-nebula"
-                                    activeTooltip={activeTooltip}
-                                    setActiveTooltip={setActiveTooltip}
-                                    isCoarsePointer={isCoarsePointer}
                                     tooltipText="Ion Nebula completely disables shields."
                                     containerStyle={{fontSize: '0.75rem', marginBottom: '4px', position: 'relative'}}
                                     label={<span className="label" style={{ color: 'var(--color-text-secondary)', cursor: 'help' }}>Shields Bypassed</span>}
@@ -431,40 +400,24 @@ export default function VolleyBreakdown({ results, damageResult, outOfArc, weapo
                             ) : (
                               <>
                                 <BreakdownRow
-                                    id="struck-arc"
-                                    activeTooltip={activeTooltip}
-                                    setActiveTooltip={setActiveTooltip}
-                                    isCoarsePointer={isCoarsePointer}
                                     tooltipText="The shield arc that intercepted the attack."
                                     containerStyle={{fontSize: '0.75rem', position: 'relative'}}
                                     label={<span className="label" style={{ color: 'var(--color-text-secondary)', cursor: 'help' }}>Struck Arc</span>}
                                     valueNode={<span className="mono" style={{ color: 'var(--color-holo-cyan)' }}>{sectorLabel}</span>}
                                   />
                                 <BreakdownRow
-                                    id="init-shields"
-                                    activeTooltip={activeTooltip}
-                                    setActiveTooltip={setActiveTooltip}
-                                    isCoarsePointer={isCoarsePointer}
                                     tooltipText="The initial shield strength before the attack."
                                     containerStyle={{fontSize: '0.75rem', position: 'relative'}}
                                     label={<span className="label" style={{ color: 'var(--color-text-secondary)', cursor: 'help' }}>Initial Shields</span>}
                                     valueNode={<span className="mono">{initialShield}</span>}
                                   />
                                 <BreakdownRow
-                                    id="shield-dmg"
-                                    activeTooltip={activeTooltip}
-                                    setActiveTooltip={setActiveTooltip}
-                                    isCoarsePointer={isCoarsePointer}
                                     tooltipText="The amount of shield energy depleted by the attack."
                                     containerStyle={{fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '4px', position: 'relative'}}
                                     label={<span className="label" style={{ color: 'var(--color-text-secondary)', cursor: 'help' }}>Shield Damage</span>}
                                     valueNode={<span className="mono" style={{ color: 'var(--color-alert-amber)' }}>-{shieldHits}</span>}
                                   />
                                 <BreakdownRow
-                                    id="rem-shields"
-                                    activeTooltip={activeTooltip}
-                                    setActiveTooltip={setActiveTooltip}
-                                    isCoarsePointer={isCoarsePointer}
                                     tooltipText="The remaining shield energy in this arc."
                                     containerStyle={{fontSize: '0.9rem', borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '6px', marginTop: '2px', position: 'relative'}}
                                     label={<span className="label" style={{ color: 'var(--color-text-primary)', cursor: 'help' }}>Remaining</span>}
@@ -504,51 +457,31 @@ export default function VolleyBreakdown({ results, damageResult, outOfArc, weapo
                             {overflowHits > 0 && (
                               <>
                                 <BreakdownRow
-                                    id="overflow"
-                                    activeTooltip={activeTooltip}
-                                    setActiveTooltip={setActiveTooltip}
-                                    isCoarsePointer={isCoarsePointer}
                                     tooltipText="Standard hits that bypassed shields and struck the hull directly."
                                     containerStyle={{fontSize: '0.75rem', position: 'relative'}}
                                     label={<span className="label" style={{ color: 'var(--color-text-secondary)', cursor: 'help' }}>Overflow Hits</span>}
                                     valueNode={<span className="mono">+{overflowHits}</span>}
                                   />
                                 <BreakdownRow
-                                    id="armor-roll"
-                                    activeTooltip={activeTooltip}
-                                    setActiveTooltip={setActiveTooltip}
-                                    isCoarsePointer={isCoarsePointer}
                                     tooltipText="The defender's armor die roll, mitigating Overflow Hits."
                                     containerStyle={{fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '4px', position: 'relative'}}
                                     label={<span className="label" style={{ color: 'var(--color-text-secondary)', cursor: 'help' }}>Armor Roll ({currentItem.damageResult.armorDie})</span>}
                                     valueNode={<span className="mono" style={{ color: 'var(--color-text-dim)' }}>-{armorRoll}</span>}
                                   />
-                                <div 
-                                  className="flex-between" 
-                                  style={{ fontSize: '0.75rem', position: 'relative' }} 
-                                  title={isCoarsePointer ? undefined : (min1RuleApplied ? "Armor cannot reduce Overflow Hits below 1 unless there are piercing hits." : "The remaining Overflow Hits after armor mitigation.")}
-                                  onClick={(e) => {
-                                    if (isCoarsePointer) {
-                                      e.stopPropagation();
-                                      setActiveTooltip(activeTooltip === 'net-overflow' ? null : 'net-overflow');
-                                    }
-                                  }}
-                                >
-                                  <span className="label" style={{ color: 'var(--color-text-secondary)', cursor: 'help' }}>Net Overflow Hits{min1RuleApplied ? ' (Min 1)' : ''}</span>
-                                  <span className="mono">{netOverflowHits}</span>
-                                  {isCoarsePointer && activeTooltip === 'net-overflow' && (
-                                    <div className="touch-tooltip" style={{ bottom: 'calc(100% + 8px)' }}>{min1RuleApplied ? "Armor cannot reduce Overflow Hits below 1 unless there are piercing hits." : "The remaining Overflow Hits after armor mitigation."}</div>
-                                  )}
-                                </div>
+                                <SmartTooltip content={min1RuleApplied ? "Armor cannot reduce Overflow Hits below 1 unless there are piercing hits." : "The remaining Overflow Hits after armor mitigation."} as="div">
+                                  <div 
+                                    className="flex-between" 
+                                    style={{ fontSize: '0.75rem', position: 'relative' }} 
+                                  >
+                                    <span className="label" style={{ color: 'var(--color-text-secondary)', cursor: 'help' }}>Net Overflow Hits{min1RuleApplied ? ' (Min 1)' : ''}</span>
+                                    <span className="mono">{netOverflowHits}</span>
+                                  </div>
+                                </SmartTooltip>
                               </>
                             )}
                             
                             {piercingHits > 0 && (
                               <BreakdownRow
-                                    id="piercing"
-                                    activeTooltip={activeTooltip}
-                                    setActiveTooltip={setActiveTooltip}
-                                    isCoarsePointer={isCoarsePointer}
                                     tooltipText="Critical hits that completely bypass shields and armor."
                                     containerStyle={{fontSize: '0.75rem', position: 'relative'}}
                                     label={<span className="label" style={{ color: 'var(--color-text-secondary)', cursor: 'help' }}>Piercing Hits</span>}
@@ -557,10 +490,6 @@ export default function VolleyBreakdown({ results, damageResult, outOfArc, weapo
                             )}
 
                             <BreakdownRow
-                                    id="total-dmg"
-                                    activeTooltip={activeTooltip}
-                                    setActiveTooltip={setActiveTooltip}
-                                    isCoarsePointer={isCoarsePointer}
                                     tooltipText="The final amount of Hull Damage dealt to the defender."
                                     containerStyle={{fontSize: '0.9rem', borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '6px', marginTop: '2px', position: 'relative'}}
                                     label={<span className="label" style={{ color: 'var(--color-text-primary)', cursor: 'help' }}>Total Damage</span>}

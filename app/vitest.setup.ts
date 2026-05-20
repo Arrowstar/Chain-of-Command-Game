@@ -2,6 +2,21 @@ import '@testing-library/jest-dom';
 import 'vitest-canvas-mock';
 import { vi, beforeEach } from 'vitest';
 
+// jsdom doesn't implement window.matchMedia. Provide a no-op stub so any
+// component that calls useViewport (or any other matchMedia consumer) doesn't
+// crash in tests. Individual tests can override this with their own mock.
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: vi.fn().mockImplementation((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+});
+
 vi.mock('idb', () => {
   const stores = new Map<string, Map<string, any>>();
   function getStore(name: string) {

@@ -40,6 +40,9 @@ interface UIStore {
   gameLogOpen: boolean;
   unreadLogCount: number;
 
+  // How to Play Modal
+  isHowToPlayOpen: boolean;
+
   // Modal overlays
   activeModal: 'fumble' | 'critical' | 'tactic' | 'roe' | 'dice' | 'volley' | 'skill-proc' | null;
   modalData: Record<string, unknown> | null;
@@ -72,6 +75,7 @@ interface UIStore {
   toggleCombatLog: () => void;
   showTooltip: (content: string, x: number, y: number) => void;
   hideTooltip: () => void;
+  toggleHowToPlay: () => void;
   showModal: (type: UIStore['activeModal'], data?: Record<string, unknown>) => void;
   queueModal: (type: UIStore['activeModal'], data?: Record<string, unknown>) => void;
   hideModal: () => void;
@@ -115,6 +119,7 @@ export const useUIStore = create<UIStore>((set) => ({
   isRedAlert: false,
   gameLogOpen: false,
   unreadLogCount: 0,
+  isHowToPlayOpen: false,
   pendingFireAnimations: [],
   targetingMode: null,
   activeTargetingAction: null,
@@ -132,6 +137,7 @@ export const useUIStore = create<UIStore>((set) => ({
   toggleCombatLog: () => set(s => ({ combatLogOpen: !s.combatLogOpen })),
   showTooltip: (content, x, y) => set({ tooltipContent: content, tooltipPosition: { x, y } }),
   hideTooltip: () => set({ tooltipContent: null, tooltipPosition: null }),
+  toggleHowToPlay: () => set(s => ({ isHowToPlayOpen: !s.isHowToPlayOpen })),
   showModal: (type, data = {}) => set({ activeModal: type, modalData: data ?? {} }),
   queueModal: (type, data = {}) => set(s => {
     if (!s.activeModal) return { activeModal: type, modalData: data };
@@ -187,6 +193,7 @@ export const useUIStore = create<UIStore>((set) => ({
     isRedAlert: false,
     gameLogOpen: false,
     unreadLogCount: 0,
+    isHowToPlayOpen: false,
     pendingFireAnimations: [],
     targetingMode: null,
     activeTargetingAction: null,

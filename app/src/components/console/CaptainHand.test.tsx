@@ -58,13 +58,13 @@ describe('CaptainHand', () => {
     expect(tokens.length).toBe(5);
     
     // First 3 should be available (not spent)
-    expect(tokens[0]).not.toHaveAttribute('title', 'Token spent');
-    expect(tokens[1]).not.toHaveAttribute('title', 'Token spent');
-    expect(tokens[2]).not.toHaveAttribute('title', 'Token spent');
+    expect(tokens[0].parentElement).not.toHaveAttribute('title', 'Token spent');
+    expect(tokens[1].parentElement).not.toHaveAttribute('title', 'Token spent');
+    expect(tokens[2].parentElement).not.toHaveAttribute('title', 'Token spent');
     
     // Last 2 should be spent
-    expect(tokens[3]).toHaveAttribute('title', 'Token spent');
-    expect(tokens[4]).toHaveAttribute('title', 'Token spent');
+    expect(tokens[3].parentElement).toHaveAttribute('title', 'Token spent');
+    expect(tokens[4].parentElement).toHaveAttribute('title', 'Token spent');
   });
 
   it('renders all tokens as spent when commandTokens is 0', () => {
@@ -79,7 +79,7 @@ describe('CaptainHand', () => {
     // Still renders all 5 slots (no POOL DEPLETED when max > 0)
     const tokens = screen.getAllByTestId(/command-token-ct-/);
     expect(tokens.length).toBe(5);
-    const spent = tokens.filter(t => t.title === 'Token spent');
+    const spent = tokens.filter(t => t.parentElement?.title === 'Token spent');
     expect(spent.length).toBe(5);
   });
 
@@ -115,9 +115,9 @@ describe('CaptainHand', () => {
     expect(screen.getByText('Base 5 CT')).toBeInTheDocument();
     expect(screen.getByText('Round Start 4')).toBeInTheDocument();
     expect(screen.getByText('Live Pool 6')).toBeInTheDocument();
-    expect(screen.getByText('RoE +1')).toHaveAttribute('title', expect.stringContaining('Overclocked Reactors'));
+    expect(screen.getByText('RoE +1').parentElement).toHaveAttribute('title', expect.stringContaining('Overclocked Reactors'));
     expect(screen.getByText('R1 -1')).toBeInTheDocument();
     expect(screen.getByText('Bridge -1')).toBeInTheDocument();
-    expect(screen.getByText('Live +2')).toHaveAttribute('title', expect.stringContaining('Bonus CT gained during this round'));
+    expect(screen.getByText('Live +2').parentElement).toHaveAttribute('title', expect.stringContaining('Bonus CT gained during this round'));
   });
 });

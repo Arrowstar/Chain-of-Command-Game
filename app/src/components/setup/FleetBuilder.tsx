@@ -12,7 +12,7 @@ import { HexFacing } from '../../types/game';
 import { isInFiringArc, hexDistance } from '../../engine/hexGrid';
 import type { CustomScenarioConfig } from './ScenarioEditor';
 import { useViewport } from '../../utils/useViewport';
-import TouchTooltipPortal from '../TouchTooltipPortal';
+import TouchTooltipPortal, { SmartTooltip } from '../TouchTooltipPortal';
 import FleetBuilderTutorial from '../tutorial/FleetBuilderTutorial';
 
 
@@ -929,27 +929,30 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
                       <div style={{ marginBottom: 'var(--space-lg)' }}>
                         <div className="label" style={{ color: 'var(--color-holo-cyan)', marginBottom: '8px' }}>DIFFICULTY</div>
                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                          <button
-                            className={`btn ${campaignDifficulty === 'easy' ? 'btn--execute' : ''}`}
-                            onClick={() => setCampaignDifficulty('easy')}
-                            title="130 DP per ship"
-                          >
-                            WELL-EQUIPPED (130 DP)
-                          </button>
-                          <button
-                            className={`btn ${campaignDifficulty === 'normal' ? 'btn--execute' : ''}`}
-                            onClick={() => setCampaignDifficulty('normal')}
-                            title="115 DP per ship"
-                          >
-                            STANDARD (115 DP)
-                          </button>
-                          <button
-                            className={`btn ${campaignDifficulty === 'hard' ? 'btn--execute' : ''}`}
-                            onClick={() => setCampaignDifficulty('hard')}
-                            title="100 DP per ship"
-                          >
-                            DESPERATE (100 DP)
-                          </button>
+                          <SmartTooltip content="130 DP per ship" as="button">
+                            <button
+                              className={`btn ${campaignDifficulty === 'easy' ? 'btn--execute' : ''}`}
+                              onClick={() => setCampaignDifficulty('easy')}
+                            >
+                              WELL-EQUIPPED (130 DP)
+                            </button>
+                          </SmartTooltip>
+                          <SmartTooltip content="115 DP per ship" as="button">
+                            <button
+                              className={`btn ${campaignDifficulty === 'normal' ? 'btn--execute' : ''}`}
+                              onClick={() => setCampaignDifficulty('normal')}
+                            >
+                              STANDARD (115 DP)
+                            </button>
+                          </SmartTooltip>
+                          <SmartTooltip content="100 DP per ship" as="button">
+                            <button
+                              className={`btn ${campaignDifficulty === 'hard' ? 'btn--execute' : ''}`}
+                              onClick={() => setCampaignDifficulty('hard')}
+                            >
+                              DESPERATE (100 DP)
+                            </button>
+                          </SmartTooltip>
                         </div>
                       </div>
                       
@@ -1156,15 +1159,16 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
                   ← CHASSIS
                 </button>
               ) : <div />}
-              <button
-                className="btn"
-                disabled={!hasAllOfficers || (isCampaignSetup && !!dpBreakdown?.isOverBudget)}
-                onClick={() => setStep(3)}
-                data-testid="next-btn-2"
-                title={isCampaignSetup && dpBreakdown?.isOverBudget ? `Over DP budget by ${(dpBreakdown.total - campaignBudget)} DP — remove items to proceed` : undefined}
-              >
-                EQUIP MODULES →
-              </button>
+              <SmartTooltip content={isCampaignSetup && dpBreakdown?.isOverBudget ? `Over DP budget by ${(dpBreakdown.total - campaignBudget)} DP — remove items to proceed` : undefined} as="button">
+                <button
+                  className="btn"
+                  disabled={!hasAllOfficers || (isCampaignSetup && !!dpBreakdown?.isOverBudget)}
+                  onClick={() => setStep(3)}
+                  data-testid="next-btn-2"
+                >
+                  EQUIP MODULES →
+                </button>
+              </SmartTooltip>
             </div>
           </>
         )}
@@ -1426,15 +1430,16 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
               >
                 ← OFFICERS
               </button>
-              <button
-                className="btn btn--execute"
-                disabled={!allReady}
-                onClick={handleFinish}
-                data-testid="launch-btn"
-                title={!allReady ? "Not all ships are ready" : undefined}
-              >
-                {scenarioConfig && currentPlayerIndex < scenarioConfig.playerSpawns.length - 1 ? 'NEXT PLAYER' : (isCampaignSetup ? 'LAUNCH CAMPAIGN' : 'LAUNCH MISSION')}
-              </button>
+              <SmartTooltip content={!allReady ? "Not all ships are ready" : undefined} as="button">
+                <button
+                  className="btn btn--execute"
+                  disabled={!allReady}
+                  onClick={handleFinish}
+                  data-testid="launch-btn"
+                >
+                  {scenarioConfig && currentPlayerIndex < scenarioConfig.playerSpawns.length - 1 ? 'NEXT PLAYER' : (isCampaignSetup ? 'LAUNCH CAMPAIGN' : 'LAUNCH MISSION')}
+                </button>
+              </SmartTooltip>
             </div>
           </>
         )}

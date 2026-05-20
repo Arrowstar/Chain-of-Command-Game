@@ -63,16 +63,15 @@ export function generateSectorMap(seed: number = Math.random(), totalLayers: num
     const havenSlot = HAVEN_TIERS.has(layer) ? Math.floor(random() * width) : -1;
 
     for (let slot = 0; slot < width; slot++) {
-      const type = slot === havenSlot ? NodeType.Haven : pickNodeType(layer, slot, width, random);
       const position = clamp((slot + 1) / (width + 1) + (random() * 0.12 - 0.06), 0.12, 0.88);
+      const isHaven = slot === havenSlot;
       nodes.push({
-        id: type === NodeType.Haven ? `haven-${layer}` : `node-${layer}-${slot}`,
-        type,
+        id: isHaven ? `haven-${layer}` : `node-${layer}-${slot}`,
+        type: isHaven ? NodeType.Haven : NodeType.Combat,
         layer,
         position,
         paths: [],
         isRevealed: false,
-        eventId: type === NodeType.Event ? getNextEventId() : undefined,
       });
     }
   }
@@ -107,6 +106,8 @@ export function generateSectorMap(seed: number = Math.random(), totalLayers: num
   ensureIncomingPaths(nodes, maxLayer);
   keepHavensOptional(nodes, maxLayer);
   uncrossPaths(nodes, maxLayer);
+
+  assignNodeTypes(nodes, random, getNextEventId);
 
   return { nodes, maxLayer };
 }
@@ -216,36 +217,87 @@ function uncrossPaths(nodes: SectorNode[], maxLayer: number) {
   }
 }
 
-function pickNodeType(
-  layer: number,
-  position: number,
-  width: number,
-  random: () => number,
-): NodeType {
-  void position;
-  void width;
+function assignNodeTypes(nodes: SectorNode[], random: () => number, getNextEventId: () => string) {
+  const maxLayer = Math.max(...nodes.map(n => n.layer));
+  for (let layer = 1; layer < maxLayer; layer++) {
+    const currNodes = nodes.filter(n => n.layer === layer);
 
-  const r = random();
+    for (const node of currNodes) {
+      if (node.type === NodeType.Haven) continue;
 
-  if (layer === 1) {
-    return r < 0.3 ? NodeType.Event : NodeType.Combat;
+      const parents = nodes.filter(p => p.paths.includes(node.id));
+
+      const takenSiblingTypes = new Set<NodeType>();
+      for (const parent of parents) {
+        for (const siblingId of parent.paths) {
+          if (siblingId !== node.id) {
+            const sibling = currNodes.find(n => n.id === siblingId);
+            if (sibling && sibling.type) {
+              takenSiblingTypes.add(sibling.type);
+            }
+          }
+        }
+      }
+
+      let cannotBeElite = false;
+      for (const parent of parents) {
+        if (parent.type === NodeType.Elite) {
+          cannotBeElite = true;
+        }
+      }
+
+      const possibleTypes: NodeType[] = [NodeType.Combat, NodeType.Event];
+      const eliteTierBlocks: [number, number][] = [[2, 3], [5, 7], [9, 11]];
+      const isInEliteBlock = eliteTierBlocks.some(([lo, hi]) => layer >= lo && layer <= hi);
+      if (isInEliteBlock) {
+        possibleTypes.push(NodeType.Elite);
+      }
+
+      const availableTypes = possibleTypes.filter(t => {
+        if (t === NodeType.Elite && cannotBeElite) return false;
+        if (takenSiblingTypes.has(t)) return false;
+        return true;
+      });
+
+      let chosenType: NodeType = NodeType.Combat;
+      if (availableTypes.length > 0) {
+        const weights: Partial<Record<NodeType, number>> = {};
+        if (layer === 1) {
+          weights[NodeType.Event] = 30;
+          weights[NodeType.Combat] = 70;
+        } else if (layer === 13) {
+          weights[NodeType.Event] = 40;
+          weights[NodeType.Combat] = 60;
+        } else if (isInEliteBlock) {
+          weights[NodeType.Elite] = 18;
+          weights[NodeType.Event] = 27;
+          weights[NodeType.Combat] = 55;
+        } else {
+          weights[NodeType.Event] = 30;
+          weights[NodeType.Combat] = 70;
+        }
+
+        let totalWeight = 0;
+        for (const t of availableTypes) {
+          totalWeight += weights[t] || 0;
+        }
+
+        let roll = random() * totalWeight;
+        for (const t of availableTypes) {
+          roll -= weights[t] || 0;
+          if (roll <= 0) {
+            chosenType = t;
+            break;
+          }
+        }
+      }
+
+      node.type = chosenType;
+      if (chosenType === NodeType.Event) {
+        node.eventId = getNextEventId();
+      }
+    }
   }
-
-  if (layer === 13) {
-    return r > 0.6 ? NodeType.Event : NodeType.Combat;
-  }
-
-  const eliteTierBlocks: [number, number][] = [[2, 3], [5, 7], [9, 11]];
-  const isInEliteBlock = eliteTierBlocks.some(([lo, hi]) => layer >= lo && layer <= hi);
-
-  if (isInEliteBlock) {
-    if (r < 0.18) return NodeType.Elite;
-    if (r < 0.45) return NodeType.Event;
-    return NodeType.Combat;
-  }
-
-  if (r < 0.3) return NodeType.Event;
-  return NodeType.Combat;
 }
 
 function clamp(value: number, min: number, max: number): number {
