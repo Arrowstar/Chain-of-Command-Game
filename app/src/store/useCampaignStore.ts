@@ -41,6 +41,7 @@ import { getEventById } from '../data/eventNodes';
 import { getWeaponById } from '../data/weapons';
 import { getSubsystemById } from '../data/subsystems';
 import { useGameStore } from './useGameStore';
+import { TRAUMA_POOL } from '../data/traumaTraits';
 
 // ══════════════════════════════════════════════════════════════════
 // Campaign Store (Zustand)
@@ -102,7 +103,7 @@ interface CampaignStore {
   completeDrydock: () => void;
   purchaseHullPatch: (shipId: string) => void;
   scrapItem: (shipId: string, slotIndex: number, isWeapon: boolean) => void;
-  purchasePsychEval: (officerId: string, shipId: string) => void;
+  purchasePsychEval: (officerId: string, shipId: string, traumaId: string) => void;
   purchaseDeepRepair: (shipId: string, scarId: string) => void;
   purchaseOfficerTraining: (officerId: string, shipId: string) => void;
   purchaseMarketItem: (itemId: string, shipId: string, isWeapon: boolean, slotIndex: number) => void;
@@ -143,6 +144,9 @@ interface CampaignStore {
   // ── Active Save Slot Tracking ────────────────────────────────
   activeSaveSlotId: string | null;
   setActiveSaveSlotId: (id: string | null) => void;
+
+  // ── Debug Cheats ─────────────────────────────────────────────
+  debugAddTrauma: (officerId: string, traumaId: string) => void;
 }
 
 // ─── Initial campaign state factory ──────────────────────────────
@@ -287,6 +291,39 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
   activeSaveSlotId: null,
 
   setActiveSaveSlotId: (id) => set({ activeSaveSlotId: id }),
+
+  debugAddTrauma: (officerId, traumaId) => {
+    const trauma = TRAUMA_POOL.find(t => t.id === traumaId);
+    if (!trauma) {
+      console.warn(`[DEBUG] Trauma trait ${traumaId} not found in pool.`);
+      return;
+    }
+
+    set(state => ({
+      persistedPlayers: state.persistedPlayers.map(p => ({
+        ...p,
+        officers: p.officers.map(o => {
+          if (o.officerId !== officerId) return o;
+          if (o.traumas.some(t => t.id === traumaId)) return o;
+          return {
+            ...o,
+            traumas: [...o.traumas, {
+              id: trauma.id,
+              name: trauma.name,
+              effect: trauma.effect,
+              spritePos: trauma.spritePos
+            }]
+          };
+        })
+      }))
+    }));
+
+    get().pushCampaignLog({
+      type: 'system',
+      message: `⚡ [DEBUG] Added Trauma: ${trauma.name} to officer ${officerId}`,
+      outcome: `Cheat function applied: Added ${trauma.name} to officer ${officerId}.`,
+    });
+  },
 
   pushCampaignLog: ({ type, message, outcome, details }) => {
     set(state => {
@@ -1108,7 +1145,7 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
     });
   },
 
-  purchasePsychEval: (officerId, shipId) => {
+  purchasePsychEval: (officerId, shipId, traumaId) => {
     const { campaign, persistedPlayers } = get();
     if (!campaign) return;
     const player = persistedPlayers.find(p => p.shipId === shipId);
@@ -1119,7 +1156,7 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
     const result = purchasePsychEval({
       officerId,
       shipId,
-      traumas: officer.traumas,
+      traumaId,
       currentRP: freeRepair ? Number.MAX_SAFE_INTEGER : campaign.requisitionPoints,
     });
     if (!result.success) { console.warn('[Drydock]', result.failureReason); return; }

@@ -736,24 +736,22 @@ export function scrapItem(params: {
 export function purchasePsychEval(params: {
   officerId: string;
   shipId: string;
-  traumas: TraumaEffect[];
+  traumaId: string;
   currentRP: number;
 }): DrydockResult {
-  const { officerId, shipId, traumas, currentRP } = params;
+  const { officerId, shipId, traumaId, currentRP } = params;
 
   if (currentRP < PSYCH_EVAL_COST) {
     return { success: false, failureReason: `Not enough RP (need ${PSYCH_EVAL_COST}, have ${currentRP})`, rpDelta: 0, mutations: [] };
   }
-  if (traumas.length === 0) {
-    return { success: false, failureReason: 'Officer has no Trauma Traits to cure.', rpDelta: 0, mutations: [] };
+  if (!traumaId) {
+    return { success: false, failureReason: 'No Trauma Trait specified to cure.', rpDelta: 0, mutations: [] };
   }
 
-  // Remove the most recently acquired trauma
-  const traumaToRemove = traumas[traumas.length - 1];
   return {
     success: true,
     rpDelta: -PSYCH_EVAL_COST,
-    mutations: [{ type: 'traumaRemoved', officerId, shipId, itemId: traumaToRemove.id }],
+    mutations: [{ type: 'traumaRemoved', officerId, shipId, itemId: traumaId }],
   };
 }
 

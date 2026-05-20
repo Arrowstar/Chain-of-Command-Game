@@ -35,6 +35,7 @@ import { rollDie, rollOfficerSkillProc, rollVolley, stepUpDie, stepDownDie } fro
 import { resolveFighterMovement, resolveFighterAttack, buildCarrierFighters } from '../engine/ai/fighterAI';
 import { getScenarioById } from '../data/scenarios';
 import { getFleetAssetDefinition } from '../data/fleetAssets';
+import { TRAUMA_POOL } from '../data/traumaTraits';
 import type { CombatModifiers, ExperimentalTech } from '../types/campaignTypes';
 import {
   applyHardLightPlating,
@@ -217,6 +218,7 @@ interface GameStore {
   debugAutoWin: () => void;
   /** DEV ONLY: Instantly destroy all player ships and trigger defeat. */
   debugAutoLose: () => void;
+  debugAddTrauma: (officerId: string, traumaId: string) => void;
   selectDeploymentShip: (shipId: string) => void;
   setDeploymentShipPosition: (shipId: string, position: HexCoord) => boolean;
   rotateDeploymentShip: (shipId: string, delta?: 1 | -1) => void;
@@ -5897,6 +5899,32 @@ export const useGameStore = create<GameStore>((set, get) => ({
       playerShips: state.playerShips.map(p => ({ ...p, isDestroyed: true, currentHull: 0 })),
     }));
     get().checkGameOver();
+  },
+
+  debugAddTrauma: (officerId, traumaId) => {
+    const trauma = TRAUMA_POOL.find(t => t.id === traumaId);
+    if (!trauma) {
+      console.warn(`[DEBUG] Trauma trait ${traumaId} not found in pool.`);
+      return;
+    }
+    set(state => {
+      const updatedPlayers = state.players.map(p => ({
+        ...p,
+        officers: p.officers.map(o => {
+          if (o.officerId === officerId) {
+            // Avoid duplicates
+            if (o.traumas.some(t => t.id === traumaId)) return o;
+            return {
+              ...o,
+              traumas: [...o.traumas, trauma],
+            };
+          }
+          return o;
+        }),
+      }));
+      return { players: updatedPlayers };
+    });
+    get().addLog('system', `⚡ [DEBUG] Added Trauma: ${trauma.name} to officer ${officerId}`);
   },
 
   selectDeploymentShip: (shipId) => {

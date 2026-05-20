@@ -492,19 +492,19 @@ describe('purchasePsychEval', () => {
   const trauma: TraumaEffect = { id: 'paranoid', name: 'Paranoid', effect: 'test' };
 
   it('costs 20 RP and removes a Trauma', () => {
-    const result = purchasePsychEval({ officerId: 'o1', shipId: 's1', traumas: [trauma], currentRP: 30 });
+    const result = purchasePsychEval({ officerId: 'o1', shipId: 's1', traumaId: 'paranoid', currentRP: 30 });
     expect(result.success).toBe(true);
     expect(result.rpDelta).toBe(-20);
     expect(result.mutations[0].type).toBe('traumaRemoved');
   });
 
   it('fails with insufficient RP', () => {
-    const result = purchasePsychEval({ officerId: 'o1', shipId: 's1', traumas: [trauma], currentRP: 10 });
+    const result = purchasePsychEval({ officerId: 'o1', shipId: 's1', traumaId: 'paranoid', currentRP: 10 });
     expect(result.success).toBe(false);
   });
 
-  it('fails if officer has no traumas', () => {
-    const result = purchasePsychEval({ officerId: 'o1', shipId: 's1', traumas: [], currentRP: 30 });
+  it('fails if no trauma specified', () => {
+    const result = purchasePsychEval({ officerId: 'o1', shipId: 's1', traumaId: '', currentRP: 30 });
     expect(result.success).toBe(false);
   });
 });

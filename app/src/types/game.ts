@@ -285,6 +285,8 @@ export interface TraumaEffect {
   id: string;
   name: string;
   effect: string;
+  imagePath?: string;
+  spritePos?: { col: number; row: number };
 }
 
 // ─── Ship Runtime State ──────────────────────────────────────────

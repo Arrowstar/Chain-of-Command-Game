@@ -27,6 +27,7 @@ import { useViewport } from '../../utils/useViewport';
 import { useBgm } from '../../utils/useBgm';
 import SettingsButton from '../SettingsButton';
 import { getStimInjectorBonus } from '../../engine/techEffects';
+import { TRAUMA_POOL } from '../../data/traumaTraits';
 
 export default function GameScreen() {
   const players = useGameStore(s => s.players);
@@ -1021,6 +1022,22 @@ function DebugMenu({ onAutoWin, onAutoLose }: { onAutoWin: () => void; onAutoLos
   const [visible, setVisible] = useState(false);
   const [open, setOpen] = useState(false);
 
+  const players = useGameStore(s => s.players);
+  const debugAddTrauma = useGameStore(s => s.debugAddTrauma);
+
+  const [selectedOfficerId, setSelectedOfficerId] = useState('');
+  const [selectedTraumaId, setSelectedTraumaId] = useState(TRAUMA_POOL[0]?.id || '');
+
+  // Flatten officers from all players
+  const allOfficers = players.flatMap(p => p.officers.map(o => {
+    const data = getOfficerById(o.officerId);
+    return {
+      officerId: o.officerId,
+      name: data?.name || o.officerId,
+      station: o.station,
+    };
+  }));
+
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.altKey && e.key.toLowerCase() === 'd') {
@@ -1030,6 +1047,13 @@ function DebugMenu({ onAutoWin, onAutoLose }: { onAutoWin: () => void; onAutoLos
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  // Initialize selected officer when loaded
+  React.useEffect(() => {
+    if (allOfficers.length > 0 && !selectedOfficerId) {
+      setSelectedOfficerId(allOfficers[0].officerId);
+    }
+  }, [allOfficers, selectedOfficerId]);
 
   if (!visible) return null;
 
@@ -1070,7 +1094,7 @@ function DebugMenu({ onAutoWin, onAutoLose }: { onAutoWin: () => void; onAutoLos
           display: 'flex',
           flexDirection: 'column',
           gap: '6px',
-          minWidth: '140px',
+          minWidth: '180px',
         }}>
           <div style={{ fontSize: '0.6rem', color: 'rgba(255,200,0,0.5)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>
             DEBUG TOOLS
@@ -1089,6 +1113,50 @@ function DebugMenu({ onAutoWin, onAutoLose }: { onAutoWin: () => void; onAutoLos
           >
             Auto-Lose
           </button>
+
+          <div style={{ borderTop: '1px solid rgba(255,200,0,0.2)', marginTop: 4, marginBottom: 4 }} />
+          <div style={{ fontSize: '0.6rem', color: 'rgba(255,200,0,0.5)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>
+            ADD TRAUMA
+          </div>
+          {allOfficers.length > 0 ? (
+            <>
+              <select
+                value={selectedOfficerId}
+                onChange={e => setSelectedOfficerId(e.target.value)}
+                style={{ fontSize: '0.7rem', padding: '4px', background: 'var(--color-bg-deep)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border)' }}
+              >
+                {allOfficers.map(o => (
+                  <option key={o.officerId} value={o.officerId}>
+                    {o.name} ({o.station.toUpperCase()})
+                  </option>
+                ))}
+              </select>
+              <select
+                value={selectedTraumaId}
+                onChange={e => setSelectedTraumaId(e.target.value)}
+                style={{ fontSize: '0.7rem', padding: '4px', background: 'var(--color-bg-deep)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border)' }}
+              >
+                {TRAUMA_POOL.map(t => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                className="btn btn--danger"
+                style={{ fontSize: '0.72rem', padding: '4px 10px', marginTop: '2px' }}
+                onClick={() => {
+                  if (selectedOfficerId && selectedTraumaId) {
+                    debugAddTrauma(selectedOfficerId, selectedTraumaId);
+                  }
+                }}
+              >
+                Apply Trauma
+              </button>
+            </>
+          ) : (
+            <div style={{ fontSize: '0.65rem', color: 'var(--color-text-secondary)' }}>No officers found.</div>
+          )}
         </div>
       )}
     </div>

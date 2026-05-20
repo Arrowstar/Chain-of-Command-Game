@@ -9,7 +9,129 @@ import { getTechById } from '../../data/experimentalTech';
 import { getOfficerById } from '../../data/officers';
 import { getScarTooltip } from '../console/scarStatus';
 import ArmoryItemCard from './ArmoryItemCard';
-import type { WeaponModule, Subsystem } from '../../types/game';
+import TraumaIcon from '../console/TraumaIcon';
+import type { CampaignState } from '../../types/campaignTypes';
+import type { WeaponModule, Subsystem, PlayerState, OfficerState } from '../../types/game';
+
+interface OfficerDrydockCardProps {
+  officerState: OfficerState;
+  player: PlayerState;
+  campaign: CampaignState;
+  hasFreeRepair: boolean;
+  purchasePsychEval: (officerId: string, shipId: string, traumaId: string) => void;
+  purchaseOfficerTraining: (officerId: string, shipId: string) => void;
+}
+
+function OfficerDrydockCard({
+  officerState,
+  player,
+  campaign,
+  hasFreeRepair,
+  purchasePsychEval,
+  purchaseOfficerTraining
+}: OfficerDrydockCardProps) {
+  const [activeTraumaIdx, setActiveTraumaIdx] = useState(0);
+
+  const officerDef = getOfficerById(officerState.officerId);
+  const costKey = `${officerState.currentTier}-to-${officerState.currentTier === 'rookie' ? 'veteran' : 'elite'}`;
+  const upgradeCost = OFFICER_TRAINING_COSTS[costKey];
+  const isMaxTier = !upgradeCost;
+
+  const traumas = officerState.traumas;
+  const clampedIdx = Math.min(activeTraumaIdx, Math.max(0, traumas.length - 1));
+
+  const panelStyle: React.CSSProperties = { padding: 'var(--space-sm)', display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' };
+
+  return (
+    <div className={`panel ${traumas.length > 0 ? 'panel--glow' : ''}`} style={{ ...panelStyle, padding: 0, overflow: 'hidden', borderColor: traumas.length > 0 ? '#E53E3E' : undefined }}>
+      <div style={{ display: 'flex', background: 'rgba(255,255,255,0.02)', padding: 'var(--space-sm)', borderBottom: '1px solid var(--color-border)' }}>
+        {officerDef?.avatar ? (
+          <img src={officerDef.avatar} alt={officerDef.name} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '4px', border: '1px solid var(--color-border)', marginRight: 'var(--space-sm)' }} />
+        ) : (
+          <div style={{ width: '60px', height: '60px', background: '#333', borderRadius: '4px', marginRight: 'var(--space-sm)' }} />
+        )}
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--color-text-primary)' }}>{officerDef?.name}</div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>{officerState.station.toUpperCase()}</div>
+          <div style={{ marginTop: '4px', display: 'flex', gap: '4px' }}>
+            {['rookie', 'veteran', 'elite', 'legendary'].map((tier, i) => {
+              const tiers = ['rookie', 'veteran', 'elite', 'legendary'];
+              const currentIndex = tiers.indexOf(officerState.currentTier);
+              const isFilled = i <= currentIndex;
+              return (
+                <div key={tier} title={tier.toUpperCase()} style={{ width: '12px', height: '12px', borderRadius: '50%', background: isFilled ? 'var(--color-holo-cyan)' : 'var(--color-bg-raised)', border: `1px solid ${isFilled ? 'var(--color-holo-cyan)' : 'var(--color-border)'}` }} />
+              );
+            })}
+          </div>
+        </div>
+      </div>
+      
+      <div style={{ padding: 'var(--space-sm)', display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
+        {traumas.length > 0 && (() => {
+          const trauma = traumas[clampedIdx];
+          if (!trauma) return null;
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)' }}>
+              {/* Pagination Controls if > 1 Trauma */}
+              {traumas.length > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+                  <span className="mono" style={{ fontSize: '0.75rem', color: '#E53E3E', fontWeight: 'bold' }}>
+                    TRAUMA {clampedIdx + 1} OF {traumas.length}
+                  </span>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <button
+                      className="btn"
+                      style={{ padding: '2px 8px', fontSize: '0.7rem', lineHeight: 1 }}
+                      onClick={() => setActiveTraumaIdx(prev => (prev - 1 + traumas.length) % traumas.length)}
+                    >
+                      ◀
+                    </button>
+                    <button
+                      className="btn"
+                      style={{ padding: '2px 8px', fontSize: '0.7rem', lineHeight: 1 }}
+                      onClick={() => setActiveTraumaIdx(prev => (prev + 1) % traumas.length)}
+                    >
+                      ▶
+                    </button>
+                  </div>
+                </div>
+              )}
+              
+              <div style={{ padding: 'var(--space-xs) var(--space-sm)', background: 'rgba(229, 62, 62, 0.1)', borderLeft: '3px solid #E53E3E', fontSize: '0.85rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <TraumaIcon trauma={trauma} size={32} />
+                  <div>
+                    <div style={{ color: '#E53E3E', fontWeight: 'bold' }}>⚠️ {trauma.name}</div>
+                    <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>{trauma.effect}</div>
+                  </div>
+                </div>
+                <button
+                  className="btn btn--outline"
+                  style={{ width: '100%', fontSize: '0.8rem', padding: '4px', marginTop: 'var(--space-xs)', color: '#E53E3E', borderColor: '#E53E3E' }}
+                  disabled={!hasFreeRepair && campaign.requisitionPoints < PSYCH_EVAL_COST}
+                  onClick={() => purchasePsychEval(officerState.officerId, player.shipId, trauma.id)}
+                >
+                  {hasFreeRepair ? 'USE FREE REPAIR' : campaign.requisitionPoints < PSYCH_EVAL_COST ? `NEEDS ${PSYCH_EVAL_COST} RP` : `PSYCH EVAL (${PSYCH_EVAL_COST} RP)`}
+                </button>
+              </div>
+            </div>
+          );
+        })()}
+        
+        <button
+          className="btn btn--outline"
+          style={{ width: '100%', fontSize: '0.8rem', padding: '6px' }}
+          disabled={isMaxTier || campaign.requisitionPoints < upgradeCost!}
+          onClick={() => {
+            if (!isMaxTier) purchaseOfficerTraining(officerState.officerId, player.shipId);
+          }}
+        >
+          {isMaxTier ? 'MAX TIER REACHED' : (campaign.requisitionPoints < upgradeCost! ? `TRAINING (${upgradeCost} RP)` : `OFFICER TRAINING (${upgradeCost} RP)`)}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 type Tab = 'ships' | 'officers' | 'shipyard' | 'armory';
 
@@ -222,67 +344,17 @@ export default function DrydockView() {
                       {player.name} <span style={{ color: 'var(--color-text-dim)', fontSize: '0.9rem' }}>({ship?.name || 'Unknown Ship'})</span>
                     </h3>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 'var(--space-md)' }}>
-                      {player.officers.map(officerState => {
-                        const officerDef = getOfficerById(officerState.officerId);
-                        const costKey = `${officerState.currentTier}-to-${officerState.currentTier === 'rookie' ? 'veteran' : 'elite'}`;
-                        const upgradeCost = OFFICER_TRAINING_COSTS[costKey];
-                        const isMaxTier = !upgradeCost;
-                        
-                        return (
-                          <div key={officerState.officerId} className={`panel ${officerState.traumas.length > 0 ? 'panel--glow' : ''}`} style={{ ...panelStyle, padding: 0, overflow: 'hidden', borderColor: officerState.traumas.length > 0 ? '#E53E3E' : undefined }}>
-                            <div style={{ display: 'flex', background: 'rgba(255,255,255,0.02)', padding: 'var(--space-sm)', borderBottom: '1px solid var(--color-border)' }}>
-                              {officerDef?.avatar ? (
-                                <img src={officerDef.avatar} alt={officerDef.name} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '4px', border: '1px solid var(--color-border)', marginRight: 'var(--space-sm)' }} />
-                              ) : (
-                                <div style={{ width: '60px', height: '60px', background: '#333', borderRadius: '4px', marginRight: 'var(--space-sm)' }} />
-                              )}
-                              <div style={{ flex: 1 }}>
-                                <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: 'var(--color-text-primary)' }}>{officerDef?.name}</div>
-                                <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>{officerState.station.toUpperCase()}</div>
-                                <div style={{ marginTop: '4px', display: 'flex', gap: '4px' }}>
-                                  {['rookie', 'veteran', 'elite', 'legendary'].map((tier, i) => {
-                                    const tiers = ['rookie', 'veteran', 'elite', 'legendary'];
-                                    const currentIndex = tiers.indexOf(officerState.currentTier);
-                                    const isFilled = i <= currentIndex;
-                                    return (
-                                      <div key={tier} title={tier.toUpperCase()} style={{ width: '12px', height: '12px', borderRadius: '50%', background: isFilled ? 'var(--color-holo-cyan)' : 'var(--color-bg-raised)', border: `1px solid ${isFilled ? 'var(--color-holo-cyan)' : 'var(--color-border)'}` }} />
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            </div>
-                            
-                            <div style={{ padding: 'var(--space-sm)', display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
-                              {officerState.traumas.length > 0 && (
-                                <div style={{ padding: 'var(--space-xs) var(--space-sm)', background: 'rgba(229, 62, 62, 0.1)', borderLeft: '3px solid #E53E3E', fontSize: '0.85rem' }}>
-                                  <div style={{ color: '#E53E3E', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    ⚠️ {officerState.traumas[officerState.traumas.length - 1].name}
-                                  </div>
-                                  <button
-                                    className="btn btn--outline"
-                                    style={{ width: '100%', fontSize: '0.8rem', padding: '4px', marginTop: 'var(--space-xs)', color: '#E53E3E', borderColor: '#E53E3E' }}
-                                    disabled={!hasFreeRepair && campaign.requisitionPoints < PSYCH_EVAL_COST}
-                                    onClick={() => purchasePsychEval(officerState.officerId, player.shipId)}
-                                  >
-                                    {hasFreeRepair ? 'USE FREE REPAIR' : campaign.requisitionPoints < PSYCH_EVAL_COST ? `NEEDS ${PSYCH_EVAL_COST} RP` : `PSYCH EVAL (${PSYCH_EVAL_COST} RP)`}
-                                  </button>
-                                </div>
-                              )}
-                              
-                              <button
-                                className="btn btn--outline"
-                                style={{ width: '100%', fontSize: '0.8rem', padding: '6px' }}
-                                disabled={isMaxTier || campaign.requisitionPoints < upgradeCost!}
-                                onClick={() => {
-                                  if (!isMaxTier) purchaseOfficerTraining(officerState.officerId, player.shipId);
-                                }}
-                              >
-                                {isMaxTier ? 'MAX TIER REACHED' : (campaign.requisitionPoints < upgradeCost! ? `TRAINING (${upgradeCost} RP)` : `OFFICER TRAINING (${upgradeCost} RP)`)}
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
+                      {player.officers.map(officerState => (
+                        <OfficerDrydockCard
+                          key={officerState.officerId}
+                          officerState={officerState}
+                          player={player}
+                          campaign={campaign}
+                          hasFreeRepair={hasFreeRepair}
+                          purchasePsychEval={purchasePsychEval}
+                          purchaseOfficerTraining={purchaseOfficerTraining}
+                        />
+                      ))}
                     </div>
                   </div>
                 );

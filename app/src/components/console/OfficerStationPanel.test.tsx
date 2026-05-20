@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, fireEvent } from '@testing-library/react';
 import { DndContext } from '@dnd-kit/core';
 import OfficerStationPanel from './OfficerStationPanel';
 import { useGameStore } from '../../store/useGameStore';
-
+ 
 describe('OfficerStationPanel', () => {
   beforeEach(() => {
     useGameStore.setState({
@@ -51,21 +51,21 @@ describe('OfficerStationPanel', () => {
       objectiveType: '',
     });
   });
-
+ 
   it('shows the true next CT cost for the first assignment when a scar increases it', () => {
     const engineeringOfficer = useGameStore.getState().players[0].officers.find(officer => officer.station === 'engineering');
     expect(engineeringOfficer).toBeDefined();
-
+ 
     render(
       <DndContext>
         <OfficerStationPanel officerState={engineeringOfficer!} playerId="p1" />
       </DndContext>
     );
-
+ 
     const damageControlSlot = screen.getByTestId('action-slot-damage-control');
     expect(within(damageControlSlot).getByText('3 CT')).toBeInTheDocument();
   });
-
+ 
   it('shows Xel CT modifier on the command panel when Cyber-Warfare cost is adjusted', () => {
     useGameStore.setState(state => ({
       players: state.players.map(player => ({
@@ -77,35 +77,35 @@ describe('OfficerStationPanel', () => {
         ),
       })),
     }));
-
+ 
     const sensorsOfficer = useGameStore.getState().players[0].officers.find(officer => officer.station === 'sensors');
     expect(sensorsOfficer).toBeDefined();
-
+ 
     render(
       <DndContext>
         <OfficerStationPanel officerState={sensorsOfficer!} playerId="p1" />
       </DndContext>
     );
-
+ 
     const cyberWarfareSlot = screen.getByTestId('action-slot-cyber-warfare');
     expect(within(cyberWarfareSlot).getByText('2 CT')).toBeInTheDocument();
     expect(within(cyberWarfareSlot).getByText(/Hacker: -1 CT/)).toBeInTheDocument();
   });
-
+ 
   it('shows the officer ability name and mechanics when hovering the officer name', () => {
     const sensorsOfficer = useGameStore.getState().players[0].officers.find(officer => officer.station === 'sensors');
     expect(sensorsOfficer).toBeDefined();
-
+ 
     render(
       <DndContext>
         <OfficerStationPanel officerState={sensorsOfficer!} playerId="p1" />
       </DndContext>
     );
-
-    expect(screen.getByRole('heading', { name: /lt\. cmdr\. vance/i })).toHaveAttribute(
-      'title',
-      'Eagle Eye: "Target Lock" actions apply -2 TN even without a Target Painting success; a successful Target Painting roll improves that to -3 TN.',
-    );
+ 
+    const nameHeading = screen.getByRole('heading', { name: /lt\. cmdr\. vance/i });
+    fireEvent.mouseEnter(nameHeading);
+ 
+    expect(screen.getByText(/Eagle Eye: "Target Lock" actions apply -2 TN/)).toBeInTheDocument();
   });
   it('hides "Load Ordnance" action when no ordnance weapons are equipped', () => {
     const tacticalOfficer = useGameStore.getState().players[0].officers.find(o => o.station === 'tactical');

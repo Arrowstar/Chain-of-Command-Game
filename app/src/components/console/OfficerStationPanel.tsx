@@ -16,6 +16,7 @@ import { useTokenSelectionStore } from '../../store/useTokenSelectionStore';
 import { useViewport } from '../../utils/useViewport';
 import { fireCombatToast } from '../board/CombatToastContainer';
 import { useTutorialStore } from '../../store/useTutorialStore';
+import TraumaIcon from './TraumaIcon';
 
 interface OfficerStationPanelProps {
   officerState: OfficerState;
@@ -52,6 +53,9 @@ export default function OfficerStationPanel({ officerState, playerId }: OfficerS
 
   const nameRef = useRef<HTMLHeadingElement>(null);
   const traitRef = useRef<HTMLDivElement>(null);
+  const traumaRef = useRef<HTMLDivElement>(null);
+  const scarHelpRef = useRef<HTMLSpanElement>(null);
+  const scarRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   if (!officerState || !officerData || !player) return null;
 
@@ -142,21 +146,22 @@ export default function OfficerStationPanel({ officerState, playerId }: OfficerS
           <div>
             <h3
               ref={nameRef}
-              title={isCoarsePointer ? undefined : officerAbilityTooltip}
+              onMouseEnter={() => {
+                if (!isCoarsePointer) setActiveTooltip('ability-name');
+              }}
+              onMouseLeave={() => {
+                if (!isCoarsePointer) setActiveTooltip(null);
+              }}
               onClick={(e) => {
-                if (isCoarsePointer) {
-                  e.stopPropagation();
-                  setActiveTooltip(activeTooltip === 'ability' ? null : 'ability');
-                }
+                e.stopPropagation();
+                setActiveTooltip(activeTooltip === 'ability-name' ? null : 'ability-name');
               }}
               style={{ color: 'var(--color-holo-cyan)', fontSize: '1rem', margin: '0 0 4px 0', cursor: 'help', position: 'relative' }}
             >
               {officerData.name}
-              {isCoarsePointer && (
-                <TouchTooltipPortal show={activeTooltip === 'ability'} anchorRef={nameRef}>
-                  {officerAbilityTooltip}
-                </TouchTooltipPortal>
-              )}
+              <TouchTooltipPortal show={activeTooltip === 'ability-name'} anchorRef={nameRef}>
+                {officerAbilityTooltip}
+              </TouchTooltipPortal>
             </h3>
             <div className="label" style={{ color: 'var(--color-text-secondary)' }}>
               Station: {officerState.station.toUpperCase()}
@@ -168,20 +173,21 @@ export default function OfficerStationPanel({ officerState, playerId }: OfficerS
             ref={traitRef}
             className="label" 
             style={{ color: 'var(--color-alert-amber)', cursor: 'help', position: 'relative' }}
-            title={isCoarsePointer ? undefined : officerAbilityTooltip}
+            onMouseEnter={() => {
+              if (!isCoarsePointer) setActiveTooltip('ability-trait');
+            }}
+            onMouseLeave={() => {
+              if (!isCoarsePointer) setActiveTooltip(null);
+            }}
             onClick={(e) => {
-              if (isCoarsePointer) {
-                e.stopPropagation();
-                setActiveTooltip(activeTooltip === 'ability' ? null : 'ability');
-              }
+              e.stopPropagation();
+              setActiveTooltip(activeTooltip === 'ability-trait' ? null : 'ability-trait');
             }}
           >
             {officerData.traitName}
-            {isCoarsePointer && (
-              <TouchTooltipPortal show={activeTooltip === 'ability'} anchorRef={traitRef}>
-                {officerAbilityTooltip}
-              </TouchTooltipPortal>
-            )}
+            <TouchTooltipPortal show={activeTooltip === 'ability-trait'} anchorRef={traitRef}>
+              {officerAbilityTooltip}
+            </TouchTooltipPortal>
           </div>
           <div className="mono" style={{ fontSize: '0.7rem' }}>Rank: {officerState.currentTier.toUpperCase()}</div>
         </div>
@@ -193,6 +199,41 @@ export default function OfficerStationPanel({ officerState, playerId }: OfficerS
         maxStress={maxStress} 
         officerName={officerData.name} 
       />
+
+      {officerState.traumas.length > 0 && (
+        <div style={{ marginTop: 'var(--space-sm)' }}>
+          <div
+            ref={traumaRef}
+            className="label"
+            style={{ color: '#E53E3E', cursor: 'help', display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(229, 62, 62, 0.1)', padding: '4px 8px', borderRadius: '4px', border: '1px solid rgba(229, 62, 62, 0.3)', position: 'relative' }}
+            onMouseEnter={() => {
+              if (!isCoarsePointer) setActiveTooltip('trauma');
+            }}
+            onMouseLeave={() => {
+              if (!isCoarsePointer) setActiveTooltip(null);
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              setActiveTooltip(activeTooltip === 'trauma' ? null : 'trauma');
+            }}
+          >
+            ⚠️ {officerState.traumas.length} TRAUMA{officerState.traumas.length > 1 ? 'S' : ''}
+            <TouchTooltipPortal show={activeTooltip === 'trauma'} anchorRef={traumaRef}>
+               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'left' }}>
+                 {officerState.traumas.map(t => (
+                   <div key={t.id}>
+                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#E53E3E', fontWeight: 'bold' }}>
+                       <TraumaIcon trauma={t} size={32} />
+                       {t.name}
+                     </div>
+                     <div style={{ fontSize: '0.75rem', marginTop: '4px', color: 'var(--color-text-primary)' }}>{t.effect}</div>
+                   </div>
+                 ))}
+               </div>
+            </TouchTooltipPortal>
+          </div>
+        </div>
+      )}
 
       {stationScars.length > 0 && (
         <div
@@ -211,8 +252,18 @@ export default function OfficerStationPanel({ officerState, playerId }: OfficerS
               Persistent Ship Damage
             </div>
             <span
+              ref={scarHelpRef}
               className="mono"
-              title={getScarImpactLegendText()}
+              onMouseEnter={() => {
+                if (!isCoarsePointer) setActiveTooltip('scar-help');
+              }}
+              onMouseLeave={() => {
+                if (!isCoarsePointer) setActiveTooltip(null);
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveTooltip(activeTooltip === 'scar-help' ? null : 'scar-help');
+              }}
               style={{
                 fontSize: '0.68rem',
                 color: 'var(--color-alert-amber)',
@@ -221,31 +272,40 @@ export default function OfficerStationPanel({ officerState, playerId }: OfficerS
                 padding: '2px 7px',
                 cursor: 'help',
                 lineHeight: 1,
+                position: 'relative'
               }}
             >
               ?
+              <TouchTooltipPortal show={activeTooltip === 'scar-help'} anchorRef={scarHelpRef}>
+                {getScarImpactLegendText()}
+              </TouchTooltipPortal>
             </span>
           </div>
           <div className="mono" style={{ fontSize: '0.68rem', color: 'var(--color-text-secondary)' }}>
-            {isCoarsePointer ? 'Tap a scar tag for the full penalty, or the ? for shorthand help.' : 'Hover a scar tag for the full penalty, or the ? for shorthand help.'}
+            Tap or hover a scar tag for the full penalty, or the ? for shorthand help.
           </div>
-          {stationScars.map((scar, idx) => {
+          {stationScars.map((scar) => {
             const meta = getScarStatusMeta(scar.fromCriticalId);
+            const tooltipId = `scar-${scar.id}`;
             return (
               <div 
                 key={scar.id} 
+                ref={el => { scarRefs.current[scar.id] = el; }}
                 style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', alignItems: 'center', position: 'relative' }}
+                onMouseEnter={() => {
+                  if (!isCoarsePointer) setActiveTooltip(tooltipId);
+                }}
+                onMouseLeave={() => {
+                  if (!isCoarsePointer) setActiveTooltip(null);
+                }}
                 onClick={(e) => {
-                  if (isCoarsePointer) {
-                    e.stopPropagation();
-                    setActiveTooltip(activeTooltip === `scar-${idx}` ? null : `scar-${idx}`);
-                  }
+                  e.stopPropagation();
+                  setActiveTooltip(activeTooltip === tooltipId ? null : tooltipId);
                 }}
               >
-                <span style={{ color: 'var(--color-text-bright)', fontSize: '0.82rem', cursor: 'help' }} title={isCoarsePointer ? undefined : getScarTooltip(scar)}>{scar.name}</span>
+                <span style={{ color: 'var(--color-text-bright)', fontSize: '0.82rem', cursor: 'help' }}>{scar.name}</span>
                 <span
                   className="mono"
-                  title={isCoarsePointer ? undefined : getScarTooltip(scar)}
                   style={{
                     fontSize: '0.68rem',
                     color: 'var(--color-alert-amber)',
@@ -258,6 +318,9 @@ export default function OfficerStationPanel({ officerState, playerId }: OfficerS
                 >
                   {meta.shortImpact}
                 </span>
+                <TouchTooltipPortal show={activeTooltip === tooltipId} anchorRef={{ current: scarRefs.current[scar.id] }}>
+                  {getScarTooltip(scar)}
+                </TouchTooltipPortal>
               </div>
             );
           })}
