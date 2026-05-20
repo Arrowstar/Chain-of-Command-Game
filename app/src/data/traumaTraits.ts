@@ -31,7 +31,7 @@ export const TRAUMA_POOL: TraumaEffect[] = [
 
   // Sensors (Row 3)
   { id: 'analysis-paralysis', name: 'Analysis Paralysis', effect: 'Target Lock no longer provides -2 TN. Instead, allows reroll of exactly one failed die in Volley Pool.', spritePos: { col: 1, row: 3 } },
-  { id: 'hyper-vigilant', name: 'Hyper-Vigilant', effect: 'Every action on the Sensors station costs an additional +1 Stress.', spritePos: { col: 2, row: 3 } },
+  { id: 'hyper-vigilant', name: 'Hyper-Vigilant', effect: 'Every action on this officer\'s assigned station costs an additional +1 Stress.', spritePos: { col: 2, row: 3 } },
   { id: 'comms-phobic', name: 'Comms-Phobic', effect: 'Cannot use "Cyber-Warfare". Ship cannot be target of Allied support actions.', spritePos: { col: 3, row: 3 } },
   { id: 'phantom-scanners', name: 'Phantom Scanners', effect: 'At the start of the Briefing Phase, roll a D6. On a 1 or 2, this officer gains +1 Stress immediately.', spritePos: { col: 4, row: 3 } }
 ];

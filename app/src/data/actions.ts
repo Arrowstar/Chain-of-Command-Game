@@ -174,9 +174,7 @@ export function calculateActionCosts(
   // Trauma effects (CT and Stress modifications)
   const hasTrauma = (id: string) => traumas.some(t => t.id === id);
 
-  if (hasTrauma('hyper-vigilant')) { // Hyper-Vigilant: every action on Sensors costs +1 Stress
-    // We assume if this function is called, and they have this trauma, it's on Sensors station since that's where the trauma is.
-    // To be perfectly safe, we'll just add +1 Stress.
+  if (hasTrauma('hyper-vigilant')) { // Hyper-Vigilant: every action on their assigned station costs +1 Stress
     stressCost += 1;
   }
   if (hasTrauma('tunnel-vision') && action.actionId === 'rotate') { // Tunnel Vision: Rotate costs 2 Stress

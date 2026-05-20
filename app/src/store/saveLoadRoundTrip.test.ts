@@ -63,7 +63,7 @@ describe('Game state persistence round-trip', () => {
           ],
           officers: [
             { officerId: 'vane', station: 'tactical', currentStress: 2, currentTier: 'elite', isLocked: false, lockDuration: 0, traumas: [{ id: 'gun-shy', name: 'Gun-Shy', effect: '+1 CT to fire-primary' }], hasFumbledThisRound: false, actionsPerformedThisRound: 1 },
-            { officerId: 'vance', station: 'sensors', currentStress: 1, currentTier: 'veteran', isLocked: false, lockDuration: 0, traumas: [{ id: 'hyper-vigilant', name: 'Hyper Vigilant', effect: '+1 stress on sensors actions' }], hasFumbledThisRound: false, actionsPerformedThisRound: 2 },
+            { officerId: 'vance', station: 'sensors', currentStress: 1, currentTier: 'veteran', isLocked: false, lockDuration: 0, traumas: [{ id: 'hyper-vigilant', name: 'Hyper Vigilant', effect: 'Every action on this officer\'s assigned station costs an additional +1 Stress.' }], hasFumbledThisRound: false, actionsPerformedThisRound: 2 },
           ],
         },
       ],
