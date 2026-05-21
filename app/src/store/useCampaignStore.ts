@@ -25,6 +25,8 @@ import {
   generateMarketInventory,
   purchaseChassisUpgrade, purchaseMarketItemFn,
   applyShipReplacement,
+  generateEliteRewards,
+  applyEliteReward,
 } from '../engine/campaignEngine';
 import type { AppliedEventState } from '../engine/campaignEngine';
 import { getChassisById } from '../data/shipChassis';
@@ -98,6 +100,7 @@ interface CampaignStore {
   executePostCombat: () => PostCombatResult | null;
   convertFleetFavorToRP: (amount: number) => FleetFavorConversionResult | null;
   finishPostCombat: () => void;
+  claimEliteReward: (rewardId: string) => void;
 
   // ── Drydock (Haven) ────────────────────────────────────────────
   enterDrydock: () => void;
@@ -782,13 +785,75 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
       return;
     }
 
+    const currentNode = get().sectorMap?.nodes.find(n => n.id === campaign.currentNodeId);
+    const isElite = currentNode?.type === NT.Elite || currentNode?.type === NT.Boss;
+    const justWonElite = isElite && campaign.lastCombatVictory;
+
+    if (justWonElite) {
+      set(state => ({
+        campaign: state.campaign ? { 
+          ...state.campaign, 
+          campaignPhase: 'eliteReward',
+          pendingEliteRewards: generateEliteRewards(state.campaign.experimentalTech.map(t => t.id)),
+          pendingEliteRewardNodeId: state.campaign.currentNodeId
+        } : null
+      }));
+      get().pushCampaignLog({
+        type: 'system',
+        message: 'Elite Combat Victorious',
+        outcome: 'After-action review closed. Fleet is securing high-value assets from the battlefield.',
+      });
+    } else {
+      set(state => ({
+        campaign: state.campaign ? { ...state.campaign, campaignPhase: 'sectorMap' } : null
+      }));
+      get().pushCampaignLog({
+        type: 'system',
+        message: 'Returned to sector map',
+        outcome: 'After-action review closed. Fleet ready for next navigation order.',
+      });
+    }
+  },
+
+  claimEliteReward: (rewardId: string) => {
+    const { campaign, persistedPlayers } = get();
+    if (!campaign || campaign.campaignPhase !== 'eliteReward' || !campaign.pendingEliteRewards) return;
+
+    const reward = campaign.pendingEliteRewards.find(r => r.id === rewardId);
+    if (!reward) return;
+
+    const result = applyEliteReward(
+      reward,
+      campaign.requisitionPoints,
+      campaign.fleetFavor,
+      campaign.experimentalTech,
+      campaign.pendingEconomicBuffs,
+      persistedPlayers
+    );
+
     set(state => ({
-      campaign: state.campaign ? { ...state.campaign, campaignPhase: 'sectorMap' } : null
+      campaign: state.campaign ? {
+        ...state.campaign,
+        requisitionPoints: result.requisitionPoints,
+        fleetFavor: result.fleetFavor,
+        experimentalTech: result.experimentalTech,
+        pendingEconomicBuffs: result.pendingEconomicBuffs,
+        campaignPhase: 'sectorMap',
+        pendingEliteRewards: [],
+        pendingEliteRewardNodeId: null,
+      } : null,
+      persistedPlayers: result.players,
     }));
+
+    fireToast({ type: 'tech', message: `Reward Claimed: ${reward.label}` });
     get().pushCampaignLog({
-      type: 'system',
-      message: 'Returned to sector map',
-      outcome: 'After-action review closed. Fleet ready for next navigation order.',
+      type: 'resource',
+      message: 'Claimed Elite Reward',
+      outcome: `Selected ${reward.label}. ${result.narrativeSummary} Fleet returning to navigation.`,
+      details: {
+        rewardId,
+        type: reward.type,
+      },
     });
   },
 
@@ -1078,6 +1143,8 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
               nextStoreDiscountPercent: 0,
               freeRepairAtNextStation: false,
               freeRepairConsumed: false,
+              freeDeepRepairAtNextStation: false,
+              freePsychEvalAtNextStation: false,
             },
           }
         : null,
@@ -1185,7 +1252,11 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
     const officer = player?.officers.find(o => o.officerId === officerId);
     if (!officer) return;
 
-    const freeRepair = campaign.pendingEconomicBuffs.freeRepairAtNextStation && !campaign.pendingEconomicBuffs.freeRepairConsumed;
+    // Check specific psych eval voucher first, then fall back to generic free repair
+    const freePsychVoucher = !!campaign.pendingEconomicBuffs.freePsychEvalAtNextStation;
+    const freeGeneric = campaign.pendingEconomicBuffs.freeRepairAtNextStation && !campaign.pendingEconomicBuffs.freeRepairConsumed;
+    const freeRepair = freePsychVoucher || freeGeneric;
+
     const result = purchasePsychEval({
       officerId,
       shipId,
@@ -1201,7 +1272,12 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
         ...state.campaign,
         requisitionPoints: state.campaign.requisitionPoints + rpDelta,
         pendingEconomicBuffs: freeRepair
-          ? { ...state.campaign.pendingEconomicBuffs, freeRepairConsumed: true }
+          ? {
+              ...state.campaign.pendingEconomicBuffs,
+              // Consume whichever voucher was used
+              freePsychEvalAtNextStation: freePsychVoucher ? false : state.campaign.pendingEconomicBuffs.freePsychEvalAtNextStation,
+              freeRepairConsumed: freeGeneric && !freePsychVoucher ? true : state.campaign.pendingEconomicBuffs.freeRepairConsumed,
+            }
           : state.campaign.pendingEconomicBuffs,
       } : null,
       persistedPlayers: state.persistedPlayers.map(p => ({
@@ -1213,12 +1289,12 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
         ),
       })),
     }));
-    fireToast({ type: freeRepair ? 'tech' : 'rp-loss', message: freeRepair ? 'Free Repair Used: Psych Eval' : `Psych Eval: ${rpDelta} RP` });
+    fireToast({ type: freeRepair ? 'tech' : 'rp-loss', message: freeRepair ? 'Free Psych Eval Voucher Used' : `Psych Eval: ${rpDelta} RP` });
     get().pushCampaignLog({
       type: 'officer',
       message: `Authorized psych evaluation for ${officer.station.toUpperCase()} officer`,
       outcome: freeRepair
-        ? `Removed trauma case ${removedTraumaId ?? 'unknown'} using the free repair benefit aboard ship ${shipId}.`
+        ? `Removed trauma case ${removedTraumaId ?? 'unknown'} using the ${freePsychVoucher ? 'Elite Reward psych eval voucher' : 'free repair benefit'} aboard ship ${shipId}.`
         : `Removed trauma case ${removedTraumaId ?? 'unknown'} for ${-rpDelta} RP aboard ship ${shipId}.`,
       details: {
         officerId,
@@ -1237,7 +1313,11 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
     if (!ship) return;
     const scar = ship.scars.find(entry => entry.id === scarId);
 
-    const freeRepair = campaign.pendingEconomicBuffs.freeRepairAtNextStation && !campaign.pendingEconomicBuffs.freeRepairConsumed;
+    // Check specific deep repair voucher first, then fall back to generic free repair
+    const freeDeepVoucher = !!campaign.pendingEconomicBuffs.freeDeepRepairAtNextStation;
+    const freeGenericRepair = campaign.pendingEconomicBuffs.freeRepairAtNextStation && !campaign.pendingEconomicBuffs.freeRepairConsumed;
+    const freeRepair = freeDeepVoucher || freeGenericRepair;
+
     const result = purchaseDeepRepair({
       shipId,
       scars: ship.scars,
@@ -1252,18 +1332,24 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
         ...state.campaign,
         requisitionPoints: state.campaign.requisitionPoints + rpDelta,
         pendingEconomicBuffs: freeRepair
-          ? { ...state.campaign.pendingEconomicBuffs, freeRepairConsumed: true }
+          ? {
+              ...state.campaign.pendingEconomicBuffs,
+              // Consume whichever voucher was used
+              freeDeepRepairAtNextStation: freeDeepVoucher ? false : state.campaign.pendingEconomicBuffs.freeDeepRepairAtNextStation,
+              freeRepairConsumed: freeGenericRepair && !freeDeepVoucher ? true : state.campaign.pendingEconomicBuffs.freeRepairConsumed,
+            }
           : state.campaign.pendingEconomicBuffs,
       } : null,
       persistedShips: state.persistedShips.map(s =>
         s.id === shipId ? { ...s, scars: s.scars.filter(sc => sc.id !== scarId) } : s
       ),
     }));
+    fireToast({ type: freeRepair ? 'tech' : 'rp-loss', message: freeRepair ? 'Free Deep Repair Voucher Used' : `Deep Repair: ${rpDelta} RP` });
     get().pushCampaignLog({
       type: 'repair',
       message: `Ordered deep repair for ${ship.name}`,
       outcome: freeRepair
-        ? `Removed scar ${scar?.name ?? scarId} using the free repair benefit.`
+        ? `Removed scar ${scar?.name ?? scarId} using the ${freeDeepVoucher ? 'Elite Reward deep repair voucher' : 'free repair benefit'}.`
         : `Removed scar ${scar?.name ?? scarId} for ${-rpDelta} RP.`,
       details: {
         shipId,

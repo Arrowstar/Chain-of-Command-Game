@@ -91,54 +91,54 @@ export default function FleetAssetsPanel({ asFab = false }: { asFab?: boolean } 
     <>
       {/* FAB trigger: floating button on the hex map pane */}
       {asFab ? (
-          <SmartTooltip content={`Fleet Assets — ${fleetFavor} FF`} as="button">
-            <button
-              onClick={() => setOpen(true)}
-              style={{
-                position: 'absolute',
-                bottom: 'var(--space-lg)',
-                left: 'var(--space-lg)',
-                zIndex: 120,
-                width: '56px',
-                height: '56px',
-                borderRadius: '50%',
-                border: '2px solid var(--color-alert-amber)',
-                background: 'rgba(10, 18, 28, 0.92)',
-                boxShadow: '0 0 16px rgba(255, 181, 71, 0.35), 0 2px 8px rgba(0,0,0,0.5)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                gap: '2px',
-                backdropFilter: 'blur(4px)',
-                transition: 'box-shadow 0.2s ease, transform 0.15s ease',
-              }}
-              aria-label="Open Fleet Assets"
-            >
-              {/* Ship-wheel / assets icon */}
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--color-alert-amber)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="3" />
-                <line x1="12" y1="2" x2="12" y2="6" />
-                <line x1="12" y1="18" x2="12" y2="22" />
-                <line x1="2" y1="12" x2="6" y2="12" />
-                <line x1="18" y1="12" x2="22" y2="12" />
-                <line x1="4.93" y1="4.93" x2="7.76" y2="7.76" />
-                <line x1="16.24" y1="16.24" x2="19.07" y2="19.07" />
-                <line x1="19.07" y1="4.93" x2="16.24" y2="7.76" />
-                <line x1="7.76" y1="16.24" x2="4.93" y2="19.07" />
-              </svg>
-              {/* FF badge */}
-              <span style={{
-                fontSize: '0.58rem',
-                fontFamily: 'var(--font-mono)',
-                color: 'var(--color-alert-amber)',
-                letterSpacing: '0.05em',
-                lineHeight: 1,
-              }}>
-                {fleetFavor} FF
-              </span>
-            </button>
+          <SmartTooltip 
+            content={`Fleet Assets — ${fleetFavor} FF`} 
+            as="button"
+            onClick={() => setOpen(true)}
+            style={{
+              position: 'absolute',
+              bottom: 'var(--space-lg)',
+              left: 'var(--space-lg)',
+              zIndex: 120,
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
+              border: '2px solid var(--color-alert-amber)',
+              background: 'rgba(10, 18, 28, 0.92)',
+              boxShadow: '0 0 16px rgba(255, 181, 71, 0.35), 0 2px 8px rgba(0,0,0,0.5)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              gap: '2px',
+              backdropFilter: 'blur(4px)',
+              transition: 'box-shadow 0.2s ease, transform 0.15s ease',
+            }}
+            aria-label="Open Fleet Assets"
+          >
+            {/* Ship-wheel / assets icon */}
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--color-alert-amber)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3" />
+              <line x1="12" y1="2" x2="12" y2="6" />
+              <line x1="12" y1="18" x2="12" y2="22" />
+              <line x1="2" y1="12" x2="6" y2="12" />
+              <line x1="18" y1="12" x2="22" y2="12" />
+              <line x1="4.93" y1="4.93" x2="7.76" y2="7.76" />
+              <line x1="16.24" y1="16.24" x2="19.07" y2="19.07" />
+              <line x1="19.07" y1="4.93" x2="16.24" y2="7.76" />
+              <line x1="7.76" y1="16.24" x2="4.93" y2="19.07" />
+            </svg>
+            {/* FF badge */}
+            <span style={{
+              fontSize: '0.58rem',
+              fontFamily: 'var(--font-mono)',
+              color: 'var(--color-alert-amber)',
+              letterSpacing: '0.05em',
+              lineHeight: 1,
+            }}>
+              {fleetFavor} FF
+            </span>
           </SmartTooltip>
       ) : (
         /* Inline compact trigger (Settings toolbar row) */

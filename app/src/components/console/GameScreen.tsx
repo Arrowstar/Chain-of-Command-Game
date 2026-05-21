@@ -317,14 +317,14 @@ export default function GameScreen() {
                   </button>
                   {/* Score counter — campaign only */}
                   {isCampaign && (
-                    <SmartTooltip content="Fleet Commendation Score — tap to view ledger" as="button">
-                      <button
-                        className="btn"
-                        style={{ pointerEvents: 'auto', padding: '8px 10px', minHeight: '40px', fontSize: '0.75rem', borderColor: 'rgba(251,191,36,0.4)', background: 'rgba(12, 18, 28, 0.92)', color: '#fbbf24', fontFamily: 'var(--font-mono)' }}
-                        onClick={() => setShowScoreLedger(true)}
-                      >
-                        ★ {campaignScore.toLocaleString()}
-                      </button>
+                    <SmartTooltip 
+                      content="Fleet Commendation Score — tap to view ledger" 
+                      as="button"
+                      className="btn"
+                      style={{ pointerEvents: 'auto', padding: '8px 10px', minHeight: '40px', fontSize: '0.75rem', borderColor: 'rgba(251,191,36,0.4)', background: 'rgba(12, 18, 28, 0.92)', color: '#fbbf24', fontFamily: 'var(--font-mono)' }}
+                      onClick={() => setShowScoreLedger(true)}
+                    >
+                      ★ {campaignScore.toLocaleString()}
                     </SmartTooltip>
                   )}
                 </div>
@@ -626,23 +626,23 @@ export default function GameScreen() {
               </button>
               {/* Score counter — campaign only */}
               {isCampaign && (
-                <SmartTooltip content="Fleet Commendation Score — click to view ledger" as="button">
-                  <button
-                    className="btn"
-                    style={{
-                      pointerEvents: 'auto',
-                      padding: isCoarsePointer ? '10px 16px' : '6px 14px',
-                      minHeight: isCoarsePointer ? '44px' : undefined,
-                      fontSize: isCoarsePointer ? '0.82rem' : '0.75rem',
-                      borderColor: 'rgba(251,191,36,0.4)',
-                      background: 'rgba(12, 18, 28, 0.92)',
-                      color: '#fbbf24',
-                      fontFamily: 'var(--font-mono)',
-                    }}
-                    onClick={() => setShowScoreLedger(true)}
-                  >
-                    ★ {campaignScore.toLocaleString()}
-                  </button>
+                <SmartTooltip 
+                  content="Fleet Commendation Score — click to view ledger" 
+                  as="button"
+                  className="btn"
+                  style={{
+                    pointerEvents: 'auto',
+                    padding: isCoarsePointer ? '10px 16px' : '6px 14px',
+                    minHeight: isCoarsePointer ? '44px' : undefined,
+                    fontSize: isCoarsePointer ? '0.82rem' : '0.75rem',
+                    borderColor: 'rgba(251,191,36,0.4)',
+                    background: 'rgba(12, 18, 28, 0.92)',
+                    color: '#fbbf24',
+                    fontFamily: 'var(--font-mono)',
+                  }}
+                  onClick={() => setShowScoreLedger(true)}
+                >
+                  ★ {campaignScore.toLocaleString()}
                 </SmartTooltip>
               )}
             </div>
@@ -1095,23 +1095,23 @@ function DebugMenu({ onAutoWin, onAutoLose }: { onAutoWin: () => void; onAutoLos
       alignItems: 'flex-end',
       gap: '4px',
     }}>
-      <SmartTooltip content="Toggle debug tools" as="button">
-        <button
-          onClick={() => setOpen(o => !o)}
-          style={{
-            background: 'rgba(20,20,30,0.85)',
-            border: '1px solid rgba(255,200,0,0.4)',
-            color: 'rgba(255,200,0,0.7)',
-            borderRadius: '4px',
-            padding: '2px 8px',
-            fontSize: '0.65rem',
-            fontFamily: 'var(--font-mono)',
-            cursor: 'pointer',
-            letterSpacing: '0.08em',
-          }}
-        >
-          {open ? 'DEV ^' : 'DEV'}
-        </button>
+      <SmartTooltip 
+        content="Toggle debug tools" 
+        as="button"
+        onClick={() => setOpen(o => !o)}
+        style={{
+          background: 'rgba(20,20,30,0.85)',
+          border: '1px solid rgba(255,200,0,0.4)',
+          color: 'rgba(255,200,0,0.7)',
+          borderRadius: '4px',
+          padding: '2px 8px',
+          fontSize: '0.65rem',
+          fontFamily: 'var(--font-mono)',
+          cursor: 'pointer',
+          letterSpacing: '0.08em',
+        }}
+      >
+        {open ? 'DEV ^' : 'DEV'}
       </SmartTooltip>
       {open && (
         <div style={{

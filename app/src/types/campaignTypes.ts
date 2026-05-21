@@ -74,6 +74,7 @@ export type CampaignPhase =
   | 'sectorMap'      // Players are choosing the next node
   | 'nodeResolution' // A node is being resolved (combat launched, event shown, etc.)
   | 'postCombat'     // At-Ease Phase: payout, trauma, damage consolidation
+  | 'eliteReward'    // Elite/Boss node victory rewards selection
   | 'drydock'        // Haven node: spending RP on repairs/upgrades
   | 'gameOver';      // Run complete (victory or total wipe)
 
@@ -250,6 +251,20 @@ export interface PendingEconomicBuffs {
   nextStoreDiscountPercent: number;
   freeRepairAtNextStation: boolean;
   freeRepairConsumed: boolean;
+  freePsychEvalAtNextStation?: boolean;
+  freeDeepRepairAtNextStation?: boolean;
+}
+
+export interface EliteRewardOption {
+  id: string;
+  icon: string;
+  label: string;
+  description: string;
+  type: 'rp' | 'ff' | 'tech' | 'repair' | 'psych' | 'officerUp' | 'stashWeapon';
+  value?: number;
+  itemId?: string;
+  imagePath?: string;
+  tooltip?: string;
 }
 
 // ─── Drydock ─────────────────────────────────────────────────────
@@ -420,6 +435,11 @@ export interface CampaignState {
 
   /** Score at start of current combat (used to calculate delta for PostCombatSummary) */
   scoreAtCombatStart?: number;
+
+  /** Unclaimed rewards from defeating an Elite/Boss node */
+  pendingEliteRewards?: EliteRewardOption[];
+  /** Node ID that granted the pending rewards */
+  pendingEliteRewardNodeId?: string | null;
 }
 
 export interface CampaignLogEntry {

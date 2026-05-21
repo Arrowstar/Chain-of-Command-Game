@@ -79,8 +79,10 @@ function OfficerDrydockCard({
   const [activeTraumaIdx, setActiveTraumaIdx] = useState(0);
 
   const officerDef = getOfficerById(officerState.officerId);
-  const costKey = `${officerState.currentTier}-to-${officerState.currentTier === 'rookie' ? 'veteran' : 'elite'}`;
-  const upgradeCost = OFFICER_TRAINING_COSTS[costKey];
+  const TIER_NEXT: Record<string, string> = { rookie: 'veteran', veteran: 'elite', elite: 'legendary' };
+  const nextTierName = TIER_NEXT[officerState.currentTier];
+  const costKey = nextTierName ? `${officerState.currentTier}-to-${nextTierName}` : '';
+  const upgradeCost = costKey ? OFFICER_TRAINING_COSTS[costKey] : undefined;
   const isMaxTier = !upgradeCost;
 
   const traumas = officerState.traumas;

@@ -19,6 +19,7 @@ export const DEEP_REPAIR_COST = 30;
 export const OFFICER_TRAINING_COSTS: Record<string, number> = {
   'rookie-to-veteran': 15,
   'veteran-to-elite': 30,
+  'elite-to-legendary': 75,
 };
 
 export const DRYDOCK_SERVICES: DrydockService[] = [
@@ -64,7 +65,12 @@ export const OFFICER_TRAINING: DrydockService[] = [
     rpCost: OFFICER_TRAINING_COSTS['veteran-to-elite'],
     description: 'Upgrade one officer from Veteran (D6) to Elite (D8): 30 RP',
   },
-  // NOTE: Legendary tier is reserved for narrative rewards only — no drydock purchase
+  {
+    id: 'train-elite-to-legendary',
+    name: 'Officer Training: Elite → Legendary',
+    rpCost: OFFICER_TRAINING_COSTS['elite-to-legendary'],
+    description: 'Upgrade one officer from Elite (D8) to Legendary (D10): 75 RP',
+  },
 ];
 
 // ══════════════════════════════════════════════════════════════════

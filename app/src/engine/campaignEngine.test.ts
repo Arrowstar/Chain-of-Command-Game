@@ -5,6 +5,7 @@ import {
   purchaseHullPatch, scrapItem, purchasePsychEval, purchaseDeepRepair,
   purchaseOfficerTraining, purchaseMarketItemFn, generateMarketInventory,
   advanceToNextSector, checkTotalWipe, applyShipReplacement,
+  generateEliteRewards, applyEliteReward,
 } from './campaignEngine';
 import type { PlayerState, ShipState, OfficerData, OfficerState } from '../types/game';
 import type { ScarEffect, TraumaEffect } from '../types/game';
@@ -545,9 +546,22 @@ describe('purchaseOfficerTraining', () => {
     expect(result.mutations[0].toTier).toBe('elite');
   });
 
-  it('Elite cannot be upgraded at drydock (Legendary is narrative only)', () => {
+  it('Elite to Legendary costs 75 RP', () => {
     const result = purchaseOfficerTraining({ officerId: 'o1', shipId: 's1', currentTier: 'elite', currentRP: 100 });
+    expect(result.success).toBe(true);
+    expect(result.rpDelta).toBe(-75);
+    expect(result.mutations[0].toTier).toBe('legendary');
+  });
+
+  it('Elite to Legendary fails with insufficient RP', () => {
+    const result = purchaseOfficerTraining({ officerId: 'o1', shipId: 's1', currentTier: 'elite', currentRP: 50 });
     expect(result.success).toBe(false);
+  });
+
+  it('Legendary officers cannot be trained further', () => {
+    const result = purchaseOfficerTraining({ officerId: 'o1', shipId: 's1', currentTier: 'legendary', currentRP: 999 });
+    expect(result.success).toBe(false);
+    expect(result.failureReason).toContain('Legendary');
   });
 
   it('fails with insufficient RP', () => {
@@ -720,6 +734,43 @@ describe('applyShipReplacement', () => {
 
     expect(rebuiltPlayer.officers[0].currentTier).toBe('rookie');
     expect(rebuiltPlayer.officers[0].currentStress).toBe(0);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════
+// Elite Rewards
+// ══════════════════════════════════════════════════════════════════
+
+describe('generateEliteRewards', () => {
+  it('generates exactly 3 rewards with distinct types', () => {
+    const rewards = generateEliteRewards([]);
+    expect(rewards).toHaveLength(3);
+    
+    const types = new Set(rewards.map((r: any) => r.type));
+    expect(types.size).toBe(3);
+  });
+});
+
+describe('applyEliteReward', () => {
+  it('applies RP reward correctly', () => {
+    const reward = { id: 'rp1', type: 'rp' as const, value: 20, icon: '💰', label: 'RP', description: '+20 RP' };
+    const result = applyEliteReward(reward, 50, 0, [], {} as any, []);
+    expect(result.requisitionPoints).toBe(70);
+    expect(result.narrativeSummary).toContain('Gained 20');
+  });
+
+  it('applies FF reward correctly', () => {
+    const reward = { id: 'ff1', type: 'ff' as const, value: 3, icon: '⭐', label: 'FF', description: '+3 FF' };
+    const result = applyEliteReward(reward, 0, 2, [], {} as any, []);
+    expect(result.fleetFavor).toBe(5);
+    expect(result.narrativeSummary).toContain('Gained 3');
+  });
+
+  it('applies Repair reward correctly', () => {
+    const reward = { id: 'repair1', type: 'repair' as const, value: 1, icon: '🔧', label: 'Repair', description: 'Free Patch' };
+    const result = applyEliteReward(reward, 0, 0, [], {} as any, []);
+    expect(result.pendingEconomicBuffs.freeRepairAtNextStation).toBe(true);
+    expect(result.pendingEconomicBuffs.freeRepairConsumed).toBe(false);
   });
 });
 

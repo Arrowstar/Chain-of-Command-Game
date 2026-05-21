@@ -114,33 +114,33 @@ function SlotRow({
         ) : (
           <>
             {mode === 'save' && (
-              <SmartTooltip content="Overwrite this save" as="button">
-                <button
-                  className="btn save-slot-btn save-slot-btn--overwrite"
-                  onClick={onOverwrite}
-                  data-testid={`overwrite-slot-${meta.id}`}
-                >
-                  OVERWRITE
-                </button>
+              <SmartTooltip 
+                content="Overwrite this save" 
+                as="button"
+                className="btn save-slot-btn save-slot-btn--overwrite"
+                onClick={onOverwrite}
+                data-testid={`overwrite-slot-${meta.id}`}
+              >
+                OVERWRITE
               </SmartTooltip>
             )}
-            <SmartTooltip content="Export to disk" as="button">
-              <button
-                className="btn save-slot-btn save-slot-btn--export"
-                onClick={onExport}
-                data-testid={`export-slot-${meta.id}`}
-              >
-                ↓
-              </button>
+            <SmartTooltip 
+              content="Export to disk" 
+              as="button"
+              className="btn save-slot-btn save-slot-btn--export"
+              onClick={onExport}
+              data-testid={`export-slot-${meta.id}`}
+            >
+              ↓
             </SmartTooltip>
-            <SmartTooltip content="Delete this save" as="button">
-              <button
-                className="btn save-slot-btn save-slot-btn--danger"
-                onClick={onDeleteRequest}
-                data-testid={`delete-slot-${meta.id}`}
-              >
-                ✕
-              </button>
+            <SmartTooltip 
+              content="Delete this save" 
+              as="button"
+              className="btn save-slot-btn save-slot-btn--danger"
+              onClick={onDeleteRequest}
+              data-testid={`delete-slot-${meta.id}`}
+            >
+              ✕
             </SmartTooltip>
           </>
         )}

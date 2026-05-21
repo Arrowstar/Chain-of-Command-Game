@@ -8,10 +8,12 @@ import CampaignLog from './CampaignLog';
 import FleetFavorConversionPanel from './FleetFavorConversionPanel';
 import TechBadge from './TechBadge';
 import CampaignStoryScreen from './CampaignStoryScreen';
+import EliteRewardView from './EliteRewardView';
 import ScoreLedgerModal from './ScoreLedgerModal';
 import { CampaignSaveManager } from '../../utils/CampaignSaveManager';
 import { useViewport } from '../../utils/useViewport';
 import { motion } from 'framer-motion';
+import { useBgm } from '../../utils/useBgm';
 import { getOfficerById } from '../../data/officers';
 import { TRAUMA_POOL } from '../../data/traumaTraits';
 import { SCAR_TEMPLATES } from '../../data/scarTemplates';
@@ -28,6 +30,17 @@ export default function CampaignScreen({ onStartCombat, onLeaveCampaign }: Props
   const { isPhone } = useViewport();
 
   if (!campaign) return null;
+
+  // Play campaign map music for all map-related phases so it persists
+  // seamlessly across eliteReward, nodeResolution, postCombat, etc.
+  // useBgm is called unconditionally (React rules) but src is blanked for
+  // phases that have their own audio or none at all.
+  const campaignMapPhases = ['sectorMap', 'nodeResolution', 'postCombat', 'eliteReward'];
+  const campaignMusicSrc = campaignMapPhases.includes(campaign.campaignPhase)
+    ? '/assets/music/Iron_Steps_on_Frozen_Ground.mp4'
+    : '';
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useBgm(campaignMusicSrc, 0.15);
 
   return (
     <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--color-bg-deep)', color: 'var(--color-text-primary)' }}>
@@ -176,6 +189,7 @@ export default function CampaignScreen({ onStartCombat, onLeaveCampaign }: Props
           </>
         )}
         {campaign.campaignPhase === 'postCombat' && <PostCombatSummary />}
+        {campaign.campaignPhase === 'eliteReward' && <EliteRewardView />}
         {campaign.campaignPhase === 'drydock' && <DrydockView />}
         {campaign.campaignPhase === 'gameOver' && (
           <CampaignGameOverScreen campaign={campaign} onLeave={onLeaveCampaign} />

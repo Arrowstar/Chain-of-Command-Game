@@ -79,6 +79,7 @@ export default function HowToPlayModal() {
             <h3 style={{ color: 'var(--color-text-bright)', marginTop: 'var(--space-md)' }}>Node Types</h3>
             <ul>
               <li><strong>Combat Nodes:</strong> Engage Hegemony forces. Winning earns Fleet Favor and RP.</li>
+              <li><strong>Elite & Boss Nodes:</strong> Engage superior Hegemony forces or sector commanders. Winning earns the standard rewards plus a choice from 3 randomized Elite Rewards (bonus RP, Fleet Favor, Tech, or free Drydock vouchers).</li>
               <li><strong>Event Nodes:</strong> Narrative choices that can provide rewards, inflict penalties, or offer unique Experimental Tech.</li>
               <li><strong>Haven (Drydock) Nodes:</strong> Safe zones where you can spend RP to repair Hull, clear Traumas/Scars, upgrade Officers, and buy new weapons or subsystems.</li>
             </ul>

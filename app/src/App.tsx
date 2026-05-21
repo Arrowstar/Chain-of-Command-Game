@@ -122,7 +122,8 @@ function App() {
     // Lock to landscape for all gameplay modes (skirmish, combat, etc.)
     const applyOrientation = async () => {
       try {
-        const isCampaignMap = appMode === 'campaign' && campaignPhase !== 'drydock';
+        // eliteReward is a full-screen overlay that needs landscape for 3-column layout
+        const isCampaignMap = appMode === 'campaign' && campaignPhase !== 'drydock' && campaignPhase !== 'eliteReward';
         // Rules Reference always forces landscape regardless of current app mode
         if (isHowToPlayOpen) {
           await ScreenOrientation.lock({ orientation: 'landscape' });

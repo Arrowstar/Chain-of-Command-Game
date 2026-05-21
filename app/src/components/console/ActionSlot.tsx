@@ -174,34 +174,34 @@ export default function ActionSlot({
                 </div>
 
                 {/* Unassign button for this specific assignment */}
-                <SmartTooltip content="Remove this assignment" as="button">
-                  <button
-                    className="action-slot-unassign-btn"
-                    onClick={(e) => {
-                      e.stopPropagation(); 
-                      onUnassign(tokenId);
-                    }}
-                    style={{
-                      position: 'absolute',
-                      top: isCoarsePointer ? '-12px' : '-6px',
-                      right: isCoarsePointer ? '-16px' : '-10px',
-                      width: isCoarsePointer ? '32px' : '16px',
-                      height: isCoarsePointer ? '32px' : '16px',
-                      borderRadius: '50%',
-                      background: 'var(--color-hostile-red)',
-                      color: 'white',
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontSize: isCoarsePointer ? '20px' : '10px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      zIndex: 10,
-                    }}
-                    data-testid={`unassign-btn-${action.id}-${assignmentIdx}`}
-                  >
-                    ×
-                  </button>
+                <SmartTooltip 
+                  content="Remove this assignment" 
+                  as="button"
+                  className="action-slot-unassign-btn"
+                  onClick={(e: React.MouseEvent) => {
+                    e.stopPropagation(); 
+                    onUnassign(tokenId);
+                  }}
+                  style={{
+                    position: 'absolute',
+                    top: isCoarsePointer ? '-12px' : '-6px',
+                    right: isCoarsePointer ? '-16px' : '-10px',
+                    width: isCoarsePointer ? '32px' : '16px',
+                    height: isCoarsePointer ? '32px' : '16px',
+                    borderRadius: '50%',
+                    background: 'var(--color-hostile-red)',
+                    color: 'white',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: isCoarsePointer ? '20px' : '10px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 10,
+                  }}
+                  data-testid={`unassign-btn-${action.id}-${assignmentIdx}`}
+                >
+                  ×
                 </SmartTooltip>
               </div>
             ))}

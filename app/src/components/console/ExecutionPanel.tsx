@@ -615,16 +615,16 @@ export default function ExecutionPanel() {
                                     <div className="mono" style={{ color: 'var(--color-text-dim)', fontSize: '0.8rem', marginBottom: '8px' }}>
                                       Ship speed is locked and cannot be adjusted.
                                     </div>
-                                    <SmartTooltip content="This ship is currently unable to adjust its speed due to size constraints or critical damage." as="button">
-                                      <button
-                                        className="btn btn--execute"
-                                        onClick={() => {
-                                          resolveAction(owner!.id, ship.id, action.id, { wasted: true, reason: 'Speed is locked' });
-                                          setExpandedActionId(null);
-                                        }}
-                                      >
-                                        WASTE ACTION
-                                      </button>
+                                    <SmartTooltip 
+                                      content="This ship is currently unable to adjust its speed due to size constraints or critical damage." 
+                                      as="button"
+                                      className="btn btn--execute"
+                                      onClick={() => {
+                                        resolveAction(owner!.id, ship.id, action.id, { wasted: true, reason: 'Speed is locked' });
+                                        setExpandedActionId(null);
+                                      }}
+                                    >
+                                      WASTE ACTION
                                     </SmartTooltip>
                                   </div>
                                 ) : (
@@ -677,16 +677,16 @@ export default function ExecutionPanel() {
                                     <div className="mono" style={{ color: 'var(--color-text-dim)', fontSize: '0.8rem', marginBottom: '8px' }}>
                                       No weapons are primed or available to fire this round.
                                     </div>
-                                    <SmartTooltip content="All weapons have either already fired or require reloading." as="button">
-                                      <button
-                                        className="btn btn--execute"
-                                        onClick={() => {
-                                          resolveAction(owner!.id, ship.id, action.id, { wasted: true, reason: 'No available weapons' });
-                                          setExpandedActionId(null);
-                                        }}
-                                      >
-                                        WASTE ACTION
-                                      </button>
+                                    <SmartTooltip 
+                                      content="All weapons have either already fired or require reloading." 
+                                      as="button"
+                                      className="btn btn--execute"
+                                      onClick={() => {
+                                        resolveAction(owner!.id, ship.id, action.id, { wasted: true, reason: 'No available weapons' });
+                                        setExpandedActionId(null);
+                                      }}
+                                    >
+                                      WASTE ACTION
                                     </SmartTooltip>
                                   </div>
                                 ) : (
@@ -735,16 +735,16 @@ export default function ExecutionPanel() {
                                   <div className="mono" style={{ color: 'var(--color-text-dim)', fontSize: '0.8rem', marginBottom: '8px' }}>
                                     All shield sectors are already at maximum integrity.
                                   </div>
-                                  <SmartTooltip content="All shield arcs are currently at their maximum capacity." as="button">
-                                    <button
-                                      className="btn btn--execute"
-                                      onClick={() => {
-                                        resolveAction(owner!.id, ship.id, action.id, { wasted: true, reason: 'All shields at max' });
-                                        setExpandedActionId(null);
-                                      }}
-                                    >
-                                      WASTE ACTION
-                                    </button>
+                                  <SmartTooltip 
+                                    content="All shield arcs are currently at their maximum capacity." 
+                                    as="button"
+                                    className="btn btn--execute"
+                                    onClick={() => {
+                                      resolveAction(owner!.id, ship.id, action.id, { wasted: true, reason: 'All shields at max' });
+                                      setExpandedActionId(null);
+                                    }}
+                                  >
+                                    WASTE ACTION
                                   </SmartTooltip>
                                 </div>
                               );
@@ -895,16 +895,16 @@ export default function ExecutionPanel() {
                                     <div className="mono" style={{ color: 'var(--color-text-dim)', fontSize: '0.8rem', marginBottom: '8px' }}>
                                       No hull damage or critical effects to repair.
                                     </div>
-                                    <SmartTooltip content="This ship is at full structural integrity and has no active critical damage." as="button">
-                                      <button
-                                        className="btn btn--execute"
-                                        onClick={() => {
-                                          resolveAction(owner!.id, ship.id, action.id, { wasted: true, reason: 'No damage to repair' });
-                                          setExpandedActionId(null);
-                                        }}
-                                      >
-                                        WASTE ACTION
-                                      </button>
+                                    <SmartTooltip 
+                                      content="This ship is at full structural integrity and has no active critical damage." 
+                                      as="button"
+                                      className="btn btn--execute"
+                                      onClick={() => {
+                                        resolveAction(owner!.id, ship.id, action.id, { wasted: true, reason: 'No damage to repair' });
+                                        setExpandedActionId(null);
+                                      }}
+                                    >
+                                      WASTE ACTION
                                     </SmartTooltip>
                                   </div>
                                 ) : (
@@ -963,16 +963,16 @@ export default function ExecutionPanel() {
                                   <div className="mono" style={{ color: 'var(--color-text-dim)', fontSize: '0.8rem', marginBottom: '8px' }}>
                                     All ordnance systems are already loaded.
                                   </div>
-                                  <SmartTooltip content="All [Ordnance] weapons are already primed and ready. This action provides no benefit." as="button">
-                                    <button
-                                      className="btn btn--execute"
-                                      onClick={() => {
-                                        resolveAction(owner!.id, ship.id, action.id, { wasted: true, reason: 'All weapons already loaded' });
-                                        setExpandedActionId(null);
-                                      }}
-                                    >
-                                      WASTE ACTION
-                                    </button>
+                                  <SmartTooltip 
+                                    content="All [Ordnance] weapons are already primed and ready. This action provides no benefit." 
+                                    as="button"
+                                    className="btn btn--execute"
+                                    onClick={() => {
+                                      resolveAction(owner!.id, ship.id, action.id, { wasted: true, reason: 'All weapons already loaded' });
+                                      setExpandedActionId(null);
+                                    }}
+                                  >
+                                    WASTE ACTION
                                   </SmartTooltip>
                                 </div>
                               );
@@ -1017,16 +1017,16 @@ export default function ExecutionPanel() {
                                   <div className="mono" style={{ color: 'var(--color-text-dim)', fontSize: '0.8rem', marginBottom: '8px' }}>
                                     No officers currently have Stress to reduce.
                                   </div>
-                                  <SmartTooltip content="All officers are currently at 0 Stress." as="button">
-                                    <button
-                                      className="btn btn--execute"
-                                      onClick={() => {
-                                        resolveAction(owner!.id, ship.id, action.id, { wasted: true, reason: 'No stressed officers' });
-                                        setExpandedActionId(null);
-                                      }}
-                                    >
-                                      WASTE ACTION
-                                    </button>
+                                  <SmartTooltip 
+                                    content="All officers are currently at 0 Stress." 
+                                    as="button"
+                                    className="btn btn--execute"
+                                    onClick={() => {
+                                      resolveAction(owner!.id, ship.id, action.id, { wasted: true, reason: 'No stressed officers' });
+                                      setExpandedActionId(null);
+                                    }}
+                                  >
+                                    WASTE ACTION
                                   </SmartTooltip>
                                 </div>
                               );
@@ -1067,16 +1067,16 @@ export default function ExecutionPanel() {
                                   <div className="mono" style={{ color: 'var(--color-text-dim)', fontSize: '0.8rem', marginBottom: '8px' }}>
                                     No enemy ships currently have active shields to strip.
                                   </div>
-                                  <SmartTooltip content="There are no visible enemy ships with active shield sectors within sensor range." as="button">
-                                    <button
-                                      className="btn btn--execute"
-                                      onClick={() => {
-                                        resolveAction(owner!.id, ship.id, action.id, { wasted: true, reason: 'No valid enemy targets' });
-                                        setExpandedActionId(null);
-                                      }}
-                                    >
-                                      WASTE ACTION
-                                    </button>
+                                  <SmartTooltip 
+                                    content="There are no visible enemy ships with active shield sectors within sensor range." 
+                                    as="button"
+                                    className="btn btn--execute"
+                                    onClick={() => {
+                                      resolveAction(owner!.id, ship.id, action.id, { wasted: true, reason: 'No valid enemy targets' });
+                                      setExpandedActionId(null);
+                                    }}
+                                  >
+                                    WASTE ACTION
                                   </SmartTooltip>
                                 </div>
                               );

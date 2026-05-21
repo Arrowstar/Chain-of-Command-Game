@@ -67,6 +67,7 @@ const PHASE_LABELS: Record<CampaignPhase, string> = {
   sectorMap: 'Sector Map',
   nodeResolution: 'Node Resolution',
   postCombat: 'Post-Combat',
+  eliteReward: 'Elite Assets',
   drydock: 'Drydock',
   gameOver: 'Game Over',
 };
