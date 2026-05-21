@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useRef, useState } from 'react';
+import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { DndContext, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
 import HexMap from '../board/HexMap';
@@ -114,7 +114,16 @@ export default function GameScreen() {
     }
   }, [isPhone, isTablet, tutorialActive, tutorialIsHidden, tutorialCurrentStep, tutorialSteps]);
 
-  useBgm('/assets/music/Iron_Perimeter.mp3', 0.15);
+  const combatMusicSrc = useMemo(() => {
+    const tracks = [
+      '/assets/music/Iron_Perimeter.mp3',
+      '/assets/music/Hull_Integrity.mp3',
+      '/assets/music/View_From_The_Command_Deck.mp3',
+      '/assets/music/Below_The_Permafrost.mp3',
+    ];
+    return tracks[Math.floor(Math.random() * tracks.length)];
+  }, []);
+  useBgm(combatMusicSrc, 0.15);
 
   // Configure dnd sensors: PointerSensor for mouse, TouchSensor for touch.
   // TouchSensor uses a hold delay so that a quick tap is NOT treated as a drag,

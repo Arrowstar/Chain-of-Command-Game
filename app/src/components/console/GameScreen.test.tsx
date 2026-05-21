@@ -5,6 +5,7 @@ import GameScreen from './GameScreen';
 import { useGameStore } from '../../store/useGameStore';
 import { useUIStore } from '../../store/useUIStore';
 import * as useViewportModule from '../../utils/useViewport';
+import * as useBgmModule from '../../utils/useBgm';
 
 import { useTutorialStore } from '../../store/useTutorialStore';
 
@@ -349,6 +350,60 @@ describe('GameScreen', () => {
 
     // Modal should be closed
     expect(screen.queryByTestId('tech-hub-modal')).not.toBeInTheDocument();
+  });
+});
+
+describe('combat music selection', () => {
+  let useBgmSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    useBgmSpy = vi.spyOn(useBgmModule, 'useBgm').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    useBgmSpy.mockRestore();
+    vi.restoreAllMocks();
+  });
+
+  const tracks = [
+    '/assets/music/Iron_Perimeter.mp3',
+    '/assets/music/Hull_Integrity.mp3',
+    '/assets/music/View_From_The_Command_Deck.mp3',
+    '/assets/music/Below_The_Permafrost.mp3',
+  ];
+
+  it('selects a track from the combat pool', () => {
+    render(<GameScreen />);
+    expect(tracks).toContain(useBgmSpy.mock.calls[0][0]);
+  });
+
+  it('plays at volume 0.15', () => {
+    render(<GameScreen />);
+    expect(useBgmSpy.mock.calls[0][1]).toBe(0.15);
+  });
+
+  it('picks Iron_Perimeter when Math.random returns 0', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    render(<GameScreen />);
+    expect(useBgmSpy).toHaveBeenCalledWith(tracks[0], 0.15);
+  });
+
+  it('picks Hull_Integrity when Math.random returns 0.25', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.25);
+    render(<GameScreen />);
+    expect(useBgmSpy).toHaveBeenCalledWith(tracks[1], 0.15);
+  });
+
+  it('picks View_From_The_Command_Deck when Math.random returns 0.5', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+    render(<GameScreen />);
+    expect(useBgmSpy).toHaveBeenCalledWith(tracks[2], 0.15);
+  });
+
+  it('picks Below_The_Permafrost when Math.random returns 0.99', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.99);
+    render(<GameScreen />);
+    expect(useBgmSpy).toHaveBeenCalledWith(tracks[3], 0.15);
   });
 });
 
