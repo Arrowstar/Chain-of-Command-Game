@@ -5,11 +5,18 @@ import { SmartTooltip } from '../TouchTooltipPortal';
 
 export default function EliteRewardView() {
   const campaign = useCampaignStore(s => s.campaign);
+  const sectorMap = useCampaignStore(s => s.sectorMap);
   const claimEliteReward = useCampaignStore(s => s.claimEliteReward);
 
   if (!campaign || campaign.campaignPhase !== 'eliteReward' || !campaign.pendingEliteRewards) {
     return null;
   }
+
+  const isBossNode = sectorMap?.nodes.find(n => n.id === campaign.pendingEliteRewardNodeId)?.type === 'boss';
+  const titleText = isBossNode ? 'Sector Command Assets' : 'Elite Asset Recovery';
+  const subtitleText = isBossNode
+    ? 'The destroyed Sector Command ship carried high-value assets. Choose one to salvage.'
+    : 'The destroyed elite squadron carried valuable assets. Choose one to salvage.';
 
   return (
     <div style={{
@@ -39,14 +46,14 @@ export default function EliteRewardView() {
           textTransform: 'uppercase',
           fontFamily: 'var(--font-mono)',
         }}>
-          Elite Asset Recovery
+          {titleText}
         </h2>
         <p style={{
           color: 'var(--color-text-secondary)',
           margin: '4px 0 0 0',
           fontSize: 'clamp(0.7rem, 2vw, 0.88rem)',
         }}>
-          The destroyed elite squadron carried valuable assets. Choose one to salvage.
+          {subtitleText}
         </p>
       </motion.div>
 

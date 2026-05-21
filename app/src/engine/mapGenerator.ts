@@ -7,6 +7,7 @@ export const NodeType = {
   Event: 'event',
   Haven: 'haven',
   Boss: 'boss',
+  Mystery: 'mystery',
 } as const;
 export type NodeType = (typeof NodeType)[keyof typeof NodeType];
 
@@ -16,6 +17,7 @@ export const NodeTypeRepair = 'haven';
 export interface SectorNode {
   id: string;
   type: NodeType;
+  trueType?: NodeType;
   layer: number;
   position: number;
   paths: string[];
@@ -63,17 +65,29 @@ export function generateSectorMap(seed: number = Math.random(), totalLayers: num
     const havenSlot = HAVEN_TIERS.has(layer) ? Math.floor(random() * width) : -1;
 
     for (let slot = 0; slot < width; slot++) {
-      const type = slot === havenSlot ? NodeType.Haven : pickNodeType(layer, slot, width, random);
+      const baseType = slot === havenSlot ? NodeType.Haven : pickNodeType(layer, slot, width, random);
+      const isMystery = random() < 0.15;
+
+      const type = isMystery ? NodeType.Mystery : baseType;
+      const trueType = isMystery ? baseType : undefined;
+
       const position = clamp((slot + 1) / (width + 1) + (random() * 0.12 - 0.06), 0.12, 0.88);
-      nodes.push({
-        id: type === NodeType.Haven ? `haven-${layer}` : `node-${layer}-${slot}`,
+
+      const node: SectorNode = {
+        id: baseType === NodeType.Haven ? `haven-${layer}` : `node-${layer}-${slot}`,
         type,
         layer,
         position,
         paths: [],
         isRevealed: false,
-        eventId: type === NodeType.Event ? getNextEventId() : undefined,
-      });
+        eventId: baseType === NodeType.Event ? getNextEventId() : undefined,
+      };
+
+      if (trueType) {
+        node.trueType = trueType;
+      }
+
+      nodes.push(node);
     }
   }
 
@@ -150,8 +164,16 @@ function keepHavensOptional(nodes: SectorNode[], maxLayer: number) {
   for (const havenLayer of HAVEN_TIERS) {
     if (havenLayer > maxLayer) continue;
 
-    const havenNode = nodes.find(node => node.layer === havenLayer && node.type === NodeType.Haven);
-    const alternateTargets = nodes.filter(node => node.layer === havenLayer && node.type !== NodeType.Haven);
+    // A haven may be visible as NodeType.Haven, or disguised as a Mystery node with trueType === Haven
+    const havenNode = nodes.find(
+      node => node.layer === havenLayer &&
+        (node.type === NodeType.Haven || (node.type === NodeType.Mystery && node.trueType === NodeType.Haven))
+    );
+    const alternateTargets = nodes.filter(
+      node => node.layer === havenLayer &&
+        node.type !== NodeType.Haven &&
+        !(node.type === NodeType.Mystery && node.trueType === NodeType.Haven)
+    );
     const prevLayerNodes = nodes.filter(node => node.layer === havenLayer - 1);
 
     if (!havenNode || alternateTargets.length === 0 || prevLayerNodes.length < 2) continue;

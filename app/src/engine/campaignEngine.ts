@@ -1019,7 +1019,7 @@ export function applyShipReplacement(
 // 6. Elite Rewards
 // ══════════════════════════════════════════════════════════════════
 
-export function generateEliteRewards(techOwnedIds: string[], seed: number = Date.now()): EliteRewardOption[] {
+export function generateEliteRewards(techOwnedIds: string[], isBossNode: boolean = false, seed: number = Date.now()): EliteRewardOption[] {
   const poolRobust: EliteRewardOption[] = [
     { id: `rp-15-${Math.random()}`, icon: '💰', label: 'Requisition Cache', description: '+15 RP', type: 'rp', value: 15 },
     { id: `rp-25-${Math.random()}`, icon: '💰', label: 'Hegemony Payroll', description: '+25 RP', type: 'rp', value: 25 },
@@ -1031,7 +1031,24 @@ export function generateEliteRewards(techOwnedIds: string[], seed: number = Date
     { id: `officer-upgrade-${Math.random()}`, icon: '🎖️', label: 'Battlefield Promotion', description: 'Upgrade an Officer by 1 Tier', type: 'officerUp' },
   ];
 
-  const drawnTech = drawMultipleRandomTech(1, techOwnedIds);
+  if (isBossNode) {
+    // Weigh probabilities towards uncommon and rare rewards
+    poolRobust.push(
+      { id: `rp-25-boss-${Math.random()}`, icon: '💰', label: 'Hegemony Payroll', description: '+25 RP', type: 'rp', value: 25 },
+      { id: `rp-25-boss2-${Math.random()}`, icon: '💰', label: 'Hegemony Payroll', description: '+25 RP', type: 'rp', value: 25 },
+      { id: `ff-4-boss-${Math.random()}`, icon: '⭐', label: 'Major Propaganda Win', description: '+4 Fleet Favor', type: 'ff', value: 4 },
+      { id: `ff-4-boss2-${Math.random()}`, icon: '⭐', label: 'Major Propaganda Win', description: '+4 Fleet Favor', type: 'ff', value: 4 },
+      { id: `repair-deep-boss-${Math.random()}`, icon: '🏗️', label: 'Captured Drydock Access', description: 'Free Deep Repair at next Haven', type: 'repair', value: 2 },
+      { id: `repair-deep-boss2-${Math.random()}`, icon: '🏗️', label: 'Captured Drydock Access', description: 'Free Deep Repair at next Haven', type: 'repair', value: 2 },
+      { id: `psych-eval-boss-${Math.random()}`, icon: '🧠', label: 'Seized Med-stims', description: 'Free Psych Eval at next Haven', type: 'psych' },
+      { id: `psych-eval-boss2-${Math.random()}`, icon: '🧠', label: 'Seized Med-stims', description: 'Free Psych Eval at next Haven', type: 'psych' },
+      { id: `officer-upgrade-boss1-${Math.random()}`, icon: '🎖️', label: 'Battlefield Promotion', description: 'Upgrade an Officer by 1 Tier', type: 'officerUp' },
+      { id: `officer-upgrade-boss2-${Math.random()}`, icon: '🎖️', label: 'Battlefield Promotion', description: 'Upgrade an Officer by 1 Tier', type: 'officerUp' },
+      { id: `officer-upgrade-boss3-${Math.random()}`, icon: '🎖️', label: 'Battlefield Promotion', description: 'Upgrade an Officer by 1 Tier', type: 'officerUp' },
+    );
+  }
+
+  const drawnTech = drawMultipleRandomTech(isBossNode ? 2 : 1, techOwnedIds);
   if (drawnTech.length > 0) {
     poolRobust.push({
       id: `tech-draw-${Math.random()}`,
@@ -1043,6 +1060,54 @@ export function generateEliteRewards(techOwnedIds: string[], seed: number = Date
       imagePath: drawnTech[0].imagePath,
       tooltip: drawnTech[0].effect,
     });
+    
+    if (isBossNode) {
+      // Increase probability of tech dropping
+      poolRobust.push({
+        id: `tech-draw-boss1-${Math.random()}`,
+        icon: '🔬',
+        label: drawnTech[0].name,
+        description: 'Experimental Tech',
+        type: 'tech',
+        itemId: drawnTech[0].id,
+        imagePath: drawnTech[0].imagePath,
+        tooltip: drawnTech[0].effect,
+      });
+      poolRobust.push({
+        id: `tech-draw-boss2-${Math.random()}`,
+        icon: '🔬',
+        label: drawnTech[0].name,
+        description: 'Experimental Tech',
+        type: 'tech',
+        itemId: drawnTech[0].id,
+        imagePath: drawnTech[0].imagePath,
+        tooltip: drawnTech[0].effect,
+      });
+      
+      // If we drew a second distinct tech, we can offer it as well
+      if (drawnTech.length > 1) {
+        poolRobust.push({
+          id: `tech-draw-second-${Math.random()}`,
+          icon: '🔬',
+          label: drawnTech[1].name,
+          description: 'Experimental Tech',
+          type: 'tech',
+          itemId: drawnTech[1].id,
+          imagePath: drawnTech[1].imagePath,
+          tooltip: drawnTech[1].effect,
+        });
+        poolRobust.push({
+          id: `tech-draw-second-boss-${Math.random()}`,
+          icon: '🔬',
+          label: drawnTech[1].name,
+          description: 'Experimental Tech',
+          type: 'tech',
+          itemId: drawnTech[1].id,
+          imagePath: drawnTech[1].imagePath,
+          tooltip: drawnTech[1].effect,
+        });
+      }
+    }
   }
 
   const shuffled = [...poolRobust].sort(() => Math.random() - 0.5);

@@ -180,9 +180,9 @@ export default function PostCombatSummary() {
         <button 
           className="btn" 
           style={{ width: '100%', padding: 'var(--space-md)', fontSize: '1.2rem', marginTop: 'var(--space-md)' }}
-          onClick={isBossDefeat ? finishPostCombat : (isBossNode ? completeBossNode : finishPostCombat)}
+          onClick={finishPostCombat}
         >
-          {isBossDefeat ? 'ACCEPT DEFEAT' : (isBossNode ? 'PROCEED TO NEXT SECTOR' : 'RETURN TO SECTOR MAP')}
+          {isBossDefeat ? 'ACCEPT DEFEAT' : ( (isBossNode || sectorMap?.nodes.find(n => n.id === campaign?.currentNodeId)?.type === NodeType.Elite) && result.victory ? 'SALVAGE ASSETS' : 'RETURN TO SECTOR MAP')}
         </button>
       </div>
 

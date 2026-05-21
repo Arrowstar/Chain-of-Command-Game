@@ -23,7 +23,8 @@ describe('generateSectorMap - 15-tier structure', () => {
 
   it('has exactly 3 Haven nodes (at tiers 4, 8, 12)', () => {
     const map = generateSectorMap(1234, 15);
-    const havens = map.nodes.filter(n => n.type === NodeType.Haven);
+    // Count havens by visible type OR by trueType (if a Mystery node wraps a Haven)
+    const havens = map.nodes.filter(n => n.type === NodeType.Haven || (n.type === NodeType.Mystery && n.trueType === NodeType.Haven));
     expect(havens).toHaveLength(3);
     const layers = havens.map(n => n.layer).sort((a, b) => a - b);
     expect(layers).toEqual([4, 8, 12]);
@@ -34,12 +35,14 @@ describe('generateSectorMap - 15-tier structure', () => {
 
     for (const layer of [4, 8, 12]) {
       const tierNodes = map.nodes.filter(n => n.layer === layer);
-      const havens = tierNodes.filter(n => n.type === NodeType.Haven);
+      const havens = tierNodes.filter(
+        n => n.type === NodeType.Haven || (n.type === NodeType.Mystery && n.trueType === NodeType.Haven)
+      );
 
       expect(havens, `Tier ${layer} should still include one haven`).toHaveLength(1);
       expect(tierNodes.length, `Tier ${layer} should have alternate nodes`).toBeGreaterThan(1);
       expect(
-        tierNodes.some(n => n.type !== NodeType.Haven),
+        tierNodes.some(n => n.type !== NodeType.Haven && !(n.type === NodeType.Mystery && n.trueType === NodeType.Haven)),
         `Tier ${layer} should include a non-haven route`,
       ).toBe(true);
     }
@@ -47,19 +50,27 @@ describe('generateSectorMap - 15-tier structure', () => {
 
   it('has at least 2 Elite nodes in the middle tiers', () => {
     const map = generateSectorMap(9999, 15);
-    const elites = map.nodes.filter(n => n.type === NodeType.Elite);
+    const elites = map.nodes.filter(
+      n => n.type === NodeType.Elite || (n.type === NodeType.Mystery && n.trueType === NodeType.Elite)
+    );
     expect(elites.length).toBeGreaterThanOrEqual(2);
   });
 
   it('no Elite nodes appear at tier 1 (protected first step)', () => {
     const map = generateSectorMap(1234, 15);
     const tier1Nodes = map.nodes.filter(n => n.layer === 1);
-    expect(tier1Nodes.every(n => n.type !== NodeType.Elite)).toBe(true);
+    // Neither a visible Elite nor a Mystery hiding an Elite should appear in tier 1
+    expect(tier1Nodes.every(n =>
+      n.type !== NodeType.Elite &&
+      !(n.type === NodeType.Mystery && n.trueType === NodeType.Elite)
+    )).toBe(true);
   });
 
   it('has at least 3 Event nodes per map', () => {
     const map = generateSectorMap(5678, 15);
-    const events = map.nodes.filter(n => n.type === NodeType.Event);
+    const events = map.nodes.filter(
+      n => n.type === NodeType.Event || (n.type === NodeType.Mystery && n.trueType === NodeType.Event)
+    );
     expect(events.length).toBeGreaterThanOrEqual(3);
   });
 
@@ -105,7 +116,11 @@ describe('generateSectorMap - 15-tier structure', () => {
       const map = generateSectorMap(seed, 15);
 
       for (const layer of [4, 8, 12]) {
-        const haven = map.nodes.find(n => n.layer === layer && n.type === NodeType.Haven);
+        // A haven may appear as its own type OR disguised as a Mystery node
+        const haven = map.nodes.find(
+          n => n.layer === layer &&
+            (n.type === NodeType.Haven || (n.type === NodeType.Mystery && n.trueType === NodeType.Haven))
+        );
         const prevNodes = map.nodes.filter(n => n.layer === layer - 1);
 
         expect(haven, `Seed ${seed} missing haven on tier ${layer}`).toBeDefined();
@@ -131,5 +146,22 @@ describe('generateSectorMap - 15-tier structure', () => {
     const types1 = map1.nodes.map(n => n.type).join(',');
     const types2 = map2.nodes.map(n => n.type).join(',');
     expect(types1).not.toBe(types2);
+  });
+
+  it('generates some Mystery nodes that have a trueType property', () => {
+    // Generate several maps to guarantee we see some mystery nodes (at 10% chance)
+    let foundMystery = false;
+    for (const seed of [1, 2, 3, 4, 5]) {
+      const map = generateSectorMap(seed, 15);
+      const mysteryNodes = map.nodes.filter(n => n.type === NodeType.Mystery);
+      if (mysteryNodes.length > 0) {
+        foundMystery = true;
+        for (const node of mysteryNodes) {
+          expect(node.trueType).toBeDefined();
+          expect(node.trueType).not.toBe(NodeType.Mystery);
+        }
+      }
+    }
+    expect(foundMystery).toBe(true);
   });
 });

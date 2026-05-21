@@ -77,26 +77,38 @@ const NODE_ICONS: Record<string, React.ReactNode> = {
       <line x1="0" y1="-5" x2="0" y2="3" strokeWidth="1.5" />
     </g>
   ),
+  // Mystery — question mark glyph
+  [NodeType.Mystery]: (
+    <g>
+      <path
+        d="M-3.5,-6 C-3.5,-8.5 3.5,-8.5 3.5,-5 C3.5,-2.5 0,-2 0,1"
+        fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+      />
+      <circle cx="0" cy="5" r="1.5" fill="currentColor" />
+    </g>
+  ),
 };
 
 // ── Color palette by node type ────────────────────────────────────────────────
 
 const NODE_COLORS: Record<string, string> = {
-  [NodeType.Start]:  'hsl(185, 90%, 55%)',    // cyan
-  [NodeType.Combat]: 'hsl(185, 40%, 72%)',    // pale cyan-blue
-  [NodeType.Elite]:  'hsl(0, 85%, 60%)',      // hostile red
-  [NodeType.Event]:  'hsl(35, 100%, 58%)',    // alert amber
-  [NodeType.Haven]:  'hsl(140, 80%, 50%)',    // holo green
-  [NodeType.Boss]:   'hsl(45, 100%, 60%)',    // gold
+  [NodeType.Start]:   'hsl(185, 90%, 55%)',   // cyan
+  [NodeType.Combat]:  'hsl(185, 40%, 72%)',   // pale cyan-blue
+  [NodeType.Elite]:   'hsl(0, 85%, 60%)',     // hostile red
+  [NodeType.Event]:   'hsl(35, 100%, 58%)',   // alert amber
+  [NodeType.Haven]:   'hsl(140, 80%, 50%)',   // holo green
+  [NodeType.Boss]:    'hsl(45, 100%, 60%)',   // gold
+  [NodeType.Mystery]: 'hsl(280, 80%, 65%)',   // vivid purple
 };
 
 const NODE_LABELS: Record<string, string> = {
-  [NodeType.Start]:  'Fleet Departure',
-  [NodeType.Combat]: 'Hostile Patrol',
-  [NodeType.Elite]:  'Elite Squadron',
-  [NodeType.Event]:  'Anomalous Signal',
-  [NodeType.Haven]:  'Hidden Drydock',
-  [NodeType.Boss]:   'Hegemony Command',
+  [NodeType.Start]:   'Fleet Departure',
+  [NodeType.Combat]:  'Hostile Patrol',
+  [NodeType.Elite]:   'Elite Squadron',
+  [NodeType.Event]:   'Anomalous Signal',
+  [NodeType.Haven]:   'Hidden Drydock',
+  [NodeType.Boss]:    'Hegemony Command',
+  [NodeType.Mystery]: 'Unknown Signal',
 };
 
 // ── Tooltip state ─────────────────────────────────────────────────────────────

@@ -196,12 +196,13 @@ function makeCampaignState(params: {
 const MAX_CAMPAIGN_LOG_ENTRIES = 400;
 
 const CAMPAIGN_NODE_LABELS: Record<NodeType, string> = {
-  [NodeType.Start]: 'Fleet Departure',
-  [NodeType.Combat]: 'Hostile Patrol',
-  [NodeType.Elite]: 'Elite Squadron',
-  [NodeType.Event]: 'Anomalous Signal',
-  [NodeType.Haven]: 'Hidden Drydock',
-  [NodeType.Boss]: 'Hegemony Command',
+  [NodeType.Start]:   'Fleet Departure',
+  [NodeType.Combat]:  'Hostile Patrol',
+  [NodeType.Elite]:   'Elite Squadron',
+  [NodeType.Event]:   'Anomalous Signal',
+  [NodeType.Haven]:   'Hidden Drydock',
+  [NodeType.Boss]:    'Hegemony Command',
+  [NodeType.Mystery]: 'Unknown Signal',
 };
 
 function makeCampaignLogEntry(
@@ -795,7 +796,7 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
         campaign: state.campaign ? { 
           ...state.campaign, 
           campaignPhase: 'eliteReward',
-          pendingEliteRewards: generateEliteRewards(state.campaign.experimentalTech.map(t => t.id)),
+          pendingEliteRewards: generateEliteRewards(state.campaign.experimentalTech.map(t => t.id), currentNode?.type === NT.Boss),
           pendingEliteRewardNodeId: state.campaign.currentNodeId
         } : null
       }));
@@ -822,6 +823,9 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
 
     const reward = campaign.pendingEliteRewards.find(r => r.id === rewardId);
     if (!reward) return;
+
+    // Must check before we clear pendingEliteRewardNodeId from the state
+    const wasBossNode = get().sectorMap?.nodes.find(n => n.id === campaign.pendingEliteRewardNodeId)?.type === NodeType.Boss;
 
     const result = applyEliteReward(
       reward,
@@ -856,6 +860,10 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
         type: reward.type,
       },
     });
+
+    if (wasBossNode) {
+      get().completeBossNode();
+    }
   },
 
   // ── Node Selection ─────────────────────────────────────────────
@@ -885,6 +893,8 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
     if (!targetNode) return;
 
     const usedSkip = isGrandchild && !isChild;
+    const revealedMystery = targetNode.type === NodeType.Mystery && !!targetNode.trueType;
+    const finalType = revealedMystery ? targetNode.trueType! : targetNode.type;
 
     set(state => ({
       campaign: state.campaign
@@ -896,16 +906,32 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
             campaignPhase: 'nodeResolution',
           }
         : null,
+      sectorMap: state.sectorMap && revealedMystery
+        ? {
+            ...state.sectorMap,
+            nodes: state.sectorMap.nodes.map(n =>
+              n.id === nodeId ? { ...n, type: finalType } : n
+            ),
+          }
+        : state.sectorMap,
     }));
+
+    if (revealedMystery) {
+      get().pushCampaignLog({
+        type: 'system',
+        message: `Unknown Signal resolved into ${getNodeLabel(finalType)}`,
+        outcome: `Sensors confirmed the true nature of the coordinates.`,
+      });
+    }
 
     get().pushCampaignLog({
       type: 'navigation',
-      message: `Plotted jump to ${getNodeLabel(targetNode.type)}`,
+      message: `Plotted jump to ${getNodeLabel(finalType)}`,
       outcome: `${usedSkip ? 'Executed skip jump and bypassed an intermediate node. ' : ''}Fleet arrived at layer ${targetNode.layer} and is awaiting node resolution.`,
       details: {
         fromNodeId: currentNode.id,
         toNodeId: targetNode.id,
-        nodeType: targetNode.type,
+        nodeType: finalType,
         usedSkip,
       },
     });
