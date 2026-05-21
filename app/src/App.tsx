@@ -11,7 +11,6 @@ import type { CustomScenarioConfig } from './components/setup/ScenarioEditor';
 import FleetBuilder from './components/setup/FleetBuilder';
 import ModalOverlay from './components/ModalOverlay';
 import GameOverScreen from './components/setup/GameOverScreen';
-import HowToPlayModal from './components/HowToPlayModal';
 import CampaignScreen from './components/campaign/CampaignScreen';
 import { useCampaignStore } from './store/useCampaignStore';
 import ToastContainer from './components/campaign/ToastContainer';
@@ -197,7 +196,6 @@ function App() {
           setAppMode('tutorial');
         }}
       />
-      <HowToPlayModal />
       </>
     );
   }
@@ -248,7 +246,6 @@ function App() {
       <div className={`app-root ${isRedAlert ? 'red-alert' : ''}`}>
         <GameScreen />
         <ModalOverlay />
-        <HowToPlayModal />
       </div>
     );
   }
@@ -281,7 +278,6 @@ function App() {
         <div className={`app-root ${isRedAlert ? 'red-alert' : ''}`}>
           <GameScreen />
           <ModalOverlay />
-          <HowToPlayModal />
         </div>
         <ToastContainer />
       </>
@@ -298,7 +294,6 @@ function App() {
     <div className={`app-root ${isRedAlert ? 'red-alert' : ''}`}>
       <GameScreen />
       <ModalOverlay />
-      <HowToPlayModal />
     </div>
   );
 }

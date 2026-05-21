@@ -3,6 +3,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import SettingsModal from './components/SettingsModal';
+import HowToPlayModal from './components/HowToPlayModal';
 import SettingsButton from './components/SettingsButton';
 import { useSettingsStore } from './store/useSettingsStore';
 
@@ -54,6 +55,7 @@ createRoot(document.getElementById('root')!).render(
       <App />
       <SettingsButton />
       <SettingsModal />
+      <HowToPlayModal />
     </>
   </StrictMode>,
 );

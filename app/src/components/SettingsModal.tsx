@@ -134,7 +134,14 @@ export default function SettingsModal() {
             <button 
               className="btn btn--secondary" 
               style={{ flex: 1 }}
-              onClick={() => useUIStore.getState().toggleHowToPlay()}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                closeSettings();
+                setTimeout(() => {
+                  useUIStore.setState({ isHowToPlayOpen: true });
+                }, 50);
+              }}
             >
               RULES REFERENCE
             </button>
