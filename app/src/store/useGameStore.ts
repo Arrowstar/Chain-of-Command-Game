@@ -1316,9 +1316,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
             
             let updatedTraumas = [...newOfficers[i].traumas];
             if (d6Roll <= 2) {
-              const autoDocResult = applyAutoDocOverride(state.experimentalTech);
+              const currentTech = get().experimentalTech;
+              const autoDocResult = applyAutoDocOverride(currentTech);
               if (autoDocResult.negated) {
-                const updatedTech = state.experimentalTech.map(tech =>
+                const updatedTech = currentTech.map(tech =>
                   tech.id === 'auto-doc-override' ? { ...tech, isConsumed: true } : tech
                 );
                 set({ experimentalTech: updatedTech });
