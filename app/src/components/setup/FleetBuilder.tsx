@@ -1082,6 +1082,7 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
                     return (
                       <div 
                         key={officer.id}
+                        role="button"
                         className={`panel`}
                         style={{ 
                           margin: '8px 0', padding: '8px',
@@ -1355,6 +1356,7 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
                       {subsForStation.map(sub => (
                         <div 
                           key={sub.id}
+                          role="button"
                           className={`panel`}
                           style={{ 
                             margin: '8px 0', cursor: 'pointer',
