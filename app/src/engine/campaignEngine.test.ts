@@ -115,8 +115,8 @@ describe('convertFleetFavorToRP', () => {
   });
 });
 
-describe('executePostCombatLoop — Trauma Assessment', () => {
-  it('officer AT max stress gains a Trauma and resets', () => {
+describe('executePostCombatLoop — Trauma Assessment (Deprecated post-combat stress check)', () => {
+  it('officer AT max stress resets but does NOT gain a Trauma post-combat', () => {
     const officer = makeOfficer('helm-1', 'helm', 4, 4); // stress 4/4 = maxed
     const player = makePlayer('p1', 'ship-1', [officer]);
     const ship = makeShip('ship-1');
@@ -128,8 +128,7 @@ describe('executePostCombatLoop — Trauma Assessment', () => {
       playerShips: [ship],
     });
 
-    expect(result.traumasGained).toHaveLength(1);
-    expect(result.traumasGained[0].officerId).toBe('helm-1');
+    expect(result.traumasGained).toHaveLength(0);
     expect(result.officerStressResets).toContain('helm-1');
   });
 
@@ -165,7 +164,7 @@ describe('executePostCombatLoop — Trauma Assessment', () => {
     expect(result.officerStressResets).not.toContain('sparky');
   });
 
-  it('multiple officers maxed → each gets individual Trauma', () => {
+  it('multiple officers maxed → stress resets but no traumas post-combat', () => {
     const o1 = makeOfficer('helm-1', 'helm', 4);
     const o2 = makeOfficer('tactical-1', 'tactical', 5);
     const player = makePlayer('p1', 'ship-1', [o1, o2]);
@@ -179,7 +178,9 @@ describe('executePostCombatLoop — Trauma Assessment', () => {
       players: [player], officerDataMap: dataMap, playerShips: [ship],
     });
 
-    expect(result.traumasGained).toHaveLength(2);
+    expect(result.traumasGained).toHaveLength(0);
+    expect(result.officerStressResets).toContain('helm-1');
+    expect(result.officerStressResets).toContain('tactical-1');
   });
 });
 

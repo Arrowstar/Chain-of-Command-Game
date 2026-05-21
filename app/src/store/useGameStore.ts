@@ -35,7 +35,7 @@ import { rollDie, rollOfficerSkillProc, rollVolley, stepUpDie, stepDownDie } fro
 import { resolveFighterMovement, resolveFighterAttack, buildCarrierFighters } from '../engine/ai/fighterAI';
 import { getScenarioById } from '../data/scenarios';
 import { getFleetAssetDefinition } from '../data/fleetAssets';
-import { TRAUMA_POOL } from '../data/traumaTraits';
+import { TRAUMA_POOL, drawRandomTrauma } from '../data/traumaTraits';
 import { SCAR_TEMPLATES } from '../data/scarTemplates';
 import type { CombatModifiers, ExperimentalTech } from '../types/campaignTypes';
 import {
@@ -49,6 +49,7 @@ import {
   getKineticSiphonShieldRestore,
   getNeuralLinkCT,
   getStimInjectorBonus,
+  applyAutoDocOverride,
 } from '../engine/techEffects';
 import { getRoundStartCtState } from '../engine/commandTokens';
 import { generateSquadronName } from '../utils/nameGenerator';
@@ -1308,9 +1309,35 @@ export const useGameStore = create<GameStore>((set, get) => ({
             }
 
             const resetStress = Math.floor(maxStress / 2);
+            
+            // ── Trauma Roll on Fumble ──
+            const d6Roll = rollDie('d6');
+            get().addLog('system', `🎲 Trauma Check for ${officerData.name}: Rolled a ${d6Roll} on a D6 (needs 3+ to pass).`);
+            
+            let updatedTraumas = [...newOfficers[i].traumas];
+            if (d6Roll <= 2) {
+              const autoDocResult = applyAutoDocOverride(state.experimentalTech);
+              if (autoDocResult.negated) {
+                const updatedTech = state.experimentalTech.map(tech =>
+                  tech.id === 'auto-doc-override' ? { ...tech, isConsumed: true } : tech
+                );
+                set({ experimentalTech: updatedTech });
+                get().addLog('system', `🛡️ Auto-Doc Override prevented trauma for ${officerData.name}!`);
+                fireCombatToast({ type: 'warning', message: `🛡️ Auto-Doc Override prevented trauma for ${officerData.name}` });
+              } else {
+                const trauma = drawRandomTrauma();
+                updatedTraumas.push({ id: trauma.id, name: trauma.name, effect: trauma.effect });
+                get().addLog('fumble', `⚡ TRAUMA INFLICTED: ${officerData.name} has suffered a permanent Trauma: ${trauma.name} (${trauma.effect})`);
+                fireCombatToast({ type: 'warning', message: `⚡ TRAUMA — ${officerData.name}: ${trauma.name}` });
+              }
+            } else {
+              get().addLog('system', `😌 ${officerData.name} resisted the trauma.`);
+            }
+
             newOfficers[i] = {
               ...newOfficers[i],
               currentStress: resetStress,
+              traumas: updatedTraumas,
             };
             get().addLog('stress', `${officerData.name} steadies after the fumble (${resetStress}/${maxStress} Stress).`);
           }

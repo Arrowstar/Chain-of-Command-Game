@@ -154,6 +154,8 @@ export function executePostCombatLoop(params: {
   // Only positive FF converts. Negative FF produces 0 RP.
 
   // ── Step 2: Trauma Assessment ─────────────────────────────────
+  // Note: Trauma is now assigned during combat on fumbles.
+  // Post-combat only resets officer stress.
   const traumasGained: TraumaGained[] = [];
   const officerStressResets: string[] = [];
 
@@ -165,18 +167,6 @@ export function executePostCombatLoop(params: {
       const data = officerDataMap[officer.officerId];
       if (!data || data.stressLimit === null) continue; // immune (Sparky)
 
-      const maxStress = getMaxStress(officer, data);
-      if (maxStress !== null && officer.currentStress >= maxStress) {
-        // Officer is at max stress → gains Trauma, stress resets to 0
-        const trauma = drawRandomTrauma();
-        traumasGained.push({
-          officerId: officer.officerId,
-          shipId: ship.id,
-          traumaId: trauma.id,
-          traumaName: trauma.name,
-          traumaEffect: trauma.effect,
-        });
-      }
       // All officers (whether traumatized or not) reset stress to 0
       officerStressResets.push(officer.officerId);
     }

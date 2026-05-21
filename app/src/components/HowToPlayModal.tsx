@@ -122,7 +122,7 @@ export default function HowToPlayModal() {
               <li><strong>Sensors:</strong> Applies Target Locks, hacks enemies, and manages intel.</li>
             </ul>
             <h3 style={{ color: 'var(--color-text-bright)', marginTop: 'var(--space-md)' }}>Stress & Fatigue</h3>
-            <p>Using officer abilities costs Stress. If an officer exceeds their Stress Limit, they trigger a <strong>Fumble</strong>. Furthermore, assigning multiple actions to the same officer in one round incurs a compounding <strong>Fatigue Penalty</strong> (+1 Stress cost per prior action).</p>
+            <p>Using officer abilities costs Stress. If an officer exceeds their Stress Limit, they trigger a <strong>Fumble</strong>—drawing a Fumble Card and prompting an immediate <strong>Trauma Check</strong>. Furthermore, assigning multiple actions to the same officer in one round incurs a compounding <strong>Fatigue Penalty</strong> (+1 Stress cost per prior action).</p>
             <h3 style={{ color: 'var(--color-text-bright)', marginTop: 'var(--space-md)' }}>Command Tokens (CT)</h3>
             <p>The War Council shares a pool of Command Tokens generated each round. Every action requires assigning a CT to a station.</p>
           </div>
@@ -166,9 +166,9 @@ export default function HowToPlayModal() {
             <h2 style={{ color: 'var(--color-holo-cyan)' }}>Hazards & Effects</h2>
             <p>Space combat is dangerous. You will suffer lasting consequences.</p>
             <ul>
-              <li><strong>Fumbles:</strong> Occur when an officer exceeds their Stress limit. A random, immediate negative effect occurs, often locking out the station or failing the action.</li>
+              <li><strong>Fumbles:</strong> Occur when an officer exceeds their Stress limit. This triggers a random, immediate negative effect (often locking out the station or failing the action) and forces a <strong>Trauma Check</strong>.</li>
               <li><strong>Critical Damage:</strong> When your Hull takes a Critical Hit (a die rolling its max face value), you draw a Critical Damage card. These apply severe, ongoing penalties until repaired by Engineering.</li>
-              <li><strong>Traumas:</strong> If an officer ends a combat scenario with maximum Stress, they gain a permanent psychological Trauma Trait, hampering their abilities in future battles.</li>
+              <li><strong>Traumas:</strong> When an officer fumbles, they must roll a **D6 Trauma Check**. On a roll of **1 or 2**, they gain a permanent psychological **Trauma Trait**, hampering their abilities in future battles. Gaining a trauma can be intercepted by the *Auto-Doc Override* experimental tech.</li>
               <li><strong>Ship Scars:</strong> If your ship survives with unresolved Critical Damage cards, they solidify into permanent Ship Scars that cannot be repaired mid-battle, only at a Drydock.</li>
               <li><strong>Rules of Engagement (RoE):</strong> A doctrine card drawn at the start of the campaign that applies a global rule to every battle. You can spend Fleet Favor to override it for a single battle.</li>
             </ul>

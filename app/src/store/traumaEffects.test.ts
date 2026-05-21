@@ -351,6 +351,9 @@ describe('Trauma Effects', () => {
       },
     };
 
+    // Mock Math.random to return 0.99 (rolls a 6 on D6, passes trauma check)
+    vi.spyOn(Math, 'random').mockReturnValue(0.99);
+
     useGameStore.setState(state => {
       const p = state.players[0];
       p.officers[2].currentStress = 6;
@@ -366,6 +369,97 @@ describe('Trauma Effects', () => {
     expect(tacticalOfficer.currentStress).toBe(2);
     expect(tacticalOfficer.hasFumbledThisRound).toBe(true);
     expect(tacticalOfficer.isLocked).toBe(true);
+    expect(tacticalOfficer.traumas).toHaveLength(0); // resisted trauma
+
+    vi.restoreAllMocks();
+  });
+
+  it('Fumble with bad trauma roll (D6 <= 2) inflicts a Trauma Trait', () => {
+    const testFumble: FumbleCard = {
+      id: 'test-fumble',
+      name: 'Test Fumble',
+      category: 'tactical',
+      flavorText: 'Test only.',
+      effect: 'Simple station lock.',
+      mechanicalEffect: {
+        actionCanceled: false,
+        ctRefunded: false,
+        stationLocked: false,
+        lockDuration: 0,
+      },
+    };
+
+    // Mock Math.random to return 0.1 (rolls a 1 on D6, fails trauma check)
+    vi.spyOn(Math, 'random').mockReturnValue(0.1);
+
+    useGameStore.setState(state => {
+      const p = state.players[0];
+      p.officers[2].currentStress = 6;
+      return {
+        players: [p],
+        fumbleDeck: [testFumble],
+        experimentalTech: [],
+      };
+    });
+
+    useGameStore.getState().evaluateCommandPhaseFumbles();
+
+    const tacticalOfficer = useGameStore.getState().players[0].officers[2];
+    expect(tacticalOfficer.traumas).toHaveLength(1); // gained trauma!
+    expect(tacticalOfficer.traumas[0].id).toBeDefined();
+
+    vi.restoreAllMocks();
+  });
+
+  it('Auto-Doc Override shields the officer and gets consumed when fumbling with a bad roll', () => {
+    const testFumble: FumbleCard = {
+      id: 'test-fumble',
+      name: 'Test Fumble',
+      category: 'tactical',
+      flavorText: 'Test only.',
+      effect: 'Simple station lock.',
+      mechanicalEffect: {
+        actionCanceled: false,
+        ctRefunded: false,
+        stationLocked: false,
+        lockDuration: 0,
+      },
+    };
+
+    // Mock Math.random to return 0.1 (rolls a 1 on D6, fails trauma check)
+    vi.spyOn(Math, 'random').mockReturnValue(0.1);
+
+    useGameStore.setState(state => {
+      const p = state.players[0];
+      p.officers[2].currentStress = 6;
+      return {
+        players: [p],
+        fumbleDeck: [testFumble],
+        experimentalTech: [
+          {
+            id: 'auto-doc-override',
+            name: 'Auto-Doc Override',
+            category: 'crew',
+            effect: 'Shields from trauma',
+            flavorText: 'Override.',
+            isConsumable: true,
+            isConsumed: false,
+            rarity: 'rare',
+            imagePath: '/assets/experimental_tech/auto_doc.png'
+          }
+        ],
+      };
+    });
+
+    useGameStore.getState().evaluateCommandPhaseFumbles();
+
+    const tacticalOfficer = useGameStore.getState().players[0].officers[2];
+    expect(tacticalOfficer.traumas).toHaveLength(0); // shielded by Auto-Doc!
+    
+    const storeTech = useGameStore.getState().experimentalTech;
+    expect(storeTech.find(t => t.id === 'auto-doc-override')?.isConsumed).toBe(true); // tech consumed!
+
+    vi.restoreAllMocks();
   });
 
 });

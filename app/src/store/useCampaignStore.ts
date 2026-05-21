@@ -500,6 +500,7 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
           ...state.campaign,
           requisitionPoints: state.campaign.requisitionPoints + bonusRp,
           fleetFavor: newFF,
+          experimentalTech: useGameStore.getState().experimentalTech,
           // Transition to gameOver immediately if it's a boss defeat or FF wipe,
           // but we still go through postCombat first so they see the result.
           campaignPhase: forceGameOver ? 'postCombat' : 'postCombat', // Actually both go to postCombat first
