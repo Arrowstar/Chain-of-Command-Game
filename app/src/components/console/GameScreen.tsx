@@ -14,6 +14,7 @@ import RoEPanel from './RoEPanel';
 import CombatScenarioProgressTracker from '../combat/CombatScenarioProgressTracker';
 import TechBadge from '../campaign/TechBadge';
 import TutorialOverlay from '../tutorial/TutorialOverlay';
+import ExperimentalTechModal from './ExperimentalTechModal';
 import CombatToastContainer from '../board/CombatToastContainer';
 import AstroCafNotification from '../campaign/AstroCafNotification';
 import ScoreLedgerModal from '../campaign/ScoreLedgerModal';
@@ -59,6 +60,7 @@ export default function GameScreen() {
   const [showEnemyTactic, setShowEnemyTactic] = React.useState(false);
   const [hasUnreadEnemyTactic, setHasUnreadEnemyTactic] = React.useState(false);
   const [showScoreLedger, setShowScoreLedger] = React.useState(false);
+  const [isTechModalOpen, setIsTechModalOpen] = useState(false);
   const previousTacticIdRef = useRef<string | null>(currentTactic?.id ?? null);
 
   const [activePlayerId, setActivePlayerId] = useState(players[0]?.id);
@@ -209,15 +211,7 @@ export default function GameScreen() {
         {tutorialActive && <TutorialOverlay />}
         <AstroCafNotification />
         <DebugMenu onAutoWin={debugAutoWin} onAutoLose={debugAutoLose} />
-
-        {/* Experimental tech badges — fixed below tab bar */}
-        {phase !== 'briefing' && experimentalTech.length > 0 && (
-          <div style={{ position: 'fixed', top: 48, left: 8, zIndex: 180, pointerEvents: 'none' }}>
-            <div style={{ display: 'flex', gap: '6px', pointerEvents: 'auto' }}>
-              {experimentalTech.map(tech => <TechBadge key={tech.id} tech={tech} />)}
-            </div>
-          </div>
-        )}
+        <ExperimentalTechModal isOpen={isTechModalOpen} onClose={() => setIsTechModalOpen(false)} />
 
         {/* Tab bar */}
         <div className="phone-tab-bar">
@@ -233,6 +227,27 @@ export default function GameScreen() {
           >
             CONSOLE
           </button>
+          {phase !== 'briefing' && (
+            <button
+              className="phone-tab-btn"
+              style={{
+                flex: '0 0 auto',
+                width: 'auto',
+                padding: '0 16px',
+                color: experimentalTech.length > 0 ? 'var(--color-alert-amber)' : 'var(--color-text-secondary)',
+                opacity: experimentalTech.length > 0 ? 1 : 0.6,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+              }}
+              onClick={() => setIsTechModalOpen(true)}
+              aria-label="Open Experimental Tech"
+            >
+              <span>⚙</span>
+              <span>TECH ({experimentalTech.length})</span>
+            </button>
+          )}
         </div>
 
         {/* Content area */}

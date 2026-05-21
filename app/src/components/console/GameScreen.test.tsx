@@ -302,5 +302,53 @@ describe('GameScreen', () => {
     // Should be hidden again
     expect(screen.queryByTitle(/toggle debug tools/i)).not.toBeInTheDocument();
   });
+
+  it('renders and opens/closes the Experimental Tech Hub Modal on mobile', async () => {
+    useViewportSpy.mockReturnValue({ isPhone: true, isTablet: false, isCoarsePointer: false } as any);
+    act(() => {
+      useGameStore.setState({
+        experimentalTech: [
+          {
+            id: 'plasma-accelerators',
+            name: 'Plasma Accelerators',
+            category: 'tactical',
+            effect: 'The maximum range of all non-[Ordnance] weapon modules equipped by the fleet is increased by 1 Hex.',
+            flavorText: 'Flavor text test',
+            isConsumable: false,
+            isConsumed: false,
+            rarity: 'uncommon',
+            imagePath: '/assets/experimental_tech/plasma_accelerator.png',
+          },
+        ],
+      });
+    });
+
+    const user = userEvent.setup();
+    render(<GameScreen />);
+
+    // Verify the Tech button in the tab bar exists and shows count
+    const techBtn = screen.getByRole('button', { name: /Open Experimental Tech/i });
+    expect(techBtn).toBeInTheDocument();
+    expect(screen.getByText('TECH (1)')).toBeInTheDocument();
+
+    // Modal should not be open yet
+    expect(screen.queryByTestId('tech-hub-modal')).not.toBeInTheDocument();
+
+    // Click Tech button
+    await user.click(techBtn);
+
+    // Modal should be visible now
+    expect(screen.getByTestId('tech-hub-modal')).toBeInTheDocument();
+    expect(screen.getByText('Plasma Accelerators')).toBeInTheDocument();
+    expect(screen.getByText(/The maximum range of all non-\[Ordnance\]/i)).toBeInTheDocument();
+    expect(screen.getByText('Flavor text test')).toBeInTheDocument();
+
+    // Click CLOSE button
+    const closeBtn = screen.getByRole('button', { name: /CLOSE/i });
+    await user.click(closeBtn);
+
+    // Modal should be closed
+    expect(screen.queryByTestId('tech-hub-modal')).not.toBeInTheDocument();
+  });
 });
 
