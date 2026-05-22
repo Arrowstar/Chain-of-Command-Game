@@ -50,7 +50,7 @@ export default function CombatScenarioProgressTracker({
         borderColor: 'rgba(230, 160, 0, 0.32)',
         background: isBriefing
           ? 'rgba(230, 160, 0, 0.06)'
-          : 'linear-gradient(180deg, rgba(230, 160, 0, 0.08) 0%, rgba(10, 18, 30, 0.88) 100%)',
+          : undefined,
         maxHeight: isBriefing ? 'none' : 'min(60vh, 520px)',
         overflowY: isBriefing ? 'visible' : 'auto',
       }}
