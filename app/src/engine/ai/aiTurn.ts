@@ -325,6 +325,9 @@ export function executeAITier(
         if (fireControlSlagged) {
           namedModifiers.push({ name: 'Fire Control Slagged', value: 2 });
         }
+        if ('enemyTnReduction' in target && target.enemyTnReduction) {
+          namedModifiers.push({ name: 'Navigational Lockout (Drifting)', value: -target.enemyTnReduction });
+        }
         const tn = calculateTN(targetEvasion, dist, defTerrain, 0, 0, 0, namedModifiers, false);
         // Tactic card extra dice (suppressed if Comms Severed)
         if (effectiveTacticCard?.mechanicalEffect.extraDice) {

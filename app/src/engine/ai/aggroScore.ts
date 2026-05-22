@@ -72,6 +72,12 @@ export function calculateAggroScores(
       breakdown['objectiveVIP'] = 4;
     }
 
+    // Fumble Effect: Priority Target
+    if ('priorityTarget' in target && target.priorityTarget) {
+      score += 1000;
+      breakdown['priorityTarget'] = 1000;
+    }
+
     // Evasive maneuvers modifier
     if (target.evasionModifiers && target.evasionModifiers > 0) {
       score -= 2;

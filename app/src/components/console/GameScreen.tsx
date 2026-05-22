@@ -31,6 +31,7 @@ import { SmartTooltip } from '../TouchTooltipPortal';
 import { getStimInjectorBonus } from '../../engine/techEffects';
 import { TRAUMA_POOL } from '../../data/traumaTraits';
 import { SCAR_TEMPLATES } from '../../data/scarTemplates';
+import { PLAYER_CRITICAL_DECK, ENEMY_CRITICAL_DECK } from '../../data/criticalDamage';
 
 export default function GameScreen() {
   const players = useGameStore(s => s.players);
@@ -1054,13 +1055,19 @@ function DebugMenu({ onAutoWin, onAutoLose }: { onAutoWin: () => void; onAutoLos
 
   const players = useGameStore(s => s.players);
   const playerShips = useGameStore(s => s.playerShips);
+  const enemyShips = useGameStore(s => s.enemyShips);
   const debugAddTrauma = useGameStore(s => s.debugAddTrauma);
   const debugAddScar = useGameStore(s => s.debugAddScar);
+  const debugAddCriticalToShip = useGameStore(s => s.debugAddCriticalToShip);
 
   const [selectedOfficerId, setSelectedOfficerId] = useState('');
   const [selectedTraumaId, setSelectedTraumaId] = useState(TRAUMA_POOL[0]?.id || '');
   const [selectedShipId, setSelectedShipId] = useState('');
   const [selectedScarId, setSelectedScarId] = useState(Object.keys(SCAR_TEMPLATES)[0] || '');
+  const [selectedPlayerCritShipId, setSelectedPlayerCritShipId] = useState('');
+  const [selectedPlayerCritId, setSelectedPlayerCritId] = useState(PLAYER_CRITICAL_DECK[0]?.id || '');
+  const [selectedEnemyCritShipId, setSelectedEnemyCritShipId] = useState('');
+  const [selectedEnemyCritId, setSelectedEnemyCritId] = useState(ENEMY_CRITICAL_DECK[0]?.id || '');
 
   // Flatten officers from all players
   const allOfficers = players.flatMap(p => p.officers.map(o => {
@@ -1105,6 +1112,21 @@ function DebugMenu({ onAutoWin, onAutoLose }: { onAutoWin: () => void; onAutoLos
       setSelectedShipId(playerShips[0].id);
     }
   }, [playerShips, selectedShipId]);
+
+  // Initialize selected player crit ship
+  React.useEffect(() => {
+    if (playerShips.length > 0 && !selectedPlayerCritShipId) {
+      setSelectedPlayerCritShipId(playerShips[0].id);
+    }
+  }, [playerShips, selectedPlayerCritShipId]);
+
+  // Initialize selected enemy crit ship
+  React.useEffect(() => {
+    const activeEnemyShips = enemyShips.filter(s => !s.isDestroyed);
+    if (activeEnemyShips.length > 0 && !selectedEnemyCritShipId) {
+      setSelectedEnemyCritShipId(activeEnemyShips[0].id);
+    }
+  }, [enemyShips, selectedEnemyCritShipId]);
 
   if (!visible) return null;
 
@@ -1265,6 +1287,94 @@ function DebugMenu({ onAutoWin, onAutoLose }: { onAutoWin: () => void; onAutoLos
             </>
           ) : (
             <div style={{ fontSize: '0.65rem', color: 'var(--color-text-secondary)' }}>No ships found.</div>
+          )}
+
+          <div style={{ borderTop: '1px solid rgba(255,200,0,0.2)', marginTop: 4, marginBottom: 4 }} />
+          <div style={{ fontSize: '0.6rem', color: 'rgba(255,200,0,0.5)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>
+            ADD CRIT TO PLAYER SHIP
+          </div>
+          {playerShips.length > 0 ? (
+            <>
+              <select
+                value={selectedPlayerCritShipId}
+                onChange={e => setSelectedPlayerCritShipId(e.target.value)}
+                style={{ fontSize: '0.7rem', padding: '4px', background: 'var(--color-bg-deep)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border)' }}
+              >
+                {playerShips.map(s => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={selectedPlayerCritId}
+                onChange={e => setSelectedPlayerCritId(e.target.value)}
+                style={{ fontSize: '0.7rem', padding: '4px', background: 'var(--color-bg-deep)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border)' }}
+              >
+                {PLAYER_CRITICAL_DECK.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                className="btn btn--danger"
+                style={{ fontSize: '0.72rem', padding: '4px 10px', marginTop: '2px' }}
+                onClick={() => {
+                  if (selectedPlayerCritShipId && selectedPlayerCritId) {
+                    debugAddCriticalToShip(selectedPlayerCritShipId, selectedPlayerCritId, false);
+                  }
+                }}
+              >
+                Apply Crit
+              </button>
+            </>
+          ) : (
+            <div style={{ fontSize: '0.65rem', color: 'var(--color-text-secondary)' }}>No player ships.</div>
+          )}
+
+          <div style={{ borderTop: '1px solid rgba(255,200,0,0.2)', marginTop: 4, marginBottom: 4 }} />
+          <div style={{ fontSize: '0.6rem', color: 'rgba(255,200,0,0.5)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>
+            ADD CRIT TO ENEMY SHIP
+          </div>
+          {enemyShips.filter(s => !s.isDestroyed).length > 0 ? (
+            <>
+              <select
+                value={selectedEnemyCritShipId}
+                onChange={e => setSelectedEnemyCritShipId(e.target.value)}
+                style={{ fontSize: '0.7rem', padding: '4px', background: 'var(--color-bg-deep)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border)' }}
+              >
+                {enemyShips.filter(s => !s.isDestroyed).map(s => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={selectedEnemyCritId}
+                onChange={e => setSelectedEnemyCritId(e.target.value)}
+                style={{ fontSize: '0.7rem', padding: '4px', background: 'var(--color-bg-deep)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border)' }}
+              >
+                {ENEMY_CRITICAL_DECK.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                className="btn btn--danger"
+                style={{ fontSize: '0.72rem', padding: '4px 10px', marginTop: '2px' }}
+                onClick={() => {
+                  if (selectedEnemyCritShipId && selectedEnemyCritId) {
+                    debugAddCriticalToShip(selectedEnemyCritShipId, selectedEnemyCritId, true);
+                  }
+                }}
+              >
+                Apply Crit
+              </button>
+            </>
+          ) : (
+            <div style={{ fontSize: '0.65rem', color: 'var(--color-text-secondary)' }}>No enemy ships.</div>
           )}
         </div>
       )}

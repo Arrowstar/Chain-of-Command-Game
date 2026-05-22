@@ -89,6 +89,7 @@ export default function ModalOverlay() {
         <CriticalCardReveal
           card={(visibleData as any).card}
           onAcknowledge={hideModal}
+          shipName={(visibleData as any).shipName as string | undefined}
         />
       )}
       

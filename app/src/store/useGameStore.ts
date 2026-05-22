@@ -10,7 +10,7 @@ import { getNextPhase, checkGameOverConditions, createLogEntry, getShipSizeForSt
 import { createShuffledTacticDeck, drawTacticCard } from '../data/tacticDeck';
 import { drawRoECard, getRoECardById } from '../data/roeDeck';
 import { createShuffledFumbleDeck, drawFumbleCard } from '../data/fumbleDeck';
-import { createShuffledPlayerCritDeck, createShuffledEnemyCritDeck, drawCriticalCard } from '../data/criticalDamage';
+import { createShuffledPlayerCritDeck, createShuffledEnemyCritDeck, drawCriticalCard, PLAYER_CRITICAL_DECK, ENEMY_CRITICAL_DECK } from '../data/criticalDamage';
 import { calculateStressRecovery, recoverStress, resetOfficerRoundState, applyStress, getMaxStress } from '../engine/stress';
 import { regenerateShields, resolveAttack, assembleVolleyPool, getValidTargetsForWeapon, getAntiSmallCraftTNModifier, type DamageResult } from '../engine/combat';
 import { executeDrift, rotateShip, adjustSpeed, type AsteroidRollResult } from '../engine/movement';
@@ -222,6 +222,7 @@ interface GameStore {
   debugAutoLose: () => void;
   debugAddTrauma: (officerId: string, traumaId: string) => void;
   debugAddScar: (shipId: string, criticalId: string) => void;
+  debugAddCriticalToShip: (shipId: string, criticalId: string, isEnemy: boolean) => void;
   selectDeploymentShip: (shipId: string) => void;
   setDeploymentShipPosition: (shipId: string, position: HexCoord) => boolean;
   rotateDeploymentShip: (shipId: string, delta?: 1 | -1) => void;
@@ -1269,6 +1270,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
                shipUpdates.navLockout = true;
                shipUpdates.navLockoutDuration = mech.navLockoutDuration;
                get().addLog('system', `Fumble Effect: Navigational Lockout! Helm maneuvers blocked for ${mech.navLockoutDuration} round(s).`);
+            }
+            if (mech.priorityTarget) {
+               shipUpdates.priorityTarget = true;
+               get().addLog('system', `Fumble Effect: Targeting Feedback Loop! This ship is now the highest priority target for enemies.`);
+            }
+            if (mech.enemyTnReduction) {
+               shipUpdates.enemyTnReduction = mech.enemyTnReduction;
+               get().addLog('system', `Fumble Effect: Ship drifts predictably. Enemies gain -${mech.enemyTnReduction} TN to hit this ship.`);
             }
             if (mech.commsBlackout) {
                commsBlackout = true;
@@ -2852,7 +2861,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     });
                     get().addLog('critical', `══& CRITICAL HIT! ${stationTarget.name} suffered: ${critCard.name}!`);
                     fireCombatToast({ type: 'critical', message: `★ CRITICAL HIT — ${stationTarget.name}: ${critCard.name}!` });
-                    useUIStore.getState().queueModal('critical', { card: critCard });
+                    useUIStore.getState().queueModal('critical', { card: critCard, shipName: stationTarget.name });
                 }
             } else if ('isFighter' in (context || {}) && context?.isFighter) {
                 const fighterTarget = target as unknown as FighterToken;
@@ -3110,7 +3119,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
                         set({ playerCritDeck: get().playerCritDeck.slice(1) });
                         get().addLog('roe', `⚡ OVERCLOCKED REACTORS: ${defenderName} took hull damage — forced Critical Draw! [${critCard.name}]`);
                         fireCombatToast({ type: 'critical', message: `★ OVERCLOCKED: ${defenderName} suffered ${critCard.name}!` });
-                        useUIStore.getState().queueModal('critical', { card: critCard });
+                        useUIStore.getState().queueModal('critical', { card: critCard, shipName: defenderName });
                     }
                 }
             });
@@ -3156,7 +3165,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             if (crit.isEnemyShieldCollapse) msg += ` (All shields immediately reduced to 0)`;
             get().addLog('critical', msg);
             fireCombatToast({ type: 'critical', message: `★ CRITICAL HIT — ${crit.targetName}: ${crit.card.name}!` });
-            useUIStore.getState().queueModal('critical', { card: crit.card });
+            useUIStore.getState().queueModal('critical', { card: crit.card, shipName: crit.targetName });
         });
         break;
       }
@@ -4147,7 +4156,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         if (crit.isMagazineExplosion) msg += ` (Immediate 2 Hull Damage)`;
         get().addLog('critical', msg);
         fireCombatToast({ type: 'critical', message: `★ CRITICAL HIT — ${crit.targetName}: ${crit.card.name}!` });
-        useUIStore.getState().queueModal('critical', { card: crit.card });
+        useUIStore.getState().queueModal('critical', { card: crit.card, shipName: crit.targetName });
       });
 
       // Log player damage summary
@@ -4784,7 +4793,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     hasDroppedBelow50: target.currentHull > maxHull / 2 && newHull <= maxHull / 2
                 });
                 get().addLog('critical', `══& CRITICAL HIT! ${target.name} suffered: ${critCard.name}!`);
-                useUIStore.getState().queueModal('critical', { card: critCard });
+                fireCombatToast({ type: 'critical', message: `★ CRITICAL HIT — ${target.name}: ${critCard.name}!` });
+                useUIStore.getState().queueModal('critical', { card: critCard, shipName: target.name });
             }
           } else if ('stationId' in target) {
             const newHull = Math.max(0, target.currentHull - attackResult.hullDamage);
@@ -5406,6 +5416,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
         ordnanceJammed: false,
         navLockout: s.navLockoutDuration ? s.navLockoutDuration > 1 : false,
         navLockoutDuration: Math.max(0, (s.navLockoutDuration ?? 0) - 1),
+        priorityTarget: false,
+        enemyTnReduction: undefined,
         isJammed: false
       }))
     );
@@ -5982,6 +5994,39 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return { playerShips: updatedShips };
     });
     get().addLog('system', `⚡ [DEBUG] Applied Ship Scar: ${template.name} to ship ${shipId}`);
+  },
+
+  debugAddCriticalToShip: (shipId, criticalId, isEnemy) => {
+    const deck = isEnemy ? ENEMY_CRITICAL_DECK : PLAYER_CRITICAL_DECK;
+    const card = deck.find(c => c.id === criticalId);
+    if (!card) {
+      console.warn(`[DEBUG] Critical card ${criticalId} not found in ${isEnemy ? 'enemy' : 'player'} deck.`);
+      return;
+    }
+    const critCard = { ...card, isRepaired: false };
+    set(state => {
+      if (isEnemy) {
+        const updatedShips = state.enemyShips.map(s => {
+          if (s.id !== shipId) return s;
+          if (s.criticalDamage.some(c => c.id === criticalId)) return s;
+          return { ...s, criticalDamage: [...s.criticalDamage, critCard] };
+        });
+        return { enemyShips: updatedShips };
+      } else {
+        const updatedShips = state.playerShips.map(s => {
+          if (s.id !== shipId) return s;
+          if (s.criticalDamage.some(c => c.id === criticalId)) return s;
+          return { ...s, criticalDamage: [...s.criticalDamage, critCard] };
+        });
+        return { playerShips: updatedShips };
+      }
+    });
+    const shipName = isEnemy
+      ? get().enemyShips.find(s => s.id === shipId)?.name ?? shipId
+      : get().playerShips.find(s => s.id === shipId)?.name ?? shipId;
+    get().addLog('critical', `══& [DEBUG] CRITICAL HIT! ${shipName} suffered: ${critCard.name}!`);
+    fireCombatToast({ type: 'critical', message: `★ [DEBUG] CRITICAL HIT — ${shipName}: ${critCard.name}!` });
+    useUIStore.getState().showModal('critical', { card: critCard, shipName });
   },
 
   selectDeploymentShip: (shipId) => {

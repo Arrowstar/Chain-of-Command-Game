@@ -341,6 +341,8 @@ export interface ShipState {
   ordnanceJammed?: boolean;              // fumble flag
   navLockout?: boolean;                  // fumble flag
   navLockoutDuration?: number;           // fumble flag
+  priorityTarget?: boolean;              // fumble flag
+  enemyTnReduction?: number;             // fumble flag
   /**
    * Tracks load state for [Ordnance] weapons, keyed by weapon slot index.
    * `false` = expended / needs reload. `true` or `undefined` = primed and ready.
@@ -377,6 +379,7 @@ export interface CriticalDamageCard {
   name: string;
   effect: string;
   isRepaired: boolean;
+  imagePath?: string;
 }
 
 export interface ScarEffect {
