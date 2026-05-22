@@ -141,7 +141,7 @@ export default function MainMenu({ onStart, onStartCampaign, onContinueCampaign,
             className={titleDone ? 'main-menu-title-glitch' : ''}
             style={{
               color: 'var(--color-holo-cyan)',
-              fontSize: '3rem',
+              fontSize: 'clamp(1.8rem, 8vw, 3rem)',
               marginBottom: 'var(--space-md)',
               textShadow: 'var(--glow-cyan-strong)',
               fontFamily: 'var(--font-display)',
@@ -154,9 +154,9 @@ export default function MainMenu({ onStart, onStartCampaign, onContinueCampaign,
 
           <div className="label" style={{
             color: 'var(--color-alert-amber)',
-            fontSize: '1.2rem',
+            fontSize: 'clamp(0.9rem, 4vw, 1.2rem)',
             marginBottom: 'var(--space-lg)',
-            letterSpacing: '4px',
+            letterSpacing: 'clamp(2px, 1vw, 4px)',
             textShadow: 'var(--glow-amber)',
           }}>
             STELLAR WAR

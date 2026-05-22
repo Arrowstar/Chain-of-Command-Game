@@ -129,23 +129,6 @@ export default function SettingsModal() {
             <button className="settings-close-btn btn" onClick={closeSettings} aria-label="Close settings">×</button>
           </div>
 
-          <div className="settings-tab-bar" style={{ display: 'flex', gap: '8px', marginBottom: 'var(--space-lg)' }}>
-            <button className="btn btn--primary" style={{ flex: 1, pointerEvents: 'none' }}>AUDIO</button>
-            <button 
-              className="btn btn--secondary" 
-              style={{ flex: 1 }}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                closeSettings();
-                setTimeout(() => {
-                  useUIStore.setState({ isHowToPlayOpen: true });
-                }, 50);
-              }}
-            >
-              RULES REFERENCE
-            </button>
-          </div>
 
           <div className="settings-content" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xl)' }}>
 
