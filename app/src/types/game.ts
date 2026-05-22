@@ -565,6 +565,7 @@ export interface FumbleCard {
   flavorText: string;
   effect: string;
   mechanicalEffect: FumbleMechanicalEffect;
+  imagePath?: string;
 }
 
 export interface FumbleMechanicalEffect {

@@ -3,6 +3,7 @@ import { useUIStore } from '../store/useUIStore';
 import VolleyBreakdown from './combat/VolleyBreakdown';
 import SkillProcResolution from './combat/SkillProcResolution';
 import CriticalCardReveal from './combat/CriticalCardReveal';
+import FumbleCardReveal from './combat/FumbleCardReveal';
 
 export default function ModalOverlay() {
   const activeModal = useUIStore(s => s.activeModal);
@@ -15,7 +16,7 @@ export default function ModalOverlay() {
 
   useEffect(() => {
     // Only delay combat modals so animations have time to play
-    if (activeModal === 'volley' || activeModal === 'critical' || activeModal === 'skill-proc') {
+    if (activeModal === 'volley' || activeModal === 'critical' || activeModal === 'skill-proc' || activeModal === 'fumble') {
       setIsDelaying(true);
       
       if (activeModal === 'volley' && modalData?.fireAnimation) {
@@ -93,17 +94,10 @@ export default function ModalOverlay() {
       
       {/* Fumble Modal */}
       {visibleModal === 'fumble' && visibleData && (visibleData as any).card && (
-        <div className="panel panel--danger" style={{ width: '400px', maxWidth: '90vw', padding: 'var(--space-md)', textAlign: 'center' }}>
-          <div className="label" style={{ color: 'var(--color-hostile-red)', marginBottom: 'var(--space-md)' }}>OFFICER FUMBLE</div>
-          <h2 style={{ color: 'var(--color-text-bright)', marginBottom: 'var(--space-sm)' }}>{((visibleData as any).card as any).name}</h2>
-          <div style={{ fontStyle: 'italic', fontSize: '0.85rem', marginBottom: 'var(--space-md)', color: 'var(--color-text-dim)' }}>
-            "{((visibleData as any).card as any).flavorText}"
-          </div>
-          <div style={{ padding: '8px', background: 'rgba(255,50,50,0.1)', border: '1px solid var(--color-hostile-red)', marginBottom: 'var(--space-md)' }}>
-            {((visibleData as any).card as any).effect}
-          </div>
-          <button className="btn btn--execute" style={{ width: '100%' }} onClick={hideModal}>ACKNOWLEDGE</button>
-        </div>
+        <FumbleCardReveal
+          card={(visibleData as any).card}
+          onAcknowledge={hideModal}
+        />
       )}
       
       {/* If there is a close button needed outside of the modal components, add it here.

@@ -8,6 +8,7 @@ export const FUMBLE_DECK: FumbleCard[] = [
     category: 'general',
     flavorText: 'Too many screens... too many alarms! Just give me a second!',
     effect: 'The Officer freezes. The intended action is canceled. Return the Command Token to the Captain\'s pool. This Officer\'s station is Locked for the remainder of the round.',
+    imagePath: '/assets/fumbles/freeze.png',
     mechanicalEffect: {
       actionCanceled: true,
       ctRefunded: true,
@@ -21,6 +22,7 @@ export const FUMBLE_DECK: FumbleCard[] = [
     category: 'general',
     flavorText: "With all due respect, Captain, I know my station better than you do!",
     effect: 'The action is executed exactly as planned with no penalty. Fleet loses -1 Fleet Favor (FF) due to open insubordination.',
+    imagePath: '/assets/fumbles/insubordination.png',
     mechanicalEffect: {
       actionCanceled: false,
       ctRefunded: false,
@@ -35,6 +37,7 @@ export const FUMBLE_DECK: FumbleCard[] = [
     category: 'general',
     flavorText: 'A sharp crack echoes across the bridge as the officer slams their fist through the console monitor.',
     effect: "The intended action is canceled and the CT is wasted. Until this Officer's stress is reduced to 0, their Skill Die is stepped down by one tier.",
+    imagePath: '/assets/fumbles/nerve_collapse.png',
     mechanicalEffect: {
       actionCanceled: true,
       ctRefunded: false,
@@ -49,6 +52,7 @@ export const FUMBLE_DECK: FumbleCard[] = [
     category: 'general',
     flavorText: "This is your fault! If you had rotated the ship, my shields wouldn't be failing!",
     effect: 'The intended action succeeds. However, the panicked shouting stresses out the rest of the crew. Add +1 Stress to every other Bridge Officer on your dashboard.',
+    imagePath: '/assets/fumbles/bickering.png',
     mechanicalEffect: {
       actionCanceled: false,
       ctRefunded: false,
@@ -65,6 +69,7 @@ export const FUMBLE_DECK: FumbleCard[] = [
     category: 'helm',
     flavorText: 'The pilot slams the thrusters in a panic...',
     effect: 'The intended action is canceled and the CT is wasted. Roll a D6 to determine a random hex-face. The ship immediately moves 1 Hex in that direction. Resolve collision damage if applicable.',
+    imagePath: '/assets/fumbles/overcompensated_burn.png',
     mechanicalEffect: {
       actionCanceled: true,
       ctRefunded: false,
@@ -79,6 +84,7 @@ export const FUMBLE_DECK: FumbleCard[] = [
     category: 'helm',
     flavorText: 'The violent maneuver throws the crew across the deck...',
     effect: "The movement action succeeds, but Base Evasion is reduced by 2 for the round. The Captain loses 1 unspent Command Token.",
+    imagePath: '/assets/fumbles/dampener_failure.png',
     mechanicalEffect: {
       actionCanceled: false,
       ctRefunded: false,
@@ -94,6 +100,7 @@ export const FUMBLE_DECK: FumbleCard[] = [
     category: 'helm',
     flavorText: 'The nav-computer freezes due to rapid, contradictory inputs from a stressed officer.',
     effect: 'The ship\'s current action is canceled. Furthermore, the ship cannot "Rotate" or move for the remainder of this round AND the next round. The ship drifts predictably, granting enemies a -1 TN to hit it.',
+    imagePath: '/assets/fumbles/nav_lockout.png',
     mechanicalEffect: {
       actionCanceled: true,
       ctRefunded: false,
@@ -112,6 +119,7 @@ export const FUMBLE_DECK: FumbleCard[] = [
     category: 'tactical',
     flavorText: 'Trigger-happy response to overwhelming threat alerts...',
     effect: 'The intended target is ignored. The Tactical Officer fires at the closest valid target in the arc — including Allied ships.',
+    imagePath: '/assets/fumbles/panic_fire.png',
     mechanicalEffect: {
       actionCanceled: false,
       ctRefunded: false,
@@ -126,6 +134,7 @@ export const FUMBLE_DECK: FumbleCard[] = [
     category: 'tactical',
     flavorText: 'The weapon system overloads...',
     effect: 'The weapon does not fire. CT is wasted. The weapon system takes 1 internal damage and cannot be fired next round unless Engineering repairs it.',
+    imagePath: '/assets/fumbles/misfire.png',
     mechanicalEffect: {
       actionCanceled: true,
       ctRefunded: false,
@@ -140,6 +149,7 @@ export const FUMBLE_DECK: FumbleCard[] = [
     category: 'tactical',
     flavorText: 'Tactical reroutes all processor power to targeting...',
     effect: 'The attack goes through against the intended target. However, Point Defense Cannons (PDCs) are disabled for the rest of the round.',
+    imagePath: '/assets/fumbles/tunnel_vision.png',
     mechanicalEffect: {
       actionCanceled: false,
       ctRefunded: false,
@@ -154,6 +164,7 @@ export const FUMBLE_DECK: FumbleCard[] = [
     category: 'tactical',
     flavorText: 'In a rush to load heavy weapons, the torpedo/missile auto-loaders jam.',
     effect: 'The intended action fails. Any currently primed ordnance is rendered inert, and Tactical cannot use the "Load Ordinance" action in the following round.',
+    imagePath: '/assets/fumbles/ordnance_jam.png',
     mechanicalEffect: {
       actionCanceled: true,
       ctRefunded: false,
@@ -170,6 +181,7 @@ export const FUMBLE_DECK: FumbleCard[] = [
     category: 'engineering',
     flavorText: 'Engineering pulls power from the wrong grid...',
     effect: 'The intended action succeeds, but the AI chooses one fully charged Shield Sector and reduces it to 0.',
+    imagePath: '/assets/fumbles/catastrophic_reroute.png',
     mechanicalEffect: {
       actionCanceled: false,
       ctRefunded: false,
@@ -184,6 +196,7 @@ export const FUMBLE_DECK: FumbleCard[] = [
     category: 'engineering',
     flavorText: 'Toxic coolant floods the lower decks...',
     effect: 'The action fails and CT is wasted. Ship takes 1 unblockable Hull damage. Engineering station is Locked for this round and next round.',
+    imagePath: '/assets/fumbles/coolant_vent.png',
     mechanicalEffect: {
       actionCanceled: true,
       ctRefunded: false,
@@ -198,6 +211,7 @@ export const FUMBLE_DECK: FumbleCard[] = [
     category: 'engineering',
     flavorText: 'The stressed officer reads the wrong screen...',
     effect: 'The intended action is canceled and the CT is wasted. For the rest of the round, whenever this ship takes Hull damage, the Armor Die is NOT rolled.',
+    imagePath: '/assets/fumbles/false_diagnostics.png',
     mechanicalEffect: {
       actionCanceled: true,
       ctRefunded: false,
@@ -214,6 +228,7 @@ export const FUMBLE_DECK: FumbleCard[] = [
     category: 'sensors',
     flavorText: 'Faulty telemetry fed to the fleet...',
     effect: 'The intended action is canceled and the CT is wasted. The closest Enemy Capital Ship gains +3 to their Evasion (TN) against ALL Allied attacks for this round.',
+    imagePath: '/assets/fumbles/ghost_contacts.png',
     mechanicalEffect: {
       actionCanceled: true,
       ctRefunded: false,
@@ -228,6 +243,7 @@ export const FUMBLE_DECK: FumbleCard[] = [
     category: 'sensors',
     flavorText: "The officer accidentally severs the ship's connection to High Command...",
     effect: 'The intended action is canceled and the CT is wasted. This ship\'s player cannot participate in spending or receiving benefits from Fleet Favor for the rest of the round.',
+    imagePath: '/assets/fumbles/comms_blackout.png',
     mechanicalEffect: {
       actionCanceled: true,
       ctRefunded: false,
@@ -242,6 +258,7 @@ export const FUMBLE_DECK: FumbleCard[] = [
     category: 'sensors',
     flavorText: 'The sensor array gets stuck in a feedback loop, broadcasting aggressive radar noise.',
     effect: 'The intended action is canceled and the CT is wasted. This ship instantly becomes the highest priority target for all AI enemies on the board.',
+    imagePath: '/assets/fumbles/targeting_feedback_loop.png',
     mechanicalEffect: {
       actionCanceled: true,
       ctRefunded: false,
