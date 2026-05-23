@@ -1579,6 +1579,19 @@ h4 { font-size: 1rem;   font-weight: 500; }
 .main-menu-corner-tag--bl { bottom: var(--space-md); left: var(--space-md); }
 .main-menu-corner-tag--br { bottom: var(--space-md); right: var(--space-md); text-align: right; }
 
+.main-menu-panel-footer {
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  letter-spacing: 0.1em;
+  text-align: center;
+  color: hsla(185, 70%, 55%, 0.18);
+  pointer-events: none;
+  line-height: 1.6;
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid hsla(185, 70%, 55%, 0.08);
+}
+
 .main-menu-status-bar {
   position: absolute;
   bottom: var(--space-lg);

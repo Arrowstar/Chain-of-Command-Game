@@ -231,6 +231,11 @@ export default function MainMenu({ onStart, onStartCampaign, onContinueCampaign,
             </button>
 
           </div>
+
+          <div className="main-menu-panel-footer">
+            <div>TACTICAL CIC TERMINAL</div>
+            <div>v{__APP_VERSION__} // {__GIT_HASH__}</div>
+          </div>
         </div>
       </div>
 
