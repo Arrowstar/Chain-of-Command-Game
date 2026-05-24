@@ -5794,7 +5794,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     addContactsFor(
       state.enemyShips,
       (e) => e.faction === 'hegemony',
-      (e) => (e as EnemyShipState).firedWeaponIndicesThisRound?.length > 0,
+      (e) => ((e as EnemyShipState).firedWeaponIndicesThisRound?.length ?? 0) > 0,
     );
 
     // Stations
