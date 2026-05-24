@@ -3,7 +3,7 @@ import type {
   GamePhase, ExecutionStep, ShipState, EnemyShipState, PlayerState,
   RoECard, TacticCard, FumbleCard, CriticalDamageCard,
   HexCoord, TerrainType, LogEntry, QueuedAction, OfficerState, FighterToken, TorpedoToken, ShieldState, HexFacing, ObjectiveMarkerState, DeploymentBounds, TacticHazardState,
-  PendingTargetingPackage, TargetingPackageMode, ShipArc, StationState, CombatTarget, ActionContext,
+  PendingTargetingPackage, TargetingPackageMode, ShipArc, StationState, CombatTarget, ActionContext, DieType,
 } from '../types/game';
 import { ShipSize, isSmallCraftSize, isCapitalShipSize, isPlayerFaction } from '../types/game';
 import { getNextPhase, checkGameOverConditions, createLogEntry, getShipSizeForStep, isInBreakoutZone } from '../engine/GameStateMachine';
@@ -456,6 +456,49 @@ function resolvePointDefenseInterception(
         return attempts;
       }
     }
+  }
+
+  return attempts;
+}
+
+const ENEMY_PDC_VOLLEY: DieType[] = ['d6'];
+
+function resolveEnemyPDCInterception(
+  defendingShips: EnemyShipState[],
+  tokenPosition: HexCoord,
+  tokenEvasion: number,
+): PointDefenseAttempt[] {
+  const attempts: PointDefenseAttempt[] = [];
+
+  for (const ship of defendingShips) {
+    if (ship.isDestroyed) continue;
+
+    if (ship.criticalDamage?.some(c => c.id === 'enemy-point-defense-offline')) continue;
+
+    const adv = getAdversaryById(ship.adversaryId);
+    if (!adv || !isCapitalShipSize(adv.size)) continue;
+
+    if (hexDistance(ship.position, tokenPosition) > 1) continue;
+
+    const targetNumber = Math.max(1, tokenEvasion - 4);
+    const volley = rollVolley(
+      ENEMY_PDC_VOLLEY.map(die => ({ type: die, source: 'weapon' })),
+      targetNumber,
+    );
+    const hits = volley.totalHits;
+    const destroyed = hits > 0;
+
+    attempts.push({
+      shipId: ship.id,
+      shipName: ship.name,
+      weaponName: 'Point Defense Cannons',
+      targetNumber,
+      rolls: volley.dice.flatMap(die => die.rolls),
+      hits,
+      destroyed,
+    });
+
+    if (destroyed) return attempts;
   }
 
   return attempts;
@@ -4491,6 +4534,53 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
       }
 
+      // ── Enemy PDC vs allied fighters ───────────────────────────────
+      if (allegiance === 'allied' && moveResult.moved) {
+        let pdcInterceptHex: HexCoord | null = null;
+
+        for (const traversedHex of moveResult.traversedHexes) {
+          const pdcAttempts = resolveEnemyPDCInterception(
+            get().enemyShips, traversedHex, fighter.baseEvasion,
+          );
+
+          for (const attempt of pdcAttempts) {
+            const outcome = attempt.destroyed ? 'INTERCEPTED' : 'missed';
+            get().addLog(
+              'combat',
+              `🛡 ${attempt.shipName}: ${attempt.weaponName} engaged ${fighter.name} | TN ${attempt.targetNumber} | Rolls [${attempt.rolls.join(', ')}] | ${outcome}`,
+            );
+          }
+
+          if (pdcAttempts.some(attempt => attempt.destroyed)) {
+            pdcInterceptHex = traversedHex;
+            break;
+          }
+        }
+
+        if (pdcInterceptHex) {
+          if (fIndex !== -1) {
+            updatedFighters[fIndex] = {
+              ...updatedFighters[fIndex],
+              position: pdcInterceptHex,
+              hasDrifted: true,
+              hasActed: true,
+              currentHull: 0,
+              isDestroyed: true,
+            };
+          }
+          get().addLog('system', `☠ ${fighter.name} was shredded by enemy point defense fire.`);
+          fireCombatToast({ type: 'pdc-intercept', message: `☠ ${fighter.name} intercepted by enemy point defense` });
+          useUIStore.getState().queueFireAnimation({
+            id: `explosion-pdc-${fighter.id}-${Date.now()}`,
+            attackerPos: pdcInterceptHex,
+            targetPos: pdcInterceptHex,
+            weaponTags: ['explosion'],
+            isEnemy: true,
+          });
+          return;
+        }
+      }
+      
       // 2. Attack (using updated position from move)
       const movedFighter = { ...fighter, position: moveResult.newPosition, facing: moveResult.newFacing, hasDrifted: true };
       const attackResult = resolveFighterAttack(movedFighter, state.playerShips, state.enemyShips, allFighters, state.terrainMap, state.stations);
@@ -4695,6 +4785,29 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
           if (pdcAttempts.some(attempt => attempt.destroyed)) {
             pdcInterceptHex = traversedHex;
+            break;
+          }
+        }
+      }
+
+      // ── Enemy PDC vs allied torpedoes ──────────────────────────────
+      if (!moveResult.isDestroyed && allegiance === 'allied') {
+        for (const traversedHex of moveResult.traversedHexes) {
+          const pdcAttempts = resolveEnemyPDCInterception(
+            get().enemyShips, traversedHex, torpedo.baseEvasion,
+          );
+
+          for (const attempt of pdcAttempts) {
+            const outcome = attempt.destroyed ? 'INTERCEPTED' : 'missed';
+            get().addLog(
+              'combat',
+              `🛡 ${attempt.shipName}: ${attempt.weaponName} engaged ${torpedo.name} | TN ${attempt.targetNumber} | Rolls [${attempt.rolls.join(', ')}] | ${outcome}`,
+            );
+          }
+
+          if (pdcAttempts.some(attempt => attempt.destroyed)) {
+            pdcInterceptHex = traversedHex;
+            fireCombatToast({ type: 'pdc-intercept', message: `🛡 ${torpedo.name} intercepted by enemy point defense` });
             break;
           }
         }

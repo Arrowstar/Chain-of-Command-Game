@@ -12,6 +12,7 @@ export type CombatToastType =
   | 'phase'
   | 'tactic'
   | 'objective'
+  | 'pdc-intercept'
   | 'warning';
 
 export interface CombatToast {
@@ -97,6 +98,12 @@ const TYPE_CONFIGS: Record<CombatToastType, { icon: string; border: string; bg: 
     border: 'rgba(0, 255, 136, 0.6)',
     bg: 'rgba(0, 20, 10, 0.95)',
     text: 'var(--color-success-green)',
+  },
+  'pdc-intercept': {
+    icon: '🛡',
+    border: 'rgba(0, 180, 255, 0.6)',
+    bg: 'rgba(0, 15, 25, 0.95)',
+    text: 'var(--color-holo-cyan)',
   },
   'warning': {
     icon: '⚠',
