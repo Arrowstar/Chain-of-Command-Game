@@ -1831,7 +1831,10 @@ body.is-phone .fleet-builder-officer-col {
   flex: 1 1 200px;
 }
 
-
+body.is-phone .btn--execute {
+  padding: var(--space-sm) var(--space-lg);
+  font-size: 0.95rem;
+}
 
 body.is-phone .fleet-status-card {
   width: 100%;

@@ -711,7 +711,7 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
         </div>
         {/* Clickable step breadcrumbs */}
         {/* Premium Step Breadcrumbs */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: isPhone ? '6px' : '20px' }}>
           {(isCampaignSetup ? [1, 2] : [1, 2, 3]).map((s, idx, arr) => {
             const stepLabels: Record<number, string> = {
               1: isCampaignSetup ? 'INIT' : 'CHASSIS',
@@ -727,7 +727,7 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
                   onClick={() => isClickable && setStep(s)}
                   role={isClickable ? "button" : undefined}
                   style={{ 
-                    width: '24px', height: '24px', borderRadius: '50%', 
+                    width: isPhone ? '20px' : '24px', height: isPhone ? '20px' : '24px', borderRadius: '50%', 
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     background: isPast ? 'var(--color-holo-green)' : isActive ? 'var(--color-holo-cyan)' : 'rgba(255,255,255,0.1)',
                     color: 'var(--color-bg-deep)', fontSize: '0.75rem', fontWeight: 'bold',
@@ -743,7 +743,7 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
                   role={isClickable ? "button" : undefined}
                   className="label" 
                   style={{ 
-                    fontSize: '0.7rem', 
+                    fontSize: isPhone ? '0.55rem' : '0.7rem', 
                     color: isActive ? 'var(--color-holo-cyan)' : isPast ? 'var(--color-holo-green)' : 'var(--color-text-dim)',
                     letterSpacing: '0.1em',
                     cursor: isClickable ? 'pointer' : 'default',
@@ -753,7 +753,7 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
                 >
                   {stepLabels[s]}
                 </span>
-                {idx < arr.length - 1 && <div style={{ width: '30px', height: '1px', background: 'var(--color-border)', opacity: 0.5 }} />}
+                {!isPhone && idx < arr.length - 1 && <div style={{ width: '30px', height: '1px', background: 'var(--color-border)', opacity: 0.5 }} />}
               </div>
             );
           })}
@@ -1149,9 +1149,8 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
               ))}
             </div>
             
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
-              {/* Back button — only show in skirmish (step 1 = chassis selection) */}
-              {!isCampaignSetup ? (
+            <div style={{ display: 'flex', flexDirection: isPhone ? 'column' : 'row', ...(isPhone ? {} : { justifyContent: 'space-between' }), alignItems: isPhone ? 'stretch' : 'center', gap: '8px', marginTop: 'auto' }}>
+              {!isCampaignSetup && (
                 <button
                   className="btn"
                   onClick={() => setStep(1)}
@@ -1159,7 +1158,7 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
                 >
                   ← CHASSIS
                 </button>
-              ) : <div />}
+              )}
               <SmartTooltip 
                 content={isCampaignSetup && dpBreakdown?.isOverBudget ? `Over DP budget by ${(dpBreakdown.total - campaignBudget)} DP — remove items to proceed` : undefined} 
                 as="button"
@@ -1424,7 +1423,7 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
             </div>
             
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
+            <div style={{ display: 'flex', flexDirection: isPhone ? 'column' : 'row', ...(isPhone ? {} : { justifyContent: 'space-between' }), alignItems: isPhone ? 'stretch' : 'center', gap: '8px', marginTop: 'auto' }}>
               <button
                 className="btn"
                 onClick={() => setStep(2)}
