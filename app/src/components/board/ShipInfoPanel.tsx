@@ -480,6 +480,41 @@ function LockIndicator({ progress, isLocked, target, targetCount }: { progress: 
 }
 
 function ShipTooltipContent({ ship, isEnemy }: { ship: ShipState | EnemyShipState; isEnemy: boolean }) {
+  const ghostContacts = useGameStore(s => s.ghostContacts);
+  const isGhostContact = isEnemy && ghostContacts.some(gc => gc.entityId === ship.id && !gc.isIdentified);
+
+  // Ghost contact: show limited information panel
+  if (isGhostContact) {
+    return (
+      <>
+        <div style={{ marginBottom: 'var(--space-sm)' }}>
+          <div className="label" style={{ color: 'var(--color-hostile-red)' }}>
+            Unknown Contact
+          </div>
+          <h3 style={{ margin: 0, color: 'var(--color-hostile-red)', marginTop: '4px' }}>
+            ??? — ION NEBULA
+          </h3>
+          <div className="label" style={{ color: 'var(--color-text-dim)' }}>
+            Sensor Ghost — Use Target Lock to identify
+          </div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-sm)' }}>
+          <StatCard 
+            label="Status" 
+            value="Concealed" 
+            color="var(--color-text-dim)"
+            tooltip={<div><div style={{ color: 'var(--color-holo-cyan)', fontWeight: 'bold', marginBottom: '4px' }}>Ghost Contact</div><div>This vessel is hidden inside an Ion Nebula. Use Target Lock to reveal its identity and full status.</div></div>}
+          />
+          <StatCard 
+            label="Position" 
+            value={`(${ship.position.q}, ${ship.position.r})`} 
+            tooltip={<div><div style={{ color: 'var(--color-holo-cyan)', fontWeight: 'bold', marginBottom: '4px' }}>Estimated Position</div><div>Reported hex position. Exact identity unknown.</div></div>}
+          />
+        </div>
+      </>
+    );
+  }
+
   const chassis = !isEnemy && 'chassisId' in ship ? getChassisById(ship.chassisId) : null;
   const adversary = isEnemy && 'adversaryId' in ship ? getAdversaryById(ship.adversaryId) : null;
   const maxHull = ship.maxHull ?? ship.currentHull;
@@ -814,6 +849,32 @@ function ObjectiveTooltipContent({ marker }: { marker: ObjectiveMarkerState }) {
 }
 
 function StationTooltipContent({ station }: { station: StationState }) {
+  const ghostContacts = useGameStore(s => s.ghostContacts);
+  const isGhostContact = ghostContacts.some(gc => gc.entityId === station.id && !gc.isIdentified);
+
+  if (isGhostContact) {
+    return (
+      <>
+        <div style={{ marginBottom: 'var(--space-sm)' }}>
+          <div className="label" style={{ color: 'var(--color-hostile-red)' }}>
+            Unknown Contact
+          </div>
+          <h3 style={{ margin: 0, color: 'var(--color-hostile-red)', marginTop: '4px' }}>
+            ??? — ION NEBULA
+          </h3>
+          <div className="label" style={{ color: 'var(--color-text-dim)' }}>
+            Ghost signature concealed by ion interference
+          </div>
+        </div>
+        <div style={{ padding: '8px', border: '1px solid rgba(136, 204, 255, 0.3)', borderRadius: '4px', background: 'rgba(136, 204, 255, 0.08)' }}>
+          <span style={{ color: 'var(--color-holo-cyan)', fontSize: '11px' }}>
+            ❓ Target Lock to identify this contact
+          </span>
+        </div>
+      </>
+    );
+  }
+
   const stationData = getStationById(station.stationId);
   const hullColor = station.currentHull <= Math.ceil(station.maxHull / 2) ? 'var(--color-hostile-red)' : 'var(--color-holo-green)';
   const maxShieldValue = station.maxShieldsPerSector || 0;

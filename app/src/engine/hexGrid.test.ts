@@ -52,13 +52,13 @@ describe('hexGrid', () => {
     expect(result.blockedBy).toEqual({ q: 1, r: -1 });
   });
 
-  it('checkLineOfSight ignores non-blocking terrain', () => {
+  it('checkLineOfSight blocks on nebula terrain', () => {
     const terrainMap = new Map<string, TerrainType>();
     // Nebula between (0,0) and (2,-2) -> at (1,-1)
     terrainMap.set('1,-1', TerrainType.IonNebula);
 
     const result = checkLineOfSight({ q: 0, r: 0 }, { q: 2, r: -2 }, terrainMap);
-    expect(result.clear).toBe(true);
-    expect(result.blockedBy).toBeNull();
+    expect(result.clear).toBe(false);
+    expect(result.blockedBy).toEqual({ q: 1, r: -1 });
   });
 });

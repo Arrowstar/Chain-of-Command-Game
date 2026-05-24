@@ -1,6 +1,6 @@
 import type { FighterToken, TorpedoToken, HexCoord, HexFacing, TerrainType, ShipState, EnemyShipState, DieType, VolleyResult, StationState, ShipSize } from '../../types/game';
 import { isSmallCraftSize } from '../../types/game';
-import { hexDistance, hexNeighbors, hexKey, getHexFacing } from '../hexGrid';
+import { hexDistance, hexNeighbors, hexKey, getHexFacing, checkLineOfSight } from '../hexGrid';
 import { rollVolley } from '../../utils/diceRoller';
 import { determineStruckShieldSector } from '../hexGrid';
 import { getFighterClassById, pickEnemyFighterClass } from '../../data/fighters';
@@ -389,6 +389,12 @@ export function resolveFighterAttack(
   const targetPos = shipTarget ? shipTarget.position : fighterTarget!.position;
   const dist = hexDistance(fighter.position, targetPos);
   if (dist > fighter.weaponRangeMax) return null;
+
+  // Check line of sight: blocking terrain (asteroids, ion nebula) blocks the shot
+  if (terrainMap) {
+    const los = checkLineOfSight(fighter.position, targetPos, terrainMap);
+    if (!los.clear) return null;
+  }
 
   // 2. Roll Attack
   let tn = 5; // Default for fighters

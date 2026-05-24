@@ -3,7 +3,7 @@ import type {
   GamePhase, ExecutionStep, ShipState, EnemyShipState, PlayerState,
   RoECard, TacticCard, FumbleCard, CriticalDamageCard,
   HexCoord, TerrainType, LogEntry, QueuedAction, OfficerState, FighterToken, TorpedoToken, ShieldState, HexFacing, ObjectiveMarkerState, DeploymentBounds, TacticHazardState,
-  PendingTargetingPackage, TargetingPackageMode, ShipArc, StationState, CombatTarget, ActionContext, DieType,
+  PendingTargetingPackage, TargetingPackageMode, ShipArc, StationState, CombatTarget, ActionContext, DieType, GhostContact,
 } from '../types/game';
 import { ShipSize, isSmallCraftSize, isCapitalShipSize, isPlayerFaction } from '../types/game';
 import { getNextPhase, checkGameOverConditions, createLogEntry, getShipSizeForStep, isInBreakoutZone } from '../engine/GameStateMachine';
@@ -18,6 +18,7 @@ import { moveTorpedo, resolveTorpedoAttack } from '../engine/torpedoMovement';
 import { hexKey, hexDistance, checkLineOfSight, parseHexKey, isInFiringArc, hexNeighbors, hexEquals, hexLineDraw } from '../engine/hexGrid';
 import { applyGravityWellPull } from '../engine/gravityWell';
 import { getChassisById } from '../data/shipChassis';
+import { TERRAIN_DATA } from '../data/terrain';
 import { getWeaponById } from '../data/weapons';
 import { useUIStore } from './useUIStore';
 import { useTutorialStore } from './useTutorialStore';
@@ -136,6 +137,7 @@ interface GameStore {
   dataSiphonedRelayNames: string[];
   /** Number of player ships that successfully escaped via the objective-required zone (Breakout). */
   successfulEscapes: number;
+  ghostContacts: GhostContact[];
   experimentalTech: ExperimentalTech[];
   combatModifiers: CombatModifiers | null;
   tachyonMatrixUsedThisScenario: boolean;
@@ -178,6 +180,11 @@ interface GameStore {
   // Experimental Tech manual resolution
   resolveAstroCaf: (playerId: string, officerId: string) => void;
   retroactiveTachyonStrike: (logEntryId: string) => void;
+
+  // Ghost Contacts
+  computeGhostContacts: () => void;
+  /** Identify a ghost contact (e.g. via Target Lock or auto-reveal). */
+  identifyGhostContact: (entityId: string) => void;
 
   // Phase-specific
   executeBriefingPhase: () => void;
@@ -467,8 +474,12 @@ function resolveEnemyPDCInterception(
   defendingShips: EnemyShipState[],
   tokenPosition: HexCoord,
   tokenEvasion: number,
+  terrainMap: Map<string, TerrainType>,
 ): PointDefenseAttempt[] {
   const attempts: PointDefenseAttempt[] = [];
+
+  const terrainType = terrainMap.get(hexKey(tokenPosition));
+  const terrainModifier = terrainType ? (TERRAIN_DATA[terrainType]?.tnModifier ?? 0) : 0;
 
   for (const ship of defendingShips) {
     if (ship.isDestroyed) continue;
@@ -480,7 +491,7 @@ function resolveEnemyPDCInterception(
 
     if (hexDistance(ship.position, tokenPosition) > 1) continue;
 
-    const targetNumber = Math.max(1, tokenEvasion - 4);
+    const targetNumber = Math.max(1, tokenEvasion + terrainModifier - 4);
     const volley = rollVolley(
       ENEMY_PDC_VOLLEY.map(die => ({ type: die, source: 'weapon' })),
       targetNumber,
@@ -727,6 +738,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   shipsWithHullDamageThisRound: [],
   pendingAstroCafPlayers: [],
   damageControlUsedThisRound: false,
+  ghostContacts: [],
 
   // ═ ══ ══ ═ Initialize ═ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ═
   initializeGame: (config) => {
@@ -1840,6 +1852,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const rollMsg = `☄️ ${get().getShipName(shipId)} Asteroid Entry: Roll ${roll.entryRoll} ${roll.entryRoll === 1 ? 'FAIL' : 'PASS'}${roll.damage > 0 ? ` ═ ${roll.damage} hull damage!` : ''}`;
       get().addLog('movement', rollMsg);
     }
+
+    get().computeGhostContacts();
   },
   
   resolveAction: (playerId: string, shipId: string, assignedActionId: string, context?: ActionContext) => {
@@ -2170,6 +2184,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
         if (state.enemyShips.some(s => s.id === target.id)) {
           get().updateEnemyShip(target.id, targetUpdates);
+          // Identify ghost contact via Target Lock
+          get().identifyGhostContact(target.id);
         } else if (state.stations.some(s => s.id === target.id)) {
           get().updateStation(target.id, targetUpdates);
         } else {
@@ -2758,6 +2774,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
               namedModifiers.push({ name: 'Dogfighting', value: -3 });
             }
 
+            // Ghost Contact penalty: +3 TN when firing at an unidentified enemy in nebula
+            let ghostContactPenalty = 0;
+            if (!isMarker && !isFighter) {
+              const gc = state.ghostContacts.find(g => g.entityId === currentTargetId);
+              if (gc && !gc.isIdentified) {
+                ghostContactPenalty = 3;
+              }
+            }
+
             const damageResult = resolveAttack(
                 ship.position, ship.facing,
                 target.position, 
@@ -2790,7 +2815,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 canRerollVoidGlass(1, state.experimentalTech),
                 state.currentTactic?.mechanicalEffect.critThresholdOverride,
                 false, // upgradeOneDie handled in assembleVolleyPool
-                ship.spoofedFireControlActive || false
+                ship.spoofedFireControlActive || false,
+                ghostContactPenalty
             );
             if (targetingPackageIndex !== -1) {
               targetingPackages.splice(targetingPackageIndex, 1);
@@ -4421,6 +4447,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
     }
 
+    // Recompute ghost contacts after enemy movement and attacks
+    get().computeGhostContacts();
+
     get().markStepResolved(currentStep);
     get().addLog('phase', `══ Enemy step complete: ${currentStep.toUpperCase()}`);
 
@@ -4540,7 +4569,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
         for (const traversedHex of moveResult.traversedHexes) {
           const pdcAttempts = resolveEnemyPDCInterception(
-            get().enemyShips, traversedHex, fighter.baseEvasion,
+            get().enemyShips, traversedHex, fighter.baseEvasion + (fighter.evasiveManeuvers ?? 0), get().terrainMap,
           );
 
           for (const attempt of pdcAttempts) {
@@ -4794,7 +4823,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       if (!moveResult.isDestroyed && allegiance === 'allied') {
         for (const traversedHex of moveResult.traversedHexes) {
           const pdcAttempts = resolveEnemyPDCInterception(
-            get().enemyShips, traversedHex, torpedo.baseEvasion,
+            get().enemyShips, traversedHex, torpedo.baseEvasion, get().terrainMap,
           );
 
           for (const attempt of pdcAttempts) {
@@ -5719,8 +5748,81 @@ export const useGameStore = create<GameStore>((set, get) => ({
         get().addLog('system', `⚠ REINFORCEMENTS: ${e.name} entered the engagement zone at (${e.position.q},${e.position.r})!`);
       });
     }
+
+    // Compute ghost contacts after all state updates
+    get().computeGhostContacts();
   },
 
+  // ═ ══ ══ ═ Ghost Contacts ═ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ═
+  computeGhostContacts: () => {
+    const state = get();
+    const ghostContacts: GhostContact[] = [];
+
+    const addContactsFor = <T extends { id: string; position: HexCoord; isDestroyed: boolean }>(
+      entities: T[],
+      isHegemony: (e: T) => boolean,
+      hasFiredWeapon: (e: T) => boolean,
+    ) => {
+      for (const entity of entities) {
+        if (entity.isDestroyed) continue;
+        if (!isHegemony(entity)) continue;
+
+        const terrain = state.terrainMap.get(hexKey(entity.position));
+        if (terrain !== 'ionNebula') continue;
+
+        // Check auto-reveal: within range 1 of any player ship
+        let autoRevealed = false;
+        for (const playerShip of state.playerShips) {
+          if (playerShip.isDestroyed) continue;
+          if (hexDistance(playerShip.position, entity.position) <= 1) {
+            autoRevealed = true;
+            break;
+          }
+        }
+
+        const hasFired = hasFiredWeapon(entity);
+
+        // Find existing ghost contact to preserve identification state
+        const existing = state.ghostContacts.find(gc => gc.entityId === entity.id);
+        const isIdentified = autoRevealed || hasFired || (existing?.isIdentified ?? false);
+
+        ghostContacts.push({ hex: entity.position, entityId: entity.id, isIdentified });
+      }
+    };
+
+    // Ships
+    addContactsFor(
+      state.enemyShips,
+      (e) => e.faction === 'hegemony',
+      (e) => (e as EnemyShipState).firedWeaponIndicesThisRound?.length > 0,
+    );
+
+    // Stations
+    addContactsFor(
+      state.stations,
+      () => true,
+      () => false,
+    );
+
+    set({ ghostContacts });
+  },
+
+  identifyGhostContact: (entityId: string) => {
+    const state = get();
+    const ghostContacts = state.ghostContacts.map(gc =>
+      gc.entityId === entityId ? { ...gc, isIdentified: true } : gc
+    );
+    set({ ghostContacts });
+    const ship = state.enemyShips.find(s => s.id === entityId);
+    if (ship) {
+      get().addLog('system', `📡 Ghost contact identified: ${ship.name}`);
+      return;
+    }
+    const station = state.stations.find(s => s.id === entityId);
+    if (station) {
+      get().addLog('system', `📡 Ghost contact identified: ${station.name}`);
+    }
+  },
 
   // ═ ══ ══ ═ Override RoE ═ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ══ ═
   overrideRoE: () => {
@@ -6661,6 +6763,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
 
     get().checkGameOver();
+
+    // Recompute ghost contacts after gravity pulls and other cleanup movement
+    get().computeGhostContacts();
+
     if (!get().gameOver) {
       get().advancePhase();
     }

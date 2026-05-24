@@ -274,15 +274,16 @@ export const ASSET_MAP: Record<string, string> = {
 export function attachOrUpdateSprite(
   container: PIXI.Container,
   adversaryId: string | undefined,
-  isNew: boolean,
+  _isNew: boolean,
   allegiance: ShipAllegianceColor = 'player',
 ): boolean {
   if (!adversaryId) return false;
   const spriteUrl = ASSET_MAP[adversaryId];
   if (!spriteUrl) return false;
 
-  if (isNew) {
-    const sprite = PIXI.Sprite.from(spriteUrl);
+  let sprite = container.getChildByName('shipSprite') as PIXI.Sprite | null;
+  if (!sprite) {
+    sprite = PIXI.Sprite.from(spriteUrl);
     sprite.name = 'shipSprite';
     sprite.anchor.set(0.5);
     sprite.width = 40;
@@ -290,10 +291,7 @@ export function attachOrUpdateSprite(
     container.addChild(sprite);
   }
 
-  const sprite = container.getChildByName('shipSprite') as PIXI.Sprite | null;
-  if (sprite) {
-    sprite.tint = getShipColor(allegiance);
-  }
+  sprite.tint = getShipColor(allegiance);
   return true;
 }
 

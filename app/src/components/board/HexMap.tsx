@@ -75,6 +75,7 @@ export default function HexMap() {
   const stations = useGameStore(s => s.stations);
   const objectiveMarkers = useGameStore(s => s.objectiveMarkers);
   const tacticHazards = useGameStore(s => s.tacticHazards);
+  const ghostContacts = useGameStore(s => s.ghostContacts);
   const objectiveType = useGameStore(s => s.objectiveType);
   const scenarioId = useGameStore(s => s.scenarioId);
   const currentTactic = useGameStore(s => s.currentTactic);
@@ -413,15 +414,42 @@ export default function HexMap() {
     const visibleEnemyShips = deploymentMode ? [] : enemyShips;
     syncEntities(visibleEnemyShips, enemies, (ship, g, getParams, isNew) => {
       g.clear();
-      const allegiance = ship.faction === 'allied' ? 'allied' : 'enemy';
-      const hasSprite = attachOrUpdateSprite(g, ship.adversaryId, isNew, allegiance);
-      if (!hasSprite) {
-        drawShipTriangle(g, 0, 0, 0, allegiance);
+      
+      // Check if this enemy is a ghost contact (unidentified ship in nebula)
+      const gc = ghostContacts.find(c => c.entityId === ship.id);
+      const isGhost = gc && !gc.isIdentified;
+      
+      if (isGhost) {
+        // Remove any existing ship sprite from previous normal rendering
+        const oldSprite = g.getChildByName('shipSprite');
+        if (oldSprite) { g.removeChild(oldSprite); oldSprite.destroy(); }
+
+        // Ghost contact: render as a generic pulsing contact marker
+        const color = 0x88CCFF;
+        g.lineStyle(2, color, 0.6);
+        g.beginFill(color, 0.15);
+        // Diamond shape for unidentified contacts
+        g.moveTo(14, 0);
+        g.lineTo(0, 10);
+        g.lineTo(-14, 0);
+        g.lineTo(0, -10);
+        g.closePath();
+        g.endFill();
+        // Central "?" marker
+        g.lineStyle(2, color, 0.5);
+        g.moveTo(0, 0);
+        g.lineTo(0, 0);
       } else {
-        drawFacingIndicator(g, allegiance);
+        const allegiance = ship.faction === 'allied' ? 'allied' : 'enemy';
+        const hasSprite = attachOrUpdateSprite(g, ship.adversaryId, isNew, allegiance);
+        if (!hasSprite) {
+          drawShipTriangle(g, 0, 0, 0, allegiance);
+        } else {
+          drawFacingIndicator(g, allegiance);
+        }
+        const adv = getAdversaryById(ship.adversaryId);
+        drawShipShields(g, 0, 0, 0, ship.shields as any, adv?.shieldsPerSector || 0, allegiance);
       }
-      const adv = getAdversaryById(ship.adversaryId);
-      drawShipShields(g, 0, 0, 0, ship.shields as any, adv?.shieldsPerSector || 0, allegiance);
 
       let unrotatable = g.getChildByName('unrotatable') as PIXI.Graphics | null;
       if (!unrotatable) {
@@ -430,12 +458,28 @@ export default function HexMap() {
         g.addChild(unrotatable);
       }
       unrotatable.clear();
-      drawShipHull(unrotatable, 0, 0, ship.currentHull, ship.maxHull);
+      // Remove any ghost label from previous frame
+      const oldLabel = unrotatable.getChildByName('ghostLabel');
+      if (oldLabel) { unrotatable.removeChild(oldLabel); oldLabel.destroy(); }
+      // Don't show hull for ghost contacts
+      if (!isGhost) {
+        drawShipHull(unrotatable, 0, 0, ship.currentHull, ship.maxHull);
+      } else {
+        // Show "???" label for ghost contact
+        const label = new PIXI.Text('???', {
+          fontSize: 9, fill: 0x88CCFF, fontFamily: 'monospace', fontWeight: 'bold',
+        });
+        label.name = 'ghostLabel';
+        label.x = -label.width / 2;
+        label.y = 14;
+        unrotatable.addChild(label);
+      }
 
       const center = hexToPixel(ship.position);
       const rot = ((ship.facing * 60) - 30) * (Math.PI / 180);
       const p = getParams();
       p.x = center.x; p.y = center.y; p.rot = rot;
+      if (isGhost) p.rot = 0; // ghost contacts don't rotate
     });
 
     // Draw fighter tokens
@@ -497,49 +541,68 @@ export default function HexMap() {
     const activeStations = stations.filter(s => !s.isDestroyed);
     syncEntities(activeStations, entitiesRef.current.stations, (station, g, getParams, isNew) => {
       g.clear();
-      const stationData = getStationById(station.stationId);
-      
-      const spriteKey = stationData?.imageKey;
-      const hasSprite = attachOrUpdateSprite(g, spriteKey, isNew, 'enemy');
 
-      if (!hasSprite) {
-        const isTurret = stationData?.type === 'turret';
-        const color = 0xFF6633; // orange-red for stations
-        const fillColor = 0xAA3311;
+      // Check if this station is a ghost contact
+      const gc = ghostContacts.find(c => c.entityId === station.id);
+      const isGhost = gc && !gc.isIdentified;
 
-        if (isTurret) {
-          // Turret: smaller square-ish shape
-          g.lineStyle(2, color, 1);
-          g.beginFill(fillColor, 0.7);
-          g.drawRect(-10, -10, 20, 20);
-          g.endFill();
-          // Turret barrel pointing in facing direction
-          const barrelLen = 14;
-          const rot = ((station.facing * 60) - 30) * (Math.PI / 180);
-          g.lineStyle(2.5, 0xFFAA44, 1);
-          g.moveTo(0, 0);
-          g.lineTo(Math.cos(rot) * barrelLen, Math.sin(rot) * barrelLen);
-        } else {
-          // Station: larger hexagonal shape
-          g.lineStyle(2.5, color, 1);
-          g.beginFill(fillColor, 0.6);
-          const corners = hexCorners({ x: 0, y: 0 }, 16);
-          g.moveTo(corners[0].x, corners[0].y);
-          for (let i = 1; i < 6; i++) {
-            g.lineTo(corners[i].x, corners[i].y);
+      if (isGhost) {
+        // Ghost contact: remove sprite, render as diamond "?"
+        const oldSprite = g.getChildByName('shipSprite');
+        if (oldSprite) { g.removeChild(oldSprite); oldSprite.destroy(); }
+
+        const color = 0x88CCFF;
+        g.lineStyle(2, color, 0.6);
+        g.beginFill(color, 0.15);
+        g.moveTo(14, 0);
+        g.lineTo(0, 10);
+        g.lineTo(-14, 0);
+        g.lineTo(0, -10);
+        g.closePath();
+        g.endFill();
+        g.lineStyle(2, color, 0.5);
+        g.moveTo(0, 0);
+        g.lineTo(0, 0);
+      } else {
+        const stationData = getStationById(station.stationId);
+        const spriteKey = stationData?.imageKey;
+        const hasSprite = attachOrUpdateSprite(g, spriteKey, isNew, 'enemy');
+
+        if (!hasSprite) {
+          const isTurret = stationData?.type === 'turret';
+          const color = 0xFF6633;
+          const fillColor = 0xAA3311;
+
+          if (isTurret) {
+            g.lineStyle(2, color, 1);
+            g.beginFill(fillColor, 0.7);
+            g.drawRect(-10, -10, 20, 20);
+            g.endFill();
+            const barrelLen = 14;
+            const rot = ((station.facing * 60) - 30) * (Math.PI / 180);
+            g.lineStyle(2.5, 0xFFAA44, 1);
+            g.moveTo(0, 0);
+            g.lineTo(Math.cos(rot) * barrelLen, Math.sin(rot) * barrelLen);
+          } else {
+            g.lineStyle(2.5, color, 1);
+            g.beginFill(fillColor, 0.6);
+            const corners = hexCorners({ x: 0, y: 0 }, 16);
+            g.moveTo(corners[0].x, corners[0].y);
+            for (let i = 1; i < 6; i++) {
+              g.lineTo(corners[i].x, corners[i].y);
+            }
+            g.closePath();
+            g.endFill();
+            const rot = ((station.facing * 60) - 30) * (Math.PI / 180);
+            g.lineStyle(2, 0xFFAA44, 0.8);
+            g.moveTo(0, 0);
+            g.lineTo(Math.cos(rot) * 18, Math.sin(rot) * 18);
           }
-          g.closePath();
-          g.endFill();
-          // Forward arc indicator
-          const rot = ((station.facing * 60) - 30) * (Math.PI / 180);
-          g.lineStyle(2, 0xFFAA44, 0.8);
-          g.moveTo(0, 0);
-          g.lineTo(Math.cos(rot) * 18, Math.sin(rot) * 18);
         }
-      }
 
-      // Draw shields at facing 0 — the container is rotated, same as ships.
-      drawShipShields(g, 0, 0, 0, station.shields as any, station.maxShieldsPerSector, 'enemy');
+        // Draw shields at facing 0 — the container is rotated, same as ships.
+        drawShipShields(g, 0, 0, 0, station.shields as any, station.maxShieldsPerSector, 'enemy');
+      }
 
       // Hull bar (must stay world-aligned, so put it in the unrotatable child)
       let unrotatable = g.getChildByName('unrotatable') as PIXI.Graphics | null;
@@ -549,12 +612,25 @@ export default function HexMap() {
         g.addChild(unrotatable);
       }
       unrotatable.clear();
-      drawShipHull(unrotatable, 0, 0, station.currentHull, station.maxHull);
+      const oldLabel = unrotatable.getChildByName('ghostLabel');
+      if (oldLabel) { unrotatable.removeChild(oldLabel); oldLabel.destroy(); }
+      if (!isGhost) {
+        drawShipHull(unrotatable, 0, 0, station.currentHull, station.maxHull);
+      } else {
+        const label = new PIXI.Text('???', {
+          fontSize: 9, fill: 0x88CCFF, fontFamily: 'monospace', fontWeight: 'bold',
+        });
+        label.name = 'ghostLabel';
+        label.x = -label.width / 2;
+        label.y = 14;
+        unrotatable.addChild(label);
+      }
 
       const center = hexToPixel(station.position);
       const rot = ((station.facing * 60) - 30) * (Math.PI / 180);
       const p = getParams();
       p.x = center.x; p.y = center.y; p.rot = rot;
+      if (isGhost) p.rot = 0;
     });
 
     // Draw Torpedo tokens
@@ -702,7 +778,12 @@ export default function HexMap() {
       });
 
       enemyShips
-        .filter(ship => !ship.isDestroyed && !ship.hasDrifted)
+        .filter(ship => {
+          if (ship.isDestroyed || ship.hasDrifted) return false;
+          const gc = ghostContacts.find(c => c.entityId === ship.id);
+          if (gc && !gc.isIdentified) return false;
+          return true;
+        })
         .forEach(ship => {
           const preview = enemyMovementPreviews.get(ship.id);
           if (!preview) return;

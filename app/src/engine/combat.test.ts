@@ -10,10 +10,10 @@ describe('combat engine', () => {
     expect(breakdown.total).toBe(10); // 5 + 1 + 2 + 2
   });
 
-  it('calculateTN applies ion nebula targeting reduction', () => {
+  it('calculateTN applies ion nebula targeting penalty', () => {
     const breakdown = calculateTN(5, 3, TerrainType.IonNebula, 0, 0);
-    expect(breakdown.terrainModifier).toBe(-1);
-    expect(breakdown.total).toBe(5);
+    expect(breakdown.terrainModifier).toBe(1);
+    expect(breakdown.total).toBe(7);
   });
 
   it('calculateTN aggregates named modifiers correctly', () => {
@@ -295,6 +295,31 @@ describe('combat engine', () => {
     expect(dmg.shieldRemaining).toBe(0);
     expect(dmg.hullDamage).toBe(0); // Ion deals 0 hull damage even on crits
     expect(dmg.volleyResult.totalCrits).toBe(1); 
+
+    vi.restoreAllMocks();
+  });
+
+  it('resolveAttack applies ghost contact penalty as named modifier', () => {
+    const shields: ShieldState = { fore: 0, foreStarboard: 0, aftStarboard: 0, aft: 0, aftPort: 0, forePort: 0 };
+    const weapon: WeaponModule = {
+      id: 'w1', name: 'W1', arcs: ['fore'], rangeMin: 1, rangeMax: 3,
+      volleyPool: ['d8'], rpCost: 10, dpCost: 10, effect: '', tags: []
+    };
+
+    vi.spyOn(Math, 'random').mockReturnValue(0.2); // d8 => 3, below any reasonable TN
+
+    const dmg = resolveAttack(
+      { q: 0, r: 0 }, HexFacing.Fore,
+      { q: 1, r: -1 }, HexFacing.Aft,
+      5, shields, 'd4', 10, 10, false, weapon, [
+        { type: 'd8', source: 'weapon' },
+      ], undefined, 0, 0, false, false, false, false, undefined, false, false, false, 0, [], false, undefined, false, false, 3
+    );
+
+    const ghostContactMod = dmg.tnBreakdown.namedModifiers.find(m => m.name === 'Ghost Contact');
+    expect(ghostContactMod).toBeDefined();
+    expect(ghostContactMod!.value).toBe(3);
+    expect(dmg.tnBreakdown.total).toBe(8); // 5 base + 0 range + 3 ghost contact
 
     vi.restoreAllMocks();
   });

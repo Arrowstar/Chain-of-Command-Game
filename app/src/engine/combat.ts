@@ -202,6 +202,7 @@ export function resolveAttack(
   critThresholdOverride?: number,
   upgradeOneDie: boolean = false,
   spoofedFireControlActive: boolean = false,
+  ghostContactPenalty: number = 0,
 ): DamageResult {
   const distance = hexDistance(attackerPos, defenderPos);
 
@@ -250,6 +251,10 @@ export function resolveAttack(
   let trackingBonus = getAntiSmallCraftTNModifier(weapon, defenderSize);
   if (pdcDisabled) trackingBonus = 0;
 
+  const allNamedModifiers = ghostContactPenalty > 0
+    ? [...namedModifiers, { name: 'Ghost Contact', value: ghostContactPenalty }]
+    : namedModifiers;
+
   const tnBreakdown = calculateTN(
     defenderEvasion,
     distance,
@@ -257,7 +262,7 @@ export function resolveAttack(
     evasiveManeuvers,
     targetLockModifier,
     trackingBonus,
-    namedModifiers,
+    allNamedModifiers,
     ignoreRangePenalty,
   );
 

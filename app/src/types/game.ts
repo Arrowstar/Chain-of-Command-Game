@@ -800,6 +800,18 @@ export interface DecoyToken {
   isDestroyed: boolean;
 }
 
+// ─── Ghost Contacts ────────────────────────────────────────────────
+
+/**
+ * A ghost contact represents an enemy ship hidden inside an Ion Nebula.
+ * The player knows a ship occupies that hex but not its identity.
+ */
+export interface GhostContact {
+  hex: HexCoord;
+  entityId: string;
+  isIdentified: boolean;
+}
+
 // ─── Fleet Assets ────────────────────────────────────────────────
 
 export interface FleetAsset {

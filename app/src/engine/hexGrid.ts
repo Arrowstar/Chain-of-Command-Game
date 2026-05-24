@@ -188,7 +188,7 @@ export function checkLineOfSight(
   for (let i = 1; i < line.length - 1; i++) {
     const key = hexKey(line[i]);
     const terrain = terrainMap.get(key);
-    if (terrain === 'asteroids') {
+    if (terrain === 'asteroids' || terrain === 'ionNebula') {
       return { clear: false, blockedBy: line[i] };
     }
   }

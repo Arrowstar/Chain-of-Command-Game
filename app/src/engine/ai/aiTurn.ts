@@ -6,7 +6,7 @@ import { getChassisById } from '../../data/shipChassis';
 import { getOfficerById } from '../../data/officers';
 import { calculateAggroScores } from './aggroScore';
 import { planAIMovement } from './behaviors';
-import { hexDistance, hexKey, determineStruckShieldSector } from '../hexGrid';
+import { hexDistance, hexKey, determineStruckShieldSector, checkLineOfSight } from '../hexGrid';
 import { rollVolley, rollDie } from '../../utils/diceRoller';
 import { calculateTN } from '../combat';
 import { applyAttackTraits } from './traitEffects';
@@ -276,6 +276,9 @@ export function executeAITier(
     // 4. Attack
     const dist = hexDistance(aiShip.position, target.position);
     if (dist >= adversary.weaponRangeMin && dist <= adversary.weaponRangeMax) {
+      // Check line of sight: blocking terrain (asteroids, ion nebula) blocks the shot
+      const los = checkLineOfSight(aiShip.position, target.position, terrainMap);
+      if (!los.clear) continue;
       // Check for weapons disabled crit
       const weaponsDisabled = aiShip.criticalDamage?.some(c => c.id === 'enemy-weapons-disabled');
       if (!weaponsDisabled) {

@@ -1,6 +1,6 @@
 import type { StationState, ShipState, EnemyShipState, TacticCard, ShipArc, FighterToken, TerrainType } from '../../types/game';
 import { getStationById } from '../../data/stations';
-import { hexDistance, determineStruckShieldSector, isInFiringArc, hexNeighbors, hexKey } from '../hexGrid';
+import { hexDistance, determineStruckShieldSector, isInFiringArc, hexNeighbors, hexKey, checkLineOfSight } from '../hexGrid';
 import { calculateTN } from '../combat';
 import { rollVolley, rollDie } from '../../utils/diceRoller';
 import { pickEnemyFighterClass } from '../../data/fighters';
@@ -114,6 +114,9 @@ export function executeStationTurn(
 
       // ── Primary Weapons (all arcs) ────────────────────────────
       if (dist >= stationData.weaponRangeMin && dist <= stationData.weaponRangeMax) {
+        // Check line of sight: blocking terrain (asteroids, ion nebula) blocks the shot
+        const los = checkLineOfSight(station.position, target.position, terrainMap);
+        if (!los.clear) continue;
         const pool: import('../../types/game').VolleyDieInput[] = stationData.volleyPool.map(dt => ({ type: dt, source: 'weapon' }));
         // Tactic card extra dice
         if (tacticCard?.mechanicalEffect.extraDice) {

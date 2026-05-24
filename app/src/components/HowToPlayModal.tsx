@@ -182,12 +182,14 @@ export default function HowToPlayModal() {
             <p><strong>TN = Target's Base Evasion + Range Modifier + Terrain Modifiers + Active Maneuvers (Helm) + Target Lock (Sensors)</strong></p>
             <ul>
               <li><strong>Range Mods:</strong> Short (1-2 hexes): +0 TN. Medium (3-4 hexes): +1 TN. Long (5+ hexes): +2 TN.</li>
-              <li><strong>Terrain Mods:</strong> Asteroids: +2 TN (blocks LoS). Debris Field: +1 TN. Ion Nebula: -1 TN (but disables all shields). Gravity Well &amp; Open Space: +0 TN.</li>
+              <li><strong>Terrain Mods:</strong> Asteroids: +2 TN (blocks LoS). Debris Field: +1 TN. Ion Nebula: +1 TN (blocks LoS, disables all shields). Gravity Well &amp; Open Space: +0 TN.</li>
             </ul>
             <h3 style={{ color: 'var(--color-text-bright)', marginTop: 'var(--space-md)' }}>Hits vs. Crits</h3>
             <p>A die that meets the TN is a <strong>Standard Hit</strong> (1 damage to the facing shield, overflowing to hull). If damage overflows to hull, the defender's Armor Die reduces the incoming damage (minimum 1). A die that meets the TN AND rolls its maximum face value is a <strong>Critical Hit</strong>. Critical Hits deal 1 damage AND bypass shields completely, striking the Hull directly and ignoring Armor.</p>
             <p><em>Exploding Dice:</em> Critical hits "explode", allowing you to roll that same die again for each crit. Additional max rolls continue to explode!</p>
             <p><em>Critical Damage:</em> If a ship takes 3 or more Hull damage from a single volley, it suffers a <strong>Critical Damage</strong> effect.</p>
+            <h3 style={{ color: 'var(--color-text-bright)', marginTop: 'var(--space-md)' }}>Enemy Point Defense Cannons (PDC)</h3>
+            <p>Enemy capital ships (Medium and Large size) are equipped with Point Defense Cannons that automatically engage allied fighters and torpedoes that pass within <strong>1 hex</strong> of the ship. The PDC rolls 1d6 against a Target Number equal to the target's total Evasion (Base Evasion + terrain modifier + active maneuvers, if any) minus 4; if the roll hits, the small craft or torpedo is destroyed before reaching its destination. This PDC system can be disabled by the <em>Point Defense Offline</em> critical damage card.</p>
             <h3 style={{ color: 'var(--color-text-bright)', marginTop: 'var(--space-md)' }}>Ramming</h3>
             <p>If a ship enters a hex occupied by another capital ship, a collision occurs. Both ships immediately suffer 1D4 unblockable Hull damage, and the moving ship stops in the adjacent hex.</p>
           </div>
@@ -197,10 +199,10 @@ export default function HowToPlayModal() {
           <div className="animate-fadeIn">
             <h2 style={{ color: 'var(--color-holo-cyan)' }}>Terrain & Environment</h2>
             <p>The hex battlefield is populated with environmental terrain that affects movement, targeting, and defense. A ship's terrain modifier is determined by the hex it currently occupies.</p>
-            <p><strong>Line of Sight (LoS):</strong> A straight line is drawn from attacker to target. If any hex along that path (excluding the attacker's and target's own hexes) contains blocking terrain (Asteroids), the shot is blocked and cannot be fired. The struck shield sector is also determined by the angle of this line relative to the target's facing.</p>
+            <p><strong>Line of Sight (LoS):</strong> A straight line is drawn from attacker to target. If any hex along that path (excluding the attacker's and target's own hexes) contains blocking terrain (Asteroids, Ion Nebula), the shot is blocked and cannot be fired. The struck shield sector is also determined by the angle of this line relative to the target's facing.</p>
             <ul>
               <li><strong>Asteroids:</strong> +2 TN for attacks against the occupant. Blocks Line of Sight. Halts momentum drift (Speed → 0) on entry. Entering requires a D6 roll; on a 1, the ship takes 1D4 unblockable Hull damage.</li>
-              <li><strong>Ion Nebula:</strong> -1 TN for attacks against the occupant. Electrostatic interference disables all shields while inside (treated as 0), making these clouds deadly kill zones.</li>
+              <li><strong>Ion Nebula:</strong> +1 TN for attacks against the occupant. Blocks Line of Sight. Electrostatic interference disables all shields while inside (treated as 0). Conceals enemy ship identity — they appear as ghost contacts (diamond "?" markers) until Identified by Target Lock or revealed by proximity (≤1 hex) or opening fire.</li>
               <li><strong>Debris Field:</strong> +1 TN for attacks against the occupant. Wreckage provides minor cover. Small Craft (Fighters) cannot enter or pass through.</li>
               <li><strong>Gravity Well:</strong> No direct TN modifier. At the start of the Cleanup Phase, any ship inside or adjacent is pulled 1 hex toward the center.</li>
               <li><strong>Open Space:</strong> No terrain effects. Standard void.</li>

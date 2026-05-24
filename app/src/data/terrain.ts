@@ -18,10 +18,10 @@ export const TERRAIN_DATA: Record<TerrainType, TerrainData> = {
   },
   [TerrainType.IonNebula]: {
     type: TerrainType.IonNebula,
-    blocksLoS: false,
-    tnModifier: -1,
+    blocksLoS: true,
+    tnModifier: 1,
     movementEffect: 'None',
-    special: 'All Shields are disabled (reduced to 0) while inside. The electrostatic interference makes targeting easier (-1 TN).',
+    special: 'All Shields are disabled (reduced to 0) while inside. The nebula blocks line of sight and conceals ship identity (+1 TN).',
   },
   [TerrainType.DebrisField]: {
     type: TerrainType.DebrisField,
