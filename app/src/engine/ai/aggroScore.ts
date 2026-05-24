@@ -23,8 +23,21 @@ export function calculateAggroScores(
   tacticCard: TacticCard | null,
   objectiveShipIds: string[] = [],
   players: PlayerState[] = [],
+  ignoreTargetingOverride: boolean = false,
+  forceClosestTarget: boolean = false,
 ): AggroEntry[] {
   const entries: AggroEntry[] = [];
+
+  // Pre-compute minimum distance to any player ship for forceClosestTarget
+  let closestPlayerDist = Infinity;
+  if (forceClosestTarget) {
+    for (const t of targets) {
+      if (!t.isDestroyed && 'chassisId' in t) {
+        const d = hexDistance(aiShip.position, t.position);
+        if (d < closestPlayerDist) closestPlayerDist = d;
+      }
+    }
+  }
 
   for (const target of targets) {
     if (target.isDestroyed) continue;
@@ -85,7 +98,7 @@ export function calculateAggroScores(
     }
 
     // Tactic card modifiers
-    if (tacticCard) {
+    if (tacticCard && !ignoreTargetingOverride) {
       const targetSector = determineStruckShieldSector(aiShip.position, target.position, target.facing);
       const hullRatio = target.currentHull / target.maxHull;
       const stressTotal = 'chassisId' in target
@@ -140,6 +153,12 @@ export function calculateAggroScores(
           }
           break;
       }
+    }
+
+    // Targeting Disrupted crit: force closest player ship
+    if (forceClosestTarget && 'chassisId' in target && distance === closestPlayerDist) {
+      score += 1000;
+      breakdown['forcedClosestTarget'] = 1000;
     }
 
     entries.push({ targetId: target.id, score, distance, breakdown });

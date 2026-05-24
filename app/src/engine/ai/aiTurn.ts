@@ -177,12 +177,15 @@ export function executeAITier(
     const commsSevered = aiShip.criticalDamage?.some(c => c.id === 'enemy-comms-severed');
     const effectiveTacticCard = commsSevered ? null : tacticCard;
 
+    // ── Critical: Targeting Disrupted — ignore targeting overrides, force closest ──
+    const targetingDisrupted = aiShip.criticalDamage?.some(c => c.id === 'enemy-targeting-disrupted');
+
     const possibleTargets = aiShip.faction === 'allied'
       ? allEnemyShips.filter(e => e.faction === 'hegemony' && !e.isDestroyed)
       : [...allPlayerShips, ...allEnemyShips.filter(e => e.faction === 'allied' && !e.isDestroyed)];
 
     // 1. Acquire target
-    const aggroEntries = calculateAggroScores(aiShip, possibleTargets, effectiveTacticCard, [], players);
+    const aggroEntries = calculateAggroScores(aiShip, possibleTargets, effectiveTacticCard, [], players, targetingDisrupted, targetingDisrupted);
     if (aggroEntries.length === 0) continue;
     const primaryTarget = aggroEntries[0];
     const target = possibleTargets.find(p => p.id === primaryTarget.targetId);

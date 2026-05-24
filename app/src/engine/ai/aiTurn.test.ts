@@ -94,3 +94,58 @@ describe('AI movement preview', () => {
     expect(preview?.newFacing).not.toBe(enemyShip.facing);
   });
 });
+
+describe('enemy-targeting-disrupted critical', () => {
+  it('forces the AI to target the closest player ship', () => {
+    const p1 = makePlayerShip({ id: 'p1', position: { q: 1, r: 0 } });
+    const p2 = makePlayerShip({ id: 'p2', position: { q: 3, r: 0 }, shields: { fore: 0, foreStarboard: 0, aftStarboard: 0, aft: 0, aftPort: 0, forePort: 0 } });
+    const enemy = makeEnemyShip({
+      position: { q: 0, r: 0 },
+      criticalDamage: [{ id: 'enemy-targeting-disrupted', name: 'Targeting Disrupted', effect: '', isRepaired: false }],
+    });
+    const occupiedHexes = new Set<string>([hexKey(p1.position), hexKey(p2.position), hexKey(enemy.position)]);
+    const terrainMap = new Map();
+
+    const result = executeAITier(
+      [enemy],
+      [p1, p2],
+      [enemy],
+      null,
+      new Set(occupiedHexes),
+      terrainMap,
+      [] as PlayerState[],
+    );
+
+    const attackAction = result.actions.find(a => a.type === 'attack');
+    expect(attackAction).toBeDefined();
+    expect((attackAction!.details as any).target).toBe('p1');
+    expect(result.playerDamage[0].targetId).toBe('p1');
+  });
+
+  it('still applies tactic card bonuses (unlike comms-severed which nulls the card)', () => {
+    const p1 = makePlayerShip({ id: 'p1', position: { q: 1, r: 0 } });
+    const p2 = makePlayerShip({ id: 'p2', position: { q: 3, r: 0 }, shields: { fore: 0, foreStarboard: 0, aftStarboard: 0, aft: 0, aftPort: 0, forePort: 0 } });
+    const enemy = makeEnemyShip({
+      position: { q: 0, r: 0 },
+      criticalDamage: [{ id: 'enemy-targeting-disrupted', name: 'Targeting Disrupted', effect: '', isRepaired: false }],
+    });
+    const tacticCard = TACTIC_DECK.find(t => t.id === 'overwhelming-firepower');
+    const occupiedHexes = new Set<string>([hexKey(p1.position), hexKey(p2.position), hexKey(enemy.position)]);
+    const terrainMap = new Map();
+
+    const result = executeAITier(
+      [enemy],
+      [p1, p2],
+      [enemy],
+      tacticCard ?? null,
+      new Set(occupiedHexes),
+      terrainMap,
+      [] as PlayerState[],
+    );
+
+    const attackAction = result.actions.find(a => a.type === 'attack');
+    expect(attackAction).toBeDefined();
+    expect((attackAction!.details as any).target).toBe('p1');
+    expect(result.playerDamage[0].targetId).toBe('p1');
+  });
+});

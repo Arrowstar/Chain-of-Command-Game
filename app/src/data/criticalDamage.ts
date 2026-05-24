@@ -95,7 +95,7 @@ export const PLAYER_CRITICAL_DECK: CriticalDamageCard[] = [
 //   'enemy-crew-casualties'    — aiTurn.ts: ship skips activation, card discarded immediately. [WIRED]
 //   'enemy-hull-breach'        — useGameStore cleanup: deals 1 unblockable hull damage each round. [WIRED]
 //   'enemy-point-defense-offline' — display-only (enemy PDC interception not yet implemented).
-//   'enemy-targeting-disrupted' — display-only (tactic targeting override system not yet implemented).
+//   'enemy-targeting-disrupted' — aiTurn.ts: ignores tactic targeting overrides, forces closest player target. [WIRED]
 //   'enemy-shield-collapse'    — immediate one-shot at crit draw: strips all shields to 0. [WIRED]
 //   'enemy-reactor-overload'   — useGameStore cleanup: +1 pending CT per player per round. [WIRED]
 
