@@ -198,12 +198,26 @@ export function getMapHoverTargetId(target: MapHoverTarget | null): string {
   }
 }
 
+export function getTargetTabLabel(target: MapHoverTarget): string {
+  switch (target.kind) {
+    case 'ship': return target.ship.name || 'VESSEL';
+    case 'station': return target.station.name || 'STATION';
+    case 'terrain': return formatTerrainName(target.terrainType);
+    case 'objective': return target.marker.name || 'OBJECTIVE';
+    case 'fighter': return target.fighter.name || 'FIGHTER';
+    case 'torpedo': return target.torpedo.name || 'TORPEDO';
+    case 'hazard': return target.hazard.name || 'HAZARD';
+    default: return 'UNKNOWN';
+  }
+}
+
 export default function ShipInfoPanel({ targets, position, onClose, onLock }: ShipInfoPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [clampedPosition, setClampedPosition] = useState(position);
   const [lockProgress, setLockProgress] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
   const { isPhone } = useViewport();
+  const [activeTabIndex, setActiveTabIndex] = useState(0);
 
   useEffect(() => {
     if (targets.length === 0) {
@@ -228,6 +242,10 @@ export default function ShipInfoPanel({ targets, position, onClose, onLock }: Sh
 
     return () => clearInterval(timer);
   }, [targets.map(t => getMapHoverTargetId(t)).join('|'), isLocked]);
+
+  useEffect(() => {
+    setActiveTabIndex(0);
+  }, [targets.map(t => getMapHoverTargetId(t)).join('|')]);
 
   useLayoutEffect(() => {
     // Skip clamp logic on phone — position is handled by CSS .ship-info-drawer
@@ -260,21 +278,16 @@ export default function ShipInfoPanel({ targets, position, onClose, onLock }: Sh
 
   // ── Phone: bottom drawer ──────────────────────────────────────────
   if (isPhone) {
-    const target = targets[0];
-    let drawerLabel = 'HEX INFO';
-    if (target.kind === 'ship') drawerLabel = target.isEnemy ? 'ENEMY VESSEL' : 'ALLIED VESSEL';
-    else if (target.kind === 'station') drawerLabel = 'INSTALLATION';
-    else if (target.kind === 'terrain') drawerLabel = 'TERRAIN';
-    else if (target.kind === 'objective') drawerLabel = 'OBJECTIVE';
-    else if (target.kind === 'fighter') drawerLabel = 'SMALL CRAFT';
-    else if (target.kind === 'torpedo') drawerLabel = 'ORDNANCE';
-    else if (target.kind === 'hazard') drawerLabel = 'HAZARD';
+    const hasMultipleTargets = targets.length > 1;
+    const activeTarget = targets[activeTabIndex];
 
     return (
       <div
         ref={panelRef}
         data-testid="ship-info-panel"
         className="panel panel--glow ship-info-drawer"
+        onPointerDown={(e) => e.stopPropagation()}
+        onPointerUp={(e) => e.stopPropagation()}
         style={{
           background: 'rgba(10, 15, 25, 0.97)',
           backdropFilter: 'blur(10px)',
@@ -286,7 +299,7 @@ export default function ShipInfoPanel({ targets, position, onClose, onLock }: Sh
         {/* Drawer header with dismiss */}
         <div className="ship-info-drawer-header">
           <span className="label" style={{ color: 'var(--color-holo-cyan)', fontSize: '0.7rem' }}>
-            {drawerLabel}
+            HEX INFO
           </span>
           <button
             className="ship-info-drawer-close"
@@ -296,30 +309,34 @@ export default function ShipInfoPanel({ targets, position, onClose, onLock }: Sh
             ×
           </button>
         </div>
-        {/* Content columns scroll horizontally if multiple targets */}
-        <div style={{ display: 'flex', overflowX: 'auto', gap: 'var(--space-md)', padding: 'var(--space-sm)' }}>
-          {targets.map((target, idx) => (
-            <div
-              key={`${target.kind}-${idx}`}
-              style={{
-                width: '100%',
-                minWidth: '260px',
-                flexShrink: 0,
-                display: 'flex',
-                flexDirection: 'column',
-                borderRight: idx < targets.length - 1 ? '1px solid rgba(255,255,255,0.1)' : 'none',
-                paddingRight: idx < targets.length - 1 ? 'var(--space-md)' : 0,
-              }}
-            >
-              {target.kind === 'ship' && <ShipTooltipContent ship={target.ship} isEnemy={target.isEnemy} />}
-              {target.kind === 'station' && <StationTooltipContent station={target.station} />}
-              {target.kind === 'terrain' && <TerrainTooltipContent terrainType={target.terrainType} coord={target.coord} />}
-              {target.kind === 'objective' && <ObjectiveTooltipContent marker={target.marker} />}
-              {target.kind === 'fighter' && <FighterTooltipContent fighter={target.fighter} stackCount={target.stackCount ?? 1} />}
-              {target.kind === 'torpedo' && <TorpedoTooltipContent torpedo={target.torpedo} />}
-              {target.kind === 'hazard' && <HazardTooltipContent hazard={target.hazard} />}
-            </div>
-          ))}
+
+        {/* Tab bar when multiple targets in hex */}
+        {hasMultipleTargets && (
+          <div className="hex-info-tab-bar" role="tablist" data-testid="hex-info-tab-bar">
+            {targets.map((target, idx) => (
+              <button
+                key={idx}
+                role="tab"
+                aria-selected={idx === activeTabIndex}
+                className={`hex-info-tab${idx === activeTabIndex ? ' active' : ''}`}
+                onClick={(e) => { e.stopPropagation(); setActiveTabIndex(idx); }}
+                data-testid={`hex-info-tab-${idx}`}
+              >
+                {getTargetTabLabel(target)}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Content - single active target */}
+        <div style={{ padding: 'var(--space-sm)' }}>
+          {activeTarget.kind === 'ship' && <ShipTooltipContent ship={activeTarget.ship} isEnemy={activeTarget.isEnemy} />}
+          {activeTarget.kind === 'station' && <StationTooltipContent station={activeTarget.station} />}
+          {activeTarget.kind === 'terrain' && <TerrainTooltipContent terrainType={activeTarget.terrainType} coord={activeTarget.coord} />}
+          {activeTarget.kind === 'objective' && <ObjectiveTooltipContent marker={activeTarget.marker} />}
+          {activeTarget.kind === 'fighter' && <FighterTooltipContent fighter={activeTarget.fighter} stackCount={activeTarget.stackCount ?? 1} />}
+          {activeTarget.kind === 'torpedo' && <TorpedoTooltipContent torpedo={activeTarget.torpedo} />}
+          {activeTarget.kind === 'hazard' && <HazardTooltipContent hazard={activeTarget.hazard} />}
         </div>
       </div>
     );

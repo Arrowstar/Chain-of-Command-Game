@@ -1,6 +1,7 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, act, fireEvent } from '@testing-library/react';
-import ShipInfoPanel, { type MapHoverTarget } from './ShipInfoPanel';
+import ShipInfoPanel, { getTargetTabLabel, type MapHoverTarget } from './ShipInfoPanel';
+import * as useViewportModule from '../../utils/useViewport';
 
 vi.mock('../../data/shipChassis', () => ({
   getChassisById: vi.fn(() => ({ className: 'Test-Class Cruiser' })),
@@ -331,6 +332,140 @@ describe('ShipInfoPanel', () => {
       fireEvent.mouseEnter(speedLabel.parentElement!);
       
       expect(getByText(/Tactical movement limit/i)).toBeInTheDocument();
+    });
+  });
+
+  describe('Phone tab behavior', () => {
+    let viewportSpy: any;
+
+    const position = { x: 20, y: 30 };
+
+    beforeEach(() => {
+      viewportSpy = vi.spyOn(useViewportModule, 'useViewport');
+      viewportSpy.mockReturnValue({ isPhone: true, isTablet: false, isCoarsePointer: false } as any);
+    });
+
+    afterEach(() => {
+      viewportSpy.mockRestore();
+    });
+
+    it('renders no tab bar when a single target is in hex', () => {
+      const target: MapHoverTarget = {
+        kind: 'ship',
+        isEnemy: false,
+        ship: { id: 'ship-1', chassisId: 'c1', ownerId: 'p1', name: 'ISS Resolute', position: { q: 0, r: 0 }, facing: 0, currentSpeed: 2, currentHull: 8, maxHull: 10, shields: { fore: 2, foreStarboard: 2, aftStarboard: 2, aft: 2, aftPort: 2, forePort: 2 }, maxShieldsPerSector: 2, equippedWeapons: [], equippedSubsystems: [], criticalDamage: [], scars: [], armorDie: 'd4', baseEvasion: 5, evasionModifiers: 0, isDestroyed: false, hasDroppedBelow50: false } as any,
+      };
+
+      render(<ShipInfoPanel targets={[target]} position={position} />);
+
+      expect(screen.queryByTestId('hex-info-tab-bar')).not.toBeInTheDocument();
+      expect(screen.getByText('ISS Resolute')).toBeInTheDocument();
+    });
+
+    it('renders tabs when multiple targets are in hex', () => {
+      const targets: MapHoverTarget[] = [
+        { kind: 'ship', isEnemy: false, ship: { id: 'ship-1', chassisId: 'c1', ownerId: 'p1', name: 'ISS Resolute', position: { q: 0, r: 0 }, facing: 0, currentSpeed: 2, currentHull: 8, maxHull: 10, shields: { fore: 2, foreStarboard: 2, aftStarboard: 2, aft: 2, aftPort: 2, forePort: 2 }, maxShieldsPerSector: 2, equippedWeapons: [], equippedSubsystems: [], criticalDamage: [], scars: [], armorDie: 'd4', baseEvasion: 5, evasionModifiers: 0, isDestroyed: false, hasDroppedBelow50: false } as any },
+        { kind: 'terrain', terrainType: 'asteroids', coord: { q: 2, r: -1 } },
+      ];
+
+      render(<ShipInfoPanel targets={targets} position={position} />);
+
+      const tabBar = screen.getByTestId('hex-info-tab-bar');
+      expect(tabBar).toBeInTheDocument();
+
+      expect(screen.getByTestId('hex-info-tab-0')).toHaveTextContent('ISS Resolute');
+      expect(screen.getByTestId('hex-info-tab-1')).toHaveTextContent('Asteroid Field');
+
+      expect(screen.getByTestId('hex-info-tab-0')).toHaveAttribute('aria-selected', 'true');
+      expect(screen.getByTestId('hex-info-tab-1')).toHaveAttribute('aria-selected', 'false');
+    });
+
+    it('switches content when a different tab is clicked', () => {
+      const targets: MapHoverTarget[] = [
+        { kind: 'ship', isEnemy: false, ship: { id: 'ship-1', chassisId: 'c1', ownerId: 'p1', name: 'ISS Resolute', position: { q: 0, r: 0 }, facing: 0, currentSpeed: 2, currentHull: 8, maxHull: 10, shields: { fore: 2, foreStarboard: 2, aftStarboard: 2, aft: 2, aftPort: 2, forePort: 2 }, maxShieldsPerSector: 2, equippedWeapons: [], equippedSubsystems: [], criticalDamage: [], scars: [], armorDie: 'd4', baseEvasion: 5, evasionModifiers: 0, isDestroyed: false, hasDroppedBelow50: false } as any },
+        { kind: 'terrain', terrainType: 'asteroids', coord: { q: 2, r: -1 } },
+      ];
+
+      render(<ShipInfoPanel targets={targets} position={position} />);
+
+      // Initially first tab is active — ship content shown
+      expect(screen.getByTestId('hex-info-tab-0')).toHaveAttribute('aria-selected', 'true');
+      expect(screen.getByText('Test-Class Cruiser')).toBeInTheDocument();
+
+      // Click the second tab (terrain)
+      act(() => {
+        fireEvent.click(screen.getByTestId('hex-info-tab-1'));
+      });
+
+      expect(screen.getByTestId('hex-info-tab-0')).toHaveAttribute('aria-selected', 'false');
+      expect(screen.getByTestId('hex-info-tab-1')).toHaveAttribute('aria-selected', 'true');
+
+      // Terrain content should now be visible — check for unique terrain text
+      expect(screen.getByText('Hex 2, -1')).toBeInTheDocument();
+    });
+
+    it('shows HEX INFO header label regardless of target count', () => {
+      const targets: MapHoverTarget[] = [
+        { kind: 'ship', isEnemy: false, ship: { id: 'ship-1', chassisId: 'c1', ownerId: 'p1', name: 'ISS Resolute', position: { q: 0, r: 0 }, facing: 0, currentSpeed: 2, currentHull: 8, maxHull: 10, shields: { fore: 2, foreStarboard: 2, aftStarboard: 2, aft: 2, aftPort: 2, forePort: 2 }, maxShieldsPerSector: 2, equippedWeapons: [], equippedSubsystems: [], criticalDamage: [], scars: [], armorDie: 'd4', baseEvasion: 5, evasionModifiers: 0, isDestroyed: false, hasDroppedBelow50: false } as any },
+        { kind: 'terrain', terrainType: 'asteroids', coord: { q: 2, r: -1 } },
+      ];
+
+      render(<ShipInfoPanel targets={targets} position={position} />);
+
+      expect(screen.getByText('HEX INFO')).toBeInTheDocument();
+    });
+
+    it('active tab has the active CSS class', () => {
+      const targets: MapHoverTarget[] = [
+        { kind: 'ship', isEnemy: false, ship: { id: 'ship-1', chassisId: 'c1', ownerId: 'p1', name: 'ISS Resolute', position: { q: 0, r: 0 }, facing: 0, currentSpeed: 2, currentHull: 8, maxHull: 10, shields: { fore: 2, foreStarboard: 2, aftStarboard: 2, aft: 2, aftPort: 2, forePort: 2 }, maxShieldsPerSector: 2, equippedWeapons: [], equippedSubsystems: [], criticalDamage: [], scars: [], armorDie: 'd4', baseEvasion: 5, evasionModifiers: 0, isDestroyed: false, hasDroppedBelow50: false } as any },
+        { kind: 'terrain', terrainType: 'asteroids', coord: { q: 2, r: -1 } },
+      ];
+
+      render(<ShipInfoPanel targets={targets} position={position} />);
+
+      const tab0 = screen.getByTestId('hex-info-tab-0');
+      const tab1 = screen.getByTestId('hex-info-tab-1');
+
+      expect(tab0.className).toContain('active');
+      expect(tab1.className).not.toContain('active');
+
+      act(() => {
+        fireEvent.click(tab1);
+      });
+
+      expect(tab0.className).not.toContain('active');
+      expect(tab1.className).toContain('active');
+    });
+
+    it('displays full tab labels without truncation for long names', () => {
+      const targets: MapHoverTarget[] = [
+        { kind: 'ship', isEnemy: false, ship: { id: 'ship-1', chassisId: 'c1', ownerId: 'p1', name: 'ISS Resolute', position: { q: 0, r: 0 }, facing: 0, currentSpeed: 2, currentHull: 8, maxHull: 10, shields: { fore: 2, foreStarboard: 2, aftStarboard: 2, aft: 2, aftPort: 2, forePort: 2 }, maxShieldsPerSector: 2, equippedWeapons: [], equippedSubsystems: [], criticalDamage: [], scars: [], armorDie: 'd4', baseEvasion: 5, evasionModifiers: 0, isDestroyed: false, hasDroppedBelow50: false } as any },
+        { kind: 'station', station: { id: 'station-1', stationId: 'mining-outpost', name: 'Heavily Fortified Forward Operating Base', position: { q: 0, r: 1 }, facing: 0, currentHull: 50, maxHull: 50, shields: { fore: 10, foreStarboard: 10, aftStarboard: 10, aft: 10, aftPort: 10, forePort: 10 }, maxShieldsPerSector: 10, armorDie: 'd8', baseEvasion: 1, isDestroyed: false, remainingFighters: 0 } as any },
+      ];
+
+      render(<ShipInfoPanel targets={targets} position={position} />);
+
+      const tab0 = screen.getByTestId('hex-info-tab-0');
+      const tab1 = screen.getByTestId('hex-info-tab-1');
+
+      expect(tab0.textContent).toBe('ISS Resolute');
+      expect(tab1.textContent).toBe('Heavily Fortified Forward Operating Base');
+    });
+
+    it('does not trigger onClose when a tab is clicked', () => {
+      const onClose = vi.fn();
+      const targets: MapHoverTarget[] = [
+        { kind: 'ship', isEnemy: false, ship: { id: 'ship-1', chassisId: 'c1', ownerId: 'p1', name: 'ISS Resolute', position: { q: 0, r: 0 }, facing: 0, currentSpeed: 2, currentHull: 8, maxHull: 10, shields: { fore: 2, foreStarboard: 2, aftStarboard: 2, aft: 2, aftPort: 2, forePort: 2 }, maxShieldsPerSector: 2, equippedWeapons: [], equippedSubsystems: [], criticalDamage: [], scars: [], armorDie: 'd4', baseEvasion: 5, evasionModifiers: 0, isDestroyed: false, hasDroppedBelow50: false } as any },
+        { kind: 'terrain', terrainType: 'asteroids', coord: { q: 2, r: -1 } },
+      ];
+
+      render(<ShipInfoPanel targets={targets} position={position} onClose={onClose} />);
+
+      act(() => {
+        fireEvent.click(screen.getByTestId('hex-info-tab-1'));
+      });
+
+      expect(onClose).not.toHaveBeenCalled();
     });
   });
 });

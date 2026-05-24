@@ -1934,6 +1934,44 @@ body.is-phone .fleet-status-card {
   color: var(--color-hostile-red);
 }
 
+/* ─── Hex info tab bar (mobile multi-target) ────────────────────── */
+.hex-info-tab-bar {
+  display: flex;
+  gap: 2px;
+  padding: 4px var(--space-sm);
+  background: rgba(0, 0, 0, 0.4);
+  border-bottom: 1px solid var(--color-border);
+  overflow-x: auto;
+  flex-shrink: 0;
+  scrollbar-width: none;
+}
+
+.hex-info-tab-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.hex-info-tab {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.hex-info-tab.active {
+  background: hsla(185, 90%, 55%, 0.15);
+  color: var(--color-holo-cyan);
+}
+
 /* ─── Modal safety net ───────────────────────────────────────────── */
 body.is-phone .modal-content {
   max-width: calc(100vw - 16px);
