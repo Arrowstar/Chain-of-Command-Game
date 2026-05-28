@@ -107,6 +107,8 @@ export default function HexMap() {
   // Subscribe to pending fire animation queue
   const pendingFireAnimations = useUIStore(s => s.pendingFireAnimations);
 
+  const [mapSize, setMapSize] = useState({ width: 0, height: 0 });
+
   // ─── Init Pixi app ───────────────────────────────────
   useEffect(() => {
     if (!containerRef.current) return;
@@ -238,41 +240,17 @@ export default function HexMap() {
       });
     });
 
-    // Initial Camera Positioning
-    const state = useGameStore.getState();
-    if (state.deploymentMode) {
-      const playerPositions = state.playerShips.map(s => hexToPixel(s.position));
-      let cx = 0;
-      let cy = 0;
-      if (playerPositions.length > 0) {
-        cx = playerPositions.reduce((sum, p) => sum + p.x, 0) / playerPositions.length;
-        cy = playerPositions.reduce((sum, p) => sum + p.y, 0) / playerPositions.length;
-      }
-      
-      const allPositions = [...state.playerShips, ...state.enemyShips].map(s => hexToPixel(s.position));
-      let maxDx = 0;
-      let maxDy = 0;
-      for (const p of allPositions) {
-        maxDx = Math.max(maxDx, Math.abs(p.x - cx));
-        maxDy = Math.max(maxDy, Math.abs(p.y - cy));
-      }
-      
-      // Ensure a minimum distance to prevent infinite zoom if all ships are on the same hex
-      maxDx = Math.max(maxDx, 200);
-      maxDy = Math.max(maxDy, 200);
-      
-      // Calculate zoom to fit all ships within 80% of the screen
-      const zoomX = (w * 0.4) / maxDx;
-      const zoomY = (h * 0.4) / maxDy;
-      const targetZoom = Math.max(0.2, Math.min(1.2, zoomX, zoomY));
-      
-      useUIStore.getState().setCameraPosition(w / 2 - cx * targetZoom, h / 2 - cy * targetZoom, targetZoom);
-    } else {
-      // Center the camera on hex (0,0) which is the player's starting position
-      useUIStore.getState().setCameraPosition(w / 2, h / 2, 1);
+    const resizeObserver = new ResizeObserver((entries) => {
+      if (!entries || entries.length === 0) return;
+      const { width, height } = entries[0].contentRect;
+      setMapSize({ width, height });
+    });
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
     }
 
     return () => {
+      resizeObserver.disconnect();
       app.destroy(true, { children: true });
       appRef.current = null;
       worldRef.current = null;
@@ -283,6 +261,46 @@ export default function HexMap() {
       activeAnimationsRef.current.clear();
     };
   }, []);
+
+  const hasInitializedCameraRef = useRef(false);
+  useEffect(() => {
+    if (mapSize.width === 0 || mapSize.height === 0) return;
+    if (hasInitializedCameraRef.current) return;
+    hasInitializedCameraRef.current = true;
+
+    const state = useGameStore.getState();
+    if (state.deploymentMode) {
+      const playerPositions = state.playerShips.map(s => hexToPixel(s.position));
+      let cx = 0;
+      let cy = 0;
+      if (playerPositions.length > 0) {
+        cx = playerPositions.reduce((sum, p) => sum + p.x, 0) / playerPositions.length;
+        cy = playerPositions.reduce((sum, p) => sum + p.y, 0) / playerPositions.length;
+      }
+
+      const allPositions = [...state.playerShips, ...state.enemyShips].map(s => hexToPixel(s.position));
+      let maxDx = 0;
+      let maxDy = 0;
+      for (const p of allPositions) {
+        maxDx = Math.max(maxDx, Math.abs(p.x - cx));
+        maxDy = Math.max(maxDy, Math.abs(p.y - cy));
+      }
+
+      // Ensure a minimum distance to prevent infinite zoom if all ships are on the same hex
+      maxDx = Math.max(maxDx, 200);
+      maxDy = Math.max(maxDy, 200);
+
+      // Calculate zoom to fit all ships within 80% of the screen
+      const zoomX = (mapSize.width * 0.4) / maxDx;
+      const zoomY = (mapSize.height * 0.4) / maxDy;
+      const targetZoom = Math.max(0.2, Math.min(1.2, zoomX, zoomY));
+
+      useUIStore.getState().setCameraPosition(mapSize.width / 2 - cx * targetZoom, mapSize.height / 2 - cy * targetZoom, targetZoom);
+    } else {
+      // Center the camera on hex (0,0) which is the player's starting position
+      useUIStore.getState().setCameraPosition(mapSize.width / 2, mapSize.height / 2, 1);
+    }
+  }, [mapSize]);
 
   // ─── Spawn new fire animations from the UIStore queue ──────────────────────
   useEffect(() => {
@@ -306,17 +324,26 @@ export default function HexMap() {
   useEffect(() => {
     if (!layersRef.current.entities || !layersRef.current.terrain || !layersRef.current.overlays) return;
 
+    // Read camera directly from store so we get the latest values even if
+    // this render's closure captured stale defaults (e.g. before the mount
+    // effect has positioned the camera).
+    const { cameraX: cx, cameraY: cy, cameraZoom: cz } = useUIStore.getState();
+
     // ── TERRAIN ──
     layersRef.current.terrain.removeChildren();
     const terrainGfx = new PIXI.Graphics();
     
-    // Determine visible area for infinite grid
-    const screenWidth = appRef.current?.screen.width || 800;
-    const screenHeight = appRef.current?.screen.height || 600;
-    const left = -cameraX / cameraZoom;
-    const right = (screenWidth - cameraX) / cameraZoom;
-    const top = -cameraY / cameraZoom;
-    const bottom = (screenHeight - cameraY) / cameraZoom;
+    // Determine visible area for infinite grid.
+    // Use the container's live clientWidth/Height rather than app.screen.width/height —
+    // the PIXI renderer updates screen size asynchronously via resizeTo, so it can lag
+    // behind the actual DOM size. The container dimensions always match what the user sees
+    // and stay consistent with the camera position computed in initCamera().
+    const screenWidth  = mapSize.width  || 800;
+    const screenHeight = mapSize.height || 600;
+    const left = -cx / cz;
+    const right = (screenWidth - cx) / cz;
+    const top = -cy / cz;
+    const bottom = (screenHeight - cy) / cz;
     
     const centerHex = pixelToHex((left + right) / 2, (top + bottom) / 2);
     const radiusX = Math.ceil((right - left) / 80);
@@ -1369,23 +1396,24 @@ export default function HexMap() {
       layersRef.current.overlays!.addChild(targetGfx);
     }
 
-  }, [terrainMap, playerShips, enemyShips, fighterTokens, torpedoTokens, stations, objectiveMarkers, tacticHazards, objectiveType, scenarioId, deploymentMode, selectedShipId, targetingMode, activeTargetingAction, activeTargetingContext, hoveredHex, currentTactic, players, cameraX, cameraY, cameraZoom]);
+  }, [terrainMap, playerShips, enemyShips, fighterTokens, torpedoTokens, stations, objectiveMarkers, tacticHazards, objectiveType, scenarioId, deploymentMode, selectedShipId, targetingMode, activeTargetingAction, activeTargetingContext, hoveredHex, currentTactic, players, cameraX, cameraY, cameraZoom, mapSize]);
 
   // ─── Update camera & background parallax ────────────
   useEffect(() => {
     const world = worldRef.current;
     if (!world) return;
-    world.position.set(cameraX, cameraY);
-    world.scale.set(cameraZoom, cameraZoom);
+    const { cameraX: cx, cameraY: cy, cameraZoom: cz } = useUIStore.getState();
+    world.position.set(cx, cy);
+    world.scale.set(cz, cz);
 
     // Apply parallax translation and depth scaling based on camera
     if (bgStarsFarRef.current) {
-      bgStarsFarRef.current.position.set(cameraX * 0.12, cameraY * 0.12);
-      bgStarsFarRef.current.scale.set(1 + (cameraZoom - 1) * 0.12);
+      bgStarsFarRef.current.position.set(cx * 0.12, cy * 0.12);
+      bgStarsFarRef.current.scale.set(1 + (cz - 1) * 0.12);
     }
     if (bgStarsNearRef.current) {
-      bgStarsNearRef.current.position.set(cameraX * 0.32, cameraY * 0.32);
-      bgStarsNearRef.current.scale.set(1 + (cameraZoom - 1) * 0.32);
+      bgStarsNearRef.current.position.set(cx * 0.32, cy * 0.32);
+      bgStarsNearRef.current.scale.set(1 + (cz - 1) * 0.32);
     }
   }, [cameraX, cameraY, cameraZoom]);
 

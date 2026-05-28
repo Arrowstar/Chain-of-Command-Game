@@ -48,6 +48,7 @@ export default function ScenarioEditor({ onConfirm, onCancel }: ScenarioEditorPr
   const [selectedRoEId, setSelectedRoEId] = useState<string>('');
 
   // Camera State
+  const [mapSize, setMapSize] = useState({ width: 0, height: 0 });
   const [cameraX, setCameraX] = useState(0);
   const [cameraY, setCameraY] = useState(0);
   const [cameraZoom, setCameraZoom] = useState(1);
@@ -62,15 +63,13 @@ export default function ScenarioEditor({ onConfirm, onCancel }: ScenarioEditorPr
   const appRef = useRef<PIXI.Application | null>(null);
   const worldRef = useRef<PIXI.Container | null>(null);
   const graphicsRef = useRef<{ terrain: PIXI.Graphics; entities: PIXI.Graphics; overlay: PIXI.Graphics } | null>(null);
+  const cameraRef = useRef({ x: cameraX, y: cameraY, zoom: cameraZoom });
 
   // Initialize Canvas & Camera
   useEffect(() => {
     if (!containerRef.current) return;
-    const w = containerRef.current.clientWidth;
-    const h = containerRef.current.clientHeight;
-    
-    setCameraX(w / 2);
-    setCameraY(h / 2);
+    const w = containerRef.current.clientWidth || 800;
+    const h = containerRef.current.clientHeight || 600;
 
     const app = new PIXI.Application({
       width: w,
@@ -96,15 +95,35 @@ export default function ScenarioEditor({ onConfirm, onCancel }: ScenarioEditorPr
     worldRef.current = world;
     graphicsRef.current = { terrain: terrainGfx, entities: entitiesGfx, overlay: overlayGfx };
 
+    const resizeObserver = new ResizeObserver((entries) => {
+      if (!entries || entries.length === 0) return;
+      const { width, height } = entries[0].contentRect;
+      setMapSize({ width, height });
+    });
+    resizeObserver.observe(containerRef.current);
+
     setTerrainMap({});
 
     return () => {
+      resizeObserver.disconnect();
       app.destroy(true, { children: true });
     };
   }, []);
 
+  const hasInitializedCameraRef = useRef(false);
+  useEffect(() => {
+    if (mapSize.width === 0 || mapSize.height === 0) return;
+    if (hasInitializedCameraRef.current) return;
+    hasInitializedCameraRef.current = true;
+
+    setCameraX(mapSize.width / 2);
+    setCameraY(mapSize.height / 2);
+    cameraRef.current = { x: mapSize.width / 2, y: mapSize.height / 2, zoom: cameraZoom };
+  }, [mapSize]);
+
   // Update Camera
   useEffect(() => {
+    cameraRef.current = { x: cameraX, y: cameraY, zoom: cameraZoom };
     if (worldRef.current) {
       worldRef.current.position.set(cameraX, cameraY);
       worldRef.current.scale.set(cameraZoom, cameraZoom);
@@ -118,12 +137,15 @@ export default function ScenarioEditor({ onConfirm, onCancel }: ScenarioEditorPr
     
     // Draw Infinite Background Terrain
     tGfx.clear();
-    const screenWidth = appRef.current?.screen.width || 800;
-    const screenHeight = appRef.current?.screen.height || 600;
-    const left = -cameraX / cameraZoom;
-    const right = (screenWidth - cameraX) / cameraZoom;
-    const top = -cameraY / cameraZoom;
-    const bottom = (screenHeight - cameraY) / cameraZoom;
+    const cx = cameraX;
+    const cy = cameraY;
+    const cz = cameraZoom;
+    const screenWidth = mapSize.width || 800;
+    const screenHeight = mapSize.height || 600;
+    const left = -cx / cz;
+    const right = (screenWidth - cx) / cz;
+    const top = -cy / cz;
+    const bottom = (screenHeight - cy) / cz;
     
     const centerHex = pixelToHex((left + right) / 2, (top + bottom) / 2);
     const radiusX = Math.ceil((right - left) / 80);
@@ -260,7 +282,7 @@ export default function ScenarioEditor({ onConfirm, onCancel }: ScenarioEditorPr
       eGfx.addChild(tempGfx);
     });
 
-  }, [terrainMap, enemies, allies, spawns, stationSpawns, fighterSpawns, cameraX, cameraY, cameraZoom]);
+  }, [terrainMap, enemies, allies, spawns, stationSpawns, fighterSpawns, cameraX, cameraY, cameraZoom, mapSize]);
 
   // Input Handlers
   const handleWheel = useCallback((e: React.WheelEvent) => {

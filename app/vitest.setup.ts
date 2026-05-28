@@ -17,6 +17,43 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 });
 
+class ResizeObserverMock {
+  constructor(private callback: ResizeObserverCallback) {}
+  observe(target: Element) {
+    const width = target.clientWidth || 800;
+    const height = target.clientHeight || 600;
+    this.callback(
+      [
+        {
+          target,
+          contentRect: {
+            x: 0,
+            y: 0,
+            width,
+            height,
+            top: 0,
+            bottom: height,
+            left: 0,
+            right: width,
+            toJSON: () => {},
+          },
+          borderBoxSize: [],
+          contentBoxSize: [],
+          devicePixelContentBoxSize: [],
+        },
+      ],
+      this
+    );
+  }
+  unobserve() {}
+  disconnect() {}
+}
+
+Object.defineProperty(window, 'ResizeObserver', {
+  writable: true,
+  value: ResizeObserverMock,
+});
+
 vi.mock('idb', () => {
   const stores = new Map<string, Map<string, any>>();
   function getStore(name: string) {
