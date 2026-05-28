@@ -1015,6 +1015,7 @@ export default function FleetBuilder({ scenarioConfig, onCancel, isCampaignSetup
                   {chassisList.map(chassis => (
                     <div 
                       key={chassis.id}
+                      role="button"
                       className={`panel ${selectedChassisId === chassis.id ? 'panel--glow' : 'panel--raised'}`}
                       style={{ cursor: 'pointer', borderColor: selectedChassisId === chassis.id ? 'var(--color-holo-cyan)' : 'var(--color-border)' }}
                       onClick={() => setSelectedChassisId(chassis.id)}
