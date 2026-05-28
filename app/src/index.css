@@ -1878,6 +1878,23 @@ body.is-phone .fleet-status-card {
   border-bottom-color: var(--color-holo-cyan);
 }
 
+/* ─── Station tab bar (officer stations) ─────────────────────────── */
+.station-tab-btn {
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  color: var(--color-text-secondary);
+}
+
+.station-tab-btn + .station-tab-btn {
+  border-left: 1px solid var(--color-border);
+}
+
+.station-tab-btn:hover {
+  background: rgba(0, 204, 255, 0.05);
+}
+
 /* ─── Pinned Execute bar ─────────────────────────────────────────── */
 .phone-execute-bar {
   position: fixed;

@@ -421,19 +421,24 @@ export default function GameScreen() {
                 {/* Officer station tabs */}
                 {player && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)', flex: 1 }}>
-                    <div style={{ display: 'flex', gap: '4px', paddingBottom: '4px', borderBottom: '1px solid var(--color-border)', overflowX: 'auto' }}>
+                    <div style={{ display: 'flex', overflowX: 'auto' }}>
                       {sortedOfficers.map(o => {
+                        const officerData = getOfficerById(o.officerId);
                         const isActive = o.station === currentStation;
                         const assignments = player.assignedActions.filter(a => a.station === o.station).length;
+                        const maxStress = (!officerData || officerData.stressLimit === null) 
+                          ? null 
+                          : officerData.stressLimit + getStimInjectorBonus(experimentalTech);
                         return (
                           <button
                             key={o.station}
                             onClick={() => setActiveTabletStation(o.station)}
-                            className={`btn${isActive ? ' btn--primary' : ''}`}
+                            className="station-tab-btn"
                             style={{
                               flex: 1, minWidth: 60, padding: '6px 4px', fontSize: '0.68rem',
-                              borderColor: isActive ? 'var(--color-holo-cyan)' : 'var(--color-border)',
+                              borderBottom: isActive ? '2px solid var(--color-holo-cyan)' : '1px solid transparent',
                               background: isActive ? 'rgba(0, 204, 255, 0.1)' : o.isLocked ? 'rgba(255,0,0,0.1)' : 'var(--color-bg-panel)',
+                              color: isActive ? 'var(--color-text-bright)' : 'var(--color-text-secondary)',
                               position: 'relative',
                             }}
                           >
@@ -443,6 +448,17 @@ export default function GameScreen() {
                                 <span style={{ color: 'var(--color-bg-deep)', background: 'var(--color-holo-cyan)', borderRadius: '999px', padding: '0 4px', fontSize: '0.58rem', fontWeight: 'bold', flexShrink: 0 }}>{assignments}</span>
                               )}
                             </div>
+                            {maxStress !== null ? (
+                              <div style={{ display: 'flex', gap: '2px', width: '100%', height: '4px', marginTop: '2px' }}>
+                                {Array.from({ length: maxStress }).map((_, i) => (
+                                  <div key={i} style={{ flex: 1, background: i < o.currentStress ? 'var(--color-stress-orange)' : 'rgba(255,255,255,0.1)', borderRadius: '1px' }} />
+                                ))}
+                              </div>
+                            ) : (
+                              <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '1px', marginTop: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <div style={{ width: '100%', height: '1px', background: 'rgba(255,255,255,0.3)' }} />
+                              </div>
+                            )}
                             {o.isLocked && <div style={{ fontSize: '0.55rem', color: 'var(--color-hostile-red)', fontWeight: 'bold' }}>LOCKED</div>}
                           </button>
                         );
@@ -791,7 +807,7 @@ export default function GameScreen() {
             {player && (
               isTablet ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)', flex: 1 }}>
-                  <div style={{ display: 'flex', gap: '4px', paddingBottom: '4px', borderBottom: '1px solid var(--color-border)' }}>
+                   <div style={{ display: 'flex' }}>
                     {(() => {
                       const officersArr = Array.isArray(player.officers) ? player.officers : [];
                       const sortedOfficers = officersArr.slice().sort((a, b) => (a.station || '').localeCompare(b.station || ''));
@@ -809,7 +825,7 @@ export default function GameScreen() {
                         <button
                           key={o.station}
                           onClick={() => setActiveTabletStation(o.station)}
-                          className={`btn ${isActive ? 'btn--primary' : ''}`}
+                          className="station-tab-btn"
                           style={{
                             flex: 1,
                             minWidth: 0,
@@ -818,8 +834,9 @@ export default function GameScreen() {
                             flexDirection: 'column',
                             gap: '6px',
                             padding: '8px 6px',
-                            borderColor: isActive ? 'var(--color-holo-cyan)' : 'var(--color-border)',
+                            borderBottom: isActive ? '2px solid var(--color-holo-cyan)' : '1px solid transparent',
                             background: isActive ? 'rgba(0, 204, 255, 0.1)' : o.isLocked ? 'rgba(255,0,0,0.1)' : 'var(--color-bg-panel)',
+                            color: isActive ? 'var(--color-text-bright)' : 'var(--color-text-secondary)',
                             position: 'relative',
                           }}
                         >
