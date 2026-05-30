@@ -213,7 +213,7 @@ export default function GameScreen() {
     const activeOfficer = sortedOfficers.find(o => o.station === currentStation);
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', width: '100vw', height: '100vh', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', overflow: 'hidden' }}>
         {/* Game-wide overlays */}
         {phase === 'briefing' && <BriefingOverlay />}
         <GameLog />
@@ -514,7 +514,7 @@ export default function GameScreen() {
   // ── End phone layout ──────────────────────────────────────────────
 
   return (
-    <div style={{ display: 'flex', width: '100vw', height: '100vh', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', width: '100%', height: '100%', overflow: 'hidden' }}>
       {/* Game-wide overlays */}
       {phase === 'briefing' && <BriefingOverlay />}
       <GameLog />
