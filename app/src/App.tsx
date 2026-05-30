@@ -24,6 +24,8 @@ import { useFleetBuilderTutorialStore } from './store/useFleetBuilderTutorialSto
 import { ScreenOrientation } from '@capacitor/screen-orientation';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
+import { StatusBar } from '@capacitor/status-bar';
+import { NavigationBar } from '@ethion/capacitor-navigation-bar';
 
 function App() {
   useViewport(); // Run globally to synchronize the 'is-phone' body class
