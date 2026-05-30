@@ -5,7 +5,8 @@
     "build": "npm --prefix app run build",
     "dev": "npm --prefix app run dev",
     "test": "npm --prefix app run test",
-    "lint": "npm --prefix app run lint"
+    "lint": "npm --prefix app run lint",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.3",
@@ -16,6 +17,7 @@
     "@ethion/capacitor-navigation-bar": "^8.0.2"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.3.3"
+    "@capacitor/cli": "^8.3.3",
+    "patch-package": "^8.0.1"
   }
 }
